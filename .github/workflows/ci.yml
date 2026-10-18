@@ -23,6 +23,9 @@ jobs:
       - uses: golangci/golangci-lint-action@v8
         with:
           version: v2.5
+          # The config schema check fetches golangci-lint.run and has failed
+          # a run on its timeout; `make lint` keeps it locally.
+          verify: false
       # -race needs cgo; the shipped binary does not.
       - run: CGO_ENABLED=1 go test -race ./...
       - name: cross-compile every release target with CGO_ENABLED=0

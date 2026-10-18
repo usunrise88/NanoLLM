@@ -60,6 +60,7 @@ jobs:
         with:
           version: v2.5
           working-directory: services/bench
+          verify: false # the schema check fetches golangci-lint.run
       # -short skips the e2e, which has a job of its own.
       - run: CGO_ENABLED=1 go test -race -short ./...
 
