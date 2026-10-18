@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"unsafe"
 
 	"github.com/usunrise88/nanollm/internal/backend"
 )
@@ -16,13 +17,13 @@ const maxLogprobs = 20
 
 // Step evaluates one batch: every slot's tokens go into one llama_batch_ext
 // at the positions given, the batch is decoded with llama_process, and each
-// sampling slot draws one token from the logits after its last token.
+// sampling slot draws its tokens from the logits.
 //
-// Without a drafter (until 1.5.M) a sampling slot gets exactly one token per
-// step. The MTP path will extend it here: the drafter proposes up to
-// MaxDraft tokens from the carried hidden state, they ride in the same
-// batch, the chain samples position by position and stops at the first
-// mismatch, and the rejected tail is removed with llama_memory_seq_rm.
+// Without a drafter a sampling slot gets one token. With one, a decode step
+// (one token, at the position after the slot's carried state) first drafts
+// up to MaxDraft tokens (mtp.go); the drafts ride in the same batch, the
+// slot's chain samples them position by position, and the slot gets the
+// accepted drafts plus the token that ended the run.
 func (m *model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.SeqOut, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -36,22 +37,49 @@ func (m *model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.Se
 		return nil, err
 	}
 
+	var drafts [][]backend.Token
+	if m.dft != nil {
+		if limits := m.draftLimits(steps); limits != nil {
+			drafts = m.draft(steps, limits)
+		}
+	}
+
 	llamaBatchExtClear(m.batch)
-	outIdx := make([]int32, len(steps))
+	// outIdx[i] are the batch entries whose logits step i samples: the last
+	// token, then one per draft.
+	outIdx := make([][]int32, len(steps))
+	add := func(seq, pos int, t backend.Token, output bool) (int32, error) {
+		idx := llamaBatchExtAddToken(m.batch, int32(seq), int32(t))
+		if idx < 0 {
+			return 0, fmt.Errorf("llamacpp: batch entry for slot %d rejected (%d)", seq, idx)
+		}
+		p := int32(pos)
+		if !llamaBatchExtSetPos(m.batch, idx, &p) {
+			return 0, fmt.Errorf("llamacpp: position %d for slot %d rejected", p, seq)
+		}
+		if output {
+			llamaBatchExtSetOutputLogits(m.batch, idx, true)
+		}
+		return idx, nil
+	}
 	for i, s := range steps {
-		outIdx[i] = -1
 		for j, t := range s.Tokens {
-			idx := llamaBatchExtAddToken(m.batch, int32(s.Seq), int32(t))
-			if idx < 0 {
-				return nil, fmt.Errorf("llamacpp: batch entry for slot %d rejected (%d)", s.Seq, idx)
+			last := j == len(s.Tokens)-1
+			idx, err := add(s.Seq, s.Pos+j, t, s.Sample && last)
+			if err != nil {
+				return nil, err
 			}
-			pos := int32(s.Pos + j)
-			if !llamaBatchExtSetPos(m.batch, idx, &pos) {
-				return nil, fmt.Errorf("llamacpp: position %d for slot %d rejected", pos, s.Seq)
+			if s.Sample && last {
+				outIdx[i] = append(outIdx[i], idx)
 			}
-			if s.Sample && j == len(s.Tokens)-1 {
-				llamaBatchExtSetOutputLogits(m.batch, idx, true)
-				outIdx[i] = idx
+		}
+		if drafts != nil {
+			for j, t := range drafts[i] {
+				idx, err := add(s.Seq, s.Pos+1+j, t, true)
+				if err != nil {
+					return nil, err
+				}
+				outIdx[i] = append(outIdx[i], idx)
 			}
 		}
 	}
@@ -61,27 +89,119 @@ func (m *model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.Se
 
 	var outs []backend.SeqOut
 	for i, s := range steps {
+		sl := &m.slots[s.Seq]
 		if !s.Sample {
+			// A prefill chunk: the carried state no longer precedes the
+			// next token.
+			sl.pendingPos = -1
 			continue
 		}
-		row, err := m.logitsRow(outIdx[i])
+		var dr []backend.Token
+		if drafts != nil {
+			dr = drafts[i]
+		}
+		out, err := m.verify(s, outIdx[i], dr)
 		if err != nil {
 			return nil, err
+		}
+		outs = append(outs, out)
+	}
+	return outs, nil
+}
+
+// verify samples one slot's output positions in order: the token after the
+// last input, then one per draft while the sample equals the draft. The
+// chain accepts each sample, so the grammar and the penalties see exactly
+// the returned tokens. The rejected drafts leave the cache, and the hidden
+// state of the input behind the last returned token is carried to the next
+// step.
+func (m *model) verify(s backend.SeqStep, idxs []int32, drafts []backend.Token) (backend.SeqOut, error) {
+	sl := &m.slots[s.Seq]
+	out := backend.SeqOut{Seq: s.Seq, Drafted: len(drafts)}
+	for i, idx := range idxs {
+		row, err := m.logitsRow(idx)
+		if err != nil {
+			return out, err
 		}
 		var lp *logprobs
 		if s.Logprobs >= 0 {
 			lp = m.logprobs(row, s.Logprobs)
 		}
-		tok := backend.Token(llamaSamplerSample(m.slots[s.Seq].chain, m.ctx, outIdx[i]))
-		out := backend.SeqOut{Seq: s.Seq, Tokens: []backend.Token{tok}, EOG: llamaVocabIsEog(m.vocab, int32(tok))}
+		tok := backend.Token(llamaSamplerSample(sl.chain, m.ctx, idx))
+		out.Tokens = append(out.Tokens, tok)
 		if lp != nil {
 			lp.Token = tok
 			lp.Logprob = lp.logprobOf(row, tok)
-			out.Logprobs = []backend.TokenLogprobs{lp.TokenLogprobs}
+			out.Logprobs = append(out.Logprobs, lp.TokenLogprobs)
 		}
-		outs = append(outs, out)
+		matched := i < len(drafts) && tok == drafts[i]
+		if matched {
+			out.Accepted++
+		}
+		if llamaVocabIsEog(m.vocab, int32(tok)) {
+			out.EOG = true
+			break
+		}
+		if !matched {
+			break
+		}
 	}
-	return outs, nil
+	// Inputs Pos .. Pos+n-1 produced the n returned tokens; the cache keeps
+	// them and drops the drafts after.
+	n := len(out.Tokens)
+	if len(drafts) > 0 && n < len(drafts)+1 {
+		if !llamaMemorySeqRm(m.mem, int32(s.Seq), int32(s.Pos+n), -1) {
+			return out, fmt.Errorf("llamacpp: slot %d: removing rejected drafts failed", s.Seq)
+		}
+	}
+	sl.pendingPos = -1
+	if m.dft != nil {
+		lastIn := s.Pos + len(s.Tokens) - 1 + (n - 1)
+		if h := llamaGetEmbeddingsNextnIth(m.ctx, idxs[n-1]); h != nil {
+			if len(sl.pendingH) != m.dft.nEmbd {
+				sl.pendingH = make([]float32, m.dft.nEmbd)
+			}
+			copy(sl.pendingH, unsafe.Slice(h, m.dft.nEmbd))
+			sl.pendingPos = lastIn
+		}
+	}
+	return out, nil
+}
+
+// draftLimits is how many tokens each step may draft: decode steps whose
+// carried state sits right before them, within the step's MaxDraft, the
+// drafter's limit, the slot's context, and what the batch has left of
+// n_batch tokens and n_outputs_max output rows — given out in step order,
+// as the scheduler orders its slots. nil when no step drafts.
+func (m *model) draftLimits(steps []backend.SeqStep) []int {
+	tokens, outputs := m.caps.NBatch, m.nOutputsMax
+	for _, s := range steps {
+		tokens -= len(s.Tokens)
+		if s.Sample {
+			outputs--
+		}
+	}
+	var limits []int
+	for i, s := range steps {
+		if !s.Sample || len(s.Tokens) != 1 || s.MaxDraft <= 0 {
+			continue
+		}
+		sl := &m.slots[s.Seq]
+		if sl.pendingPos < 0 || sl.pendingPos != s.Pos-1 {
+			continue
+		}
+		n := min(s.MaxDraft, m.dft.maxDraft, tokens, outputs, m.caps.NCtx-s.Pos-1)
+		if n <= 0 {
+			continue
+		}
+		if limits == nil {
+			limits = make([]int, len(steps))
+		}
+		limits[i] = n
+		tokens -= n
+		outputs -= n
+	}
+	return limits
 }
 
 // checkSteps validates a batch before any of it reaches llama.cpp, which
@@ -91,7 +211,7 @@ func (m *model) checkSteps(steps []backend.SeqStep) error {
 		return errors.New("llamacpp: empty step")
 	}
 	seen := map[int]bool{}
-	total := 0
+	total, outputs := 0, 0
 	for _, s := range steps {
 		if err := m.checkSeq(s.Seq); err != nil {
 			return err
@@ -123,9 +243,16 @@ func (m *model) checkSteps(steps []backend.SeqStep) error {
 			return fmt.Errorf("llamacpp: slot %d: negative MaxDraft", s.Seq)
 		}
 		total += len(s.Tokens)
+		if s.Sample {
+			outputs++
+		}
 	}
 	if total > m.caps.NBatch {
 		return fmt.Errorf("llamacpp: step of %d tokens exceeds n_batch %d", total, m.caps.NBatch)
+	}
+	// llama.cpp asserts on more output rows than n_outputs_max.
+	if outputs > m.nOutputsMax {
+		return fmt.Errorf("llamacpp: %d sampling slots exceed n_outputs_max %d", outputs, m.nOutputsMax)
 	}
 	return nil
 }
@@ -214,6 +341,7 @@ func (m *model) TrimSeq(seq int, pos int) bool {
 	if pos > pmax {
 		return true
 	}
+	m.slots[seq].pendingPos = -1
 	if pos == 0 {
 		llamaMemorySeqRm(m.mem, int32(seq), -1, -1)
 		return true
@@ -237,6 +365,7 @@ func (m *model) ClearSeq(seq int) {
 	if m.mdl == 0 || m.checkSeq(seq) != nil {
 		return
 	}
+	m.slots[seq].pendingPos = -1
 	llamaMemorySeqRm(m.mem, int32(seq), -1, -1)
 }
 
@@ -299,6 +428,9 @@ func (m *model) RestoreSeq(seq int, state []byte) error {
 	if v := binary.LittleEndian.Uint32(state[4:]); v != stateVersion {
 		return fmt.Errorf("llamacpp: slot state version %d, want %d", v, stateVersion)
 	}
+	// The MTP carry-over is not part of llama.cpp's sequence state: the
+	// first step after a restore runs without drafts.
+	m.slots[seq].pendingPos = -1
 	if want := bindingCommit[:16]; string(state[8:24]) != want {
 		return fmt.Errorf("llamacpp: slot state was saved by llama.cpp %q, this is %q", state[8:24], want)
 	}

@@ -44,31 +44,48 @@ type model struct {
 	// its context, for tests and diagnostics.
 	loadLog []string
 
+	// nOutputsMax is the context's n_outputs_max: llama.cpp asserts that a
+	// batch asks for no more output rows, so Step counts them first.
+	nOutputsMax int
+
+	// dft is the MTP drafter, nil without one.
+	dft *drafter
+
 	slots []slot
-	// scratch for logprobs: one row of logits.
-	logits []float64
 }
 
-// slot is one sequence's sampling state. The MTP state machine (1.5.M)
-// keeps its carry-over — the target's hidden state at the last accepted
-// position — here too, and every trim, restore or clear drops it.
+// slot is one sequence's sampling state and its MTP carry-over.
 type slot struct {
 	chain     LlamaSampler // owned; frees the samplers added to it
 	penalties LlamaSampler // inside chain, fed the history; 0 when unused
 	spec      backend.SamplerSpec
+
+	// pendingH is the target's hidden state (h_nextn) at position
+	// pendingPos: the input whose logits produced the token the caller
+	// feeds next. Drafting needs exactly that pair — the next token at
+	// pendingPos+1 with the state before it — so a step drafts only when
+	// its position is pendingPos+1. Anything that moves the cache another
+	// way (trim, clear, restore, a prompt-cache hit that prefills afresh)
+	// leaves the positions out of step, and that step runs without drafts
+	// while it computes a fresh state.
+	pendingH   []float32
+	pendingPos int
 }
 
 func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend.Model, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	files := []string{spec.Path}
 	if spec.DrafterPath != "" {
-		return nil, fmt.Errorf("llamacpp: MTP drafter %s: %w (STAGE1 1.5.M)", spec.DrafterPath, backend.ErrNotImplemented)
+		files = append(files, spec.DrafterPath)
 	}
-	if st, err := os.Stat(spec.Path); err != nil {
-		return nil, fmt.Errorf("llamacpp: model: %w", err)
-	} else if st.IsDir() {
-		return nil, fmt.Errorf("llamacpp: model %s is a directory", spec.Path)
+	for _, p := range files {
+		if st, err := os.Stat(p); err != nil {
+			return nil, fmt.Errorf("llamacpp: model: %w", err)
+		} else if st.IsDir() {
+			return nil, fmt.Errorf("llamacpp: model %s is a directory", p)
+		}
 	}
 	mp, keep, err := b.modelParams(spec)
 	if err != nil {
@@ -106,13 +123,29 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 		NCtx:      int(llamaNCtxSeq(m.ctx)),
 		Slots:     int(llamaNSeqMax(m.ctx)),
 		NBatch:    int(llamaNBatch(m.ctx)),
-		MaxDraft:  0, // no drafter until 1.5.M
 		SWAFull:   m.swaFull,
 		SWAWindow: m.nSWA,
 		NVocab:    m.nVocab,
 	}
+	m.nOutputsMax = int(cp.NOutputsMax)
+	if m.nOutputsMax == 0 {
+		m.nOutputsMax = m.caps.NBatch
+	}
 	m.slots = make([]slot, m.caps.Slots)
-	m.logits = make([]float64, m.nVocab)
+	for i := range m.slots {
+		m.slots[i].pendingPos = -1
+	}
+	if spec.DrafterPath != "" {
+		d, err := m.loadDrafter(spec, mp, cp)
+		if err != nil {
+			llamaBatchExtFree(m.batch)
+			llamaFree(m.ctx)
+			llamaModelFree(m.mdl)
+			return nil, err
+		}
+		m.dft = d
+		m.caps.MaxDraft = d.maxDraft
+	}
 	m.meta = m.readMetadata()
 	m.memory = memoryFromLog(m.loadLog, b)
 	return m, nil
@@ -275,6 +308,18 @@ func (b *llamaBackend) contextParams(spec backend.LoadSpec) (LlamaContextParams,
 	if spec.Threads > 0 {
 		p.NThreads = int32(spec.Threads)
 		p.NThreadsBatch = int32(spec.Threads)
+	}
+	// The planner sizes n_outputs_max to slots × (1 + DraftMax): the default
+	// (n_batch) reserves n_vocab logits per batch token in the compute
+	// buffer. llama.cpp needs at least one row per sequence.
+	if spec.NOutputsMax < 0 {
+		return p, errors.New("llamacpp: negative n_outputs_max")
+	}
+	if spec.NOutputsMax > 0 {
+		if spec.NOutputsMax < slots {
+			return p, fmt.Errorf("llamacpp: n_outputs_max %d is below the %d slots", spec.NOutputsMax, slots)
+		}
+		p.NOutputsMax = uint32(min(spec.NOutputsMax, int(p.NBatch)))
 	}
 	// One output row per slot and step: the sampled position. MTP
 	// verification asks for DraftMax+1.
@@ -549,6 +594,9 @@ func (m *model) Close() error {
 	for i := range m.slots {
 		m.freeSampler(i)
 	}
+	// The drafter's context reads the target's cache: it goes first.
+	m.dft.close()
+	m.dft = nil
 	if m.batch != 0 {
 		llamaBatchExtFree(m.batch)
 	}

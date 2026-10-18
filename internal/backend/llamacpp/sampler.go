@@ -136,7 +136,8 @@ func (m *model) SetSampler(seq int, spec backend.SamplerSpec, history []backend.
 		}
 	}
 	m.freeSampler(seq)
-	m.slots[seq] = slot{chain: chain, penalties: penalties, spec: spec}
+	sl := &m.slots[seq]
+	sl.chain, sl.penalties, sl.spec = chain, penalties, spec
 	return nil
 }
 
@@ -243,10 +244,11 @@ func regexEscape(s string) string {
 }
 
 func (m *model) freeSampler(seq int) {
-	if c := m.slots[seq].chain; c != 0 {
-		llamaSamplerFree(c)
+	sl := &m.slots[seq]
+	if sl.chain != 0 {
+		llamaSamplerFree(sl.chain)
 	}
-	m.slots[seq] = slot{}
+	sl.chain, sl.penalties, sl.spec = 0, 0, backend.SamplerSpec{}
 }
 
 func (m *model) checkSeq(seq int) error {
