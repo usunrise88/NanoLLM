@@ -40,7 +40,7 @@ func main() {
 	case "serve":
 		err = serve(args)
 	case "run":
-		err = notYet("run", "v0.1")
+		err = runCommand(args)
 	case "devices":
 		err = devicesCommand(args)
 	case "plan":
@@ -81,8 +81,8 @@ func usage() {
 
   nanollm init     [-config FILE] [-data-dir DIR] [-addr ADDR] [-model ID] [-no-download] [-force]
   nanollm serve    [-config FILE] [-addr ADDR]
-  nanollm run      MODEL [--device D] [--preset P] [--think] [--prompt TEXT]
-  nanollm devices  [-config FILE]
+  nanollm run      --model FILE --prompt TEXT [--device D] [-n N] [--temp T]
+  nanollm devices  [-config FILE] [-lib-dir DIR]
   nanollm plan     MODEL --preset P
   nanollm bench    MODEL
   nanollm eval     MODEL --suite NAME
