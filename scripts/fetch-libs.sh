@@ -190,6 +190,8 @@ universal() {
     elif [[ "$name" == *.dylib && -f "dist/darwin_amd64/lib/$name" ]]; then
       "$lipo" -create "$f" "dist/darwin_amd64/lib/$name" -output "$out/$name"
     else
+      # Only arm64 has it: ggml-metal, since the x86_64 build has no Metal.
+      # On an Intel Mac it fails to load and ggml skips the backend.
       cp "$f" "$out/$name"
     fi
   done
