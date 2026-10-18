@@ -9,8 +9,11 @@ GO          ?= go
 NPM         ?= npm
 VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LLAMA_TAG   := $(shell tr -d '[:space:]' < scripts/llama.cpp.tag)
+LLAMA_COMMIT := $(shell tr -d '[:space:]' < scripts/llama.cpp.commit)
+LLAMACPP    := github.com/usunrise88/nanollm/internal/backend/llamacpp
 LDFLAGS     := -X main.version=$(VERSION) \
-               -X github.com/usunrise88/nanollm/internal/backend/llamacpp.PinnedTag=$(LLAMA_TAG)
+               -X $(LLAMACPP).PinnedTag=$(LLAMA_TAG) \
+               -X $(LLAMACPP).PinnedCommit=$(LLAMA_COMMIT)
 DIST        := dist
 UI_DIST     := internal/ui/dist
 export CGO_ENABLED := 0
@@ -18,7 +21,7 @@ export CGO_ENABLED := 0
 # The five release platforms; darwin is built per architecture and merged.
 TARGETS     := linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/arm64 darwin/amd64
 
-.PHONY: all web build build-noui cross libs lint test test-race run tidy clean help
+.PHONY: all web build build-noui cross libs tools bindgen layout test-native lint test test-race run tidy clean help
 
 all: web build
 
@@ -52,10 +55,28 @@ cross:
 libs:
 	./scripts/fetch-libs.sh
 
+## tools: the pinned llama.cpp tools (llama-server, llama-cli, …) into dist/<os>_<arch>/tools, for golden data
+tools:
+	./scripts/fetch-libs.sh --tools
+
+## bindgen: regenerate the libllama binding; LLAMA_SRC is a llama.cpp checkout of the pinned tag
+bindgen:
+	@test -n "$(LLAMA_SRC)" || { echo "set LLAMA_SRC to a llama.cpp checkout of $(LLAMA_TAG)"; exit 1; }
+	$(GO) run ./tools/bindgen -src $(LLAMA_SRC)
+	$(GO) run ./tools/bindgen -src $(LLAMA_SRC) $(foreach d,$(wildcard $(DIST)/*/lib),-check-exports $(d))
+
+## layout: check the binding's struct layout with zig cc for every target (LLAMA_SRC as above)
+layout:
+	./scripts/check-layout.sh $(LLAMA_SRC)
+
+## test-native: tests against the real libllama (run `make libs`; set NANOLLM_TEST_MODEL or NANOLLM_TEST_MODELS)
+test-native:
+	$(GO) test -tags native -count=1 -timeout 60m ./internal/backend/llamacpp/...
+
 ## lint: vet, gofmt and golangci-lint when it is installed
 lint:
 	$(GO) vet ./...
-	@gofmt -l cmd internal | tee /dev/stderr | (! read)
+	@gofmt -l cmd internal tools | tee /dev/stderr | (! read)
 	@if command -v golangci-lint >/dev/null; then golangci-lint run; fi
 
 ## test: unit tests
