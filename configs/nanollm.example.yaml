@@ -81,3 +81,4 @@ ui:
 log:
   level: info             # debug | info | warn | error
   format: json            # json | text
+  file: ""                # append here (rolled at 64 MiB) instead of stderr; the Windows service and the launchd agent set it

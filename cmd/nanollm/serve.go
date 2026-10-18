@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -31,10 +32,23 @@ import (
 // shutdownGrace is how long in-flight requests get after SIGTERM.
 const shutdownGrace = 30 * time.Second
 
+// serve runs the server from a console: SIGINT and SIGTERM shut it down, and
+// a second signal during a stuck shutdown terminates the process.
 func serve(args []string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	return serveContext(ctx, stop, args)
+}
+
+// serveContext runs the server until ctx is done. A console run cancels it on
+// a signal, the Windows service on a stop request from the control manager.
+// release, when not nil, is called once shutdown begins, so that the signal
+// handler can be given back to the default disposition.
+func serveContext(ctx context.Context, release func(), args []string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	cfgPath := configFlag(fs)
 	addr := fs.String("addr", "", "listen address (overrides config)")
+	logFile := fs.String("log-file", "", "append the log to this file instead of stderr (overrides log.file)")
 	if _, err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -52,12 +66,21 @@ func serve(args []string) error {
 		}
 	}
 
-	log := newLogger(cfg.Log, os.Stderr)
+	if *logFile != "" {
+		cfg.Log.File = *logFile
+	}
+
+	logw, closeLog, err := openLog(cfg.Log.File)
+	if err != nil {
+		return fmt.Errorf("open the log file: %w", err)
+	}
+	defer closeLog()
+	log := newLogger(cfg.Log, logw)
+	// The backends and the queue log through the default logger; without
+	// this a service, which has no stderr, would lose their lines.
+	slog.SetDefault(log)
 	log.Info("starting nanollm", "version", version, "llama_cpp", llamacpp.PinnedTag,
 		"addr", cfg.Server.Addr, "dialects", cfg.API.Dialects, "backends", cfg.Backends.Enabled)
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	backends := openBackends(cfg, log)
 	defer func() {
@@ -190,13 +213,18 @@ func serve(args []string) error {
 
 	select {
 	case err := <-errCh:
+		// Logged as well as returned: a service's stderr goes nowhere, and
+		// "address already in use" is the commonest reason it stops.
+		log.Error("server stopped", "err", err)
 		return err
 	case <-ctx.Done():
 		log.Info("shutting down", "grace", shutdownGrace)
 	}
 	// A second signal during a stuck shutdown falls through to the default
 	// disposition and terminates.
-	stop()
+	if release != nil {
+		release()
+	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)
