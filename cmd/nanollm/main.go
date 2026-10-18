@@ -82,7 +82,8 @@ func usage() {
 
   nanollm init     [-config FILE] [-data-dir DIR] [-addr ADDR] [-model ID] [-no-download] [-force]
   nanollm serve    [-config FILE] [-addr ADDR]
-  nanollm run      --model FILE --prompt TEXT [--device D] [-n N] [--temp T]
+  nanollm run      [MODEL] [--prompt TEXT] [--preset P] [--device D] [--think] [--system TEXT] [-n N] [--temp T]
+  nanollm run      --model FILE.gguf --prompt TEXT [--drafter FILE] [--device D] [-n N] [--temp T]
   nanollm devices  [-config FILE] [-lib-dir DIR]
   nanollm plan     MODEL --preset P [--device D] [--device-memory SIZE] [--mode M] [--kv T] [--json]
   nanollm bench    [MODEL] [--suite standard|dev] [--full] [--preset P] [--submit] | submit FILE | withdraw ID
