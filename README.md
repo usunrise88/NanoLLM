@@ -31,12 +31,16 @@ development plan by stage and machine is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Build
 
-Requirements: Go 1.25+ (Node 22+ for the web UI, once it lands).
+Requirements: Go 1.25+, and Node 22+ for the web UI.
 
 ```sh
-make build        # dist/nanollm for this machine
+make web build    # the SPA into internal/ui/dist, then dist/nanollm with it embedded
+make build        # without `make web` first, a binary that serves no UI
 make cross        # every release target, with and without the UI
 make test lint
+make web-check    # the SPA's lint, typecheck and unit tests
+make e2e          # the SPA in Chromium against `serve` on the fake backend
+make run-fake     # a server on the scripted fake backend; the UI is at /ui/
 ```
 
 Native libraries come from one pinned llama.cpp release, the tag in
@@ -77,7 +81,7 @@ internal/registry/      catalog, manifests
 internal/queue/         SQLite jobs, SSE, webhooks (v1.0)
 internal/config/        YAML load/validate, env overrides
 internal/ui/            embedded SPA (built from web/)
-web/                    SPA sources (v1.0)
+web/                    SPA sources: React, Vite, TanStack, Tailwind
 scripts/                fetch-libs, release tooling
 ```
 

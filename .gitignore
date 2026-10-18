@@ -4,6 +4,8 @@
 /nanollm.exe
 /web/dist/
 /web/node_modules/
+/web/test-results/
+/web/playwright-report/
 
 # The SPA is staged here by `make web` and embedded at compile time. The
 # placeholder page is committed so `go build` works in a fresh checkout; a
