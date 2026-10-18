@@ -62,6 +62,7 @@ queue:
   max_pending: 1000
 
 registry:
+  models_dir: ""          # default <data_dir>/models
   strict_license: false
   catalog_url: ""
   mirrors: []

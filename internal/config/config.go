@@ -5,7 +5,10 @@
 // `nanollm init` writes the file a real deployment runs with.
 package config
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
 type Config struct {
 	Server     Server     `yaml:"server"`
@@ -177,10 +180,24 @@ type Queue struct {
 }
 
 type Registry struct {
+	// ModelsDir holds downloaded weights; empty means <data_dir>/models. It
+	// is separate so the weights can live on a different disk than the job
+	// database.
+	ModelsDir string `yaml:"models_dir"`
 	// StrictLicense refuses models whose commercial use is unconfirmed.
-	StrictLicense bool     `yaml:"strict_license"`
-	CatalogURL    string   `yaml:"catalog_url"`
-	Mirrors       []string `yaml:"mirrors"`
+	StrictLicense bool   `yaml:"strict_license"`
+	CatalogURL    string `yaml:"catalog_url"`
+	// Mirrors are Hugging Face compatible base URLs tried after
+	// huggingface.co: <mirror>/<repo>/resolve/<revision>/<path>.
+	Mirrors []string `yaml:"mirrors"`
+}
+
+// ModelsPath is where downloaded weights live.
+func (c Config) ModelsPath() string {
+	if c.Registry.ModelsDir != "" {
+		return c.Registry.ModelsDir
+	}
+	return filepath.Join(c.Server.DataDir, "models")
 }
 
 // UI has no path knob: the SPA lives at /ui/ (SPEC §11), and a configurable

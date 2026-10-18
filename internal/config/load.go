@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -187,6 +188,11 @@ func (c *Config) Validate() error {
 		if !knownBackend(b) {
 			return fmt.Errorf("backends.enabled[%d]: unknown backend %q; use %s, %s or %s",
 				i, b, BackendLlamaCpp, BackendORTGenAI, BackendMLX)
+		}
+	}
+	for i, m := range c.Registry.Mirrors {
+		if u, err := url.Parse(m); err != nil || u.Scheme != "https" || u.Host == "" {
+			return fmt.Errorf("registry.mirrors[%d]: %q must be an https URL", i, m)
 		}
 	}
 	if c.Backends.LibDir == "" {
