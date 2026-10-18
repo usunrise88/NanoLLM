@@ -22,6 +22,7 @@ type Config struct {
 	Generation Generation `yaml:"generation"`
 	Queue      Queue      `yaml:"queue"`
 	Registry   Registry   `yaml:"registry"`
+	Bench      Bench      `yaml:"bench"`
 	UI         UI         `yaml:"ui"`
 	Log        Log        `yaml:"log"`
 }
@@ -201,6 +202,17 @@ func (c Config) ModelsPath() string {
 		return c.Registry.ModelsDir
 	}
 	return filepath.Join(c.Server.DataDir, "models")
+}
+
+// Bench is the public benchmark client (docs/BENCHMARKS.md). Nothing is
+// ever sent without the person seeing it first, unless they pass --submit.
+type Bench struct {
+	// Submit is ask (offer after a run) or never.
+	Submit    string `yaml:"submit"`
+	SubmitURL string `yaml:"submit_url"`
+	// Anonymous sends with a throwaway key: not withdrawable, not linked to
+	// this installation's other results.
+	Anonymous bool `yaml:"anonymous"`
 }
 
 // UI has no path knob: the SPA lives at /ui/ (SPEC §11), and a configurable

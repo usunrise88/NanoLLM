@@ -190,6 +190,14 @@ func (c *Config) Validate() error {
 				i, b, BackendLlamaCpp, BackendORTGenAI, BackendMLX)
 		}
 	}
+	switch c.Bench.Submit {
+	case "ask", "never":
+	default:
+		return fmt.Errorf("bench.submit must be ask or never, got %q", c.Bench.Submit)
+	}
+	if u, err := url.Parse(c.Bench.SubmitURL); c.Bench.Submit != "never" && (err != nil || u.Scheme != "https" || u.Host == "") {
+		return fmt.Errorf("bench.submit_url %q must be an https URL", c.Bench.SubmitURL)
+	}
 	if c.Server.MaxBody <= 0 {
 		return fmt.Errorf("server.max_body must be positive")
 	}

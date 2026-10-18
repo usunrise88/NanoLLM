@@ -31,7 +31,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		if preset, err = plan.LookupPreset(ov.Preset); err != nil {
 			return Placement{}, err
 		}
-	} else if preset, err = derivedPreset(req.Device); err != nil {
+	} else if preset, err = DerivedPreset(req.Device); err != nil {
 		return Placement{}, err
 	}
 	mode, err := plan.ParseMode(ov.Mode)
@@ -79,11 +79,11 @@ func deviceMemory(d backend.Device) int64 {
 	return d.MemoryTotal
 }
 
-// derivedPreset is the budget a device offers when the configuration names
+// DerivedPreset is the budget a device offers when the configuration names
 // none: what it has free, rounded down to half a GiB, as a vram-, uma- or
 // ram- budget. The host keeps a quarter of its free memory for everything
 // else that runs on it.
-func derivedPreset(d backend.Device) (plan.Preset, error) {
+func DerivedPreset(d backend.Device) (plan.Preset, error) {
 	free := deviceMemory(d)
 	if free <= 0 {
 		return plan.Preset{}, fmt.Errorf("device %s reports no memory; set models.overrides.<id>.preset", d.Selector())

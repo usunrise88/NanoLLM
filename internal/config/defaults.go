@@ -45,6 +45,7 @@ func Default() Config {
 		},
 		Queue:    Queue{Enabled: true, MaxPending: 1000},
 		Registry: Registry{Mirrors: []string{}},
+		Bench:    Bench{Submit: "ask", SubmitURL: "https://nano.llmto.day"},
 		UI:       UI{Enabled: true},
 		Log:      Log{Level: "info", Format: "json"},
 	}

@@ -68,6 +68,11 @@ registry:
   catalog_url: ""
   mirrors: []
 
+bench:
+  submit: ask             # ask | never — results are sent only after you see them
+  submit_url: https://nano.llmto.day
+  anonymous: false        # true: a throwaway key, not withdrawable
+
 ui:
   enabled: true
 
