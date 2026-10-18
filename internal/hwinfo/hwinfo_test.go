@@ -20,8 +20,8 @@ func TestLinuxLaptop(t *testing.T) {
 		if i < 12 {
 			core = i / 2 // P-cores are hyperthreaded
 		}
-		cpuinfo += "processor\t: " + itoa(i) + "\nvendor_id\t: GenuineIntel\nmodel name\t: 12th Gen Intel(R) Core(TM) i7-12700H\n" +
-			"flags\t\t: fpu sse avx avx2 fma f16c avx_vnni\nphysical id\t: 0\ncore id\t\t: " + itoa(core) + "\n\n"
+		cpuinfo += "processor\t: " + num(i) + "\nvendor_id\t: GenuineIntel\nmodel name\t: 12th Gen Intel(R) Core(TM) i7-12700H\n" +
+			"flags\t\t: fpu sse avx avx2 fma f16c avx_vnni\nphysical id\t: 0\ncore id\t\t: " + num(core) + "\n\n"
 	}
 	fsys := fstest.MapFS{
 		"proc/cpuinfo":                                              file(cpuinfo),
@@ -162,7 +162,7 @@ func TestCollectHere(t *testing.T) {
 	t.Logf("%+v", m)
 }
 
-func itoa(n int) string {
+func num(n int) string {
 	b, _ := json.Marshal(n)
 	return string(b)
 }
