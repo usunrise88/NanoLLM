@@ -12,24 +12,25 @@ import (
 // ComputeCoeffs estimate a backend's compute buffer (G7) from the shape of a
 // batch. llama.cpp sizes the buffer by reserving a worst-case graph, and the
 // allocator reuses memory between tensors that are not alive together, so
-// the buffer is the larger of two peaks plus what lives through both:
+// the buffer is the largest of a few peaks plus the attention mask, which
+// lives through all of them:
 //
 //	tail   logits + n_ubatch · 4 · (n_ff + n_embd_per_layer·n_layer + Embd·n_embd + OutEmbd·n_embd_out)
-//	middle n_ubatch · 4 · MidFF · n_ff                        (an FFN block in flight)
-//	       + KQ · n_head · n_kv · n_ubatch · 4                (without flash attention)
-//	mask   n_kv · n_ubatch · MaskFA                           (with flash attention)
-//	       n_kv · n_ubatch · MaskNoFA + MaskNoFABase          (without)
+//	middle n_ubatch · 4 · MidFF · n_ff               an FFN block in flight
+//	KQ     n_head · n_kv · n_ubatch · 4              without flash attention only:
+//	       + n_ubatch · 4 · KQFF · n_ff              the f32 attention matrix
+//	mask   n_kv · n_ubatch · MaskFA                  with flash attention (f16)
+//	       n_kv · n_ubatch · MaskNoFA + MaskNoFABase without (f32)
 //
 // where logits = n_vocab · min(n_ubatch, n_outputs_max) · 4. With the engine
 // default n_outputs_max = n_batch the logits dominate (512 MiB for E4B at
-// n_ubatch 512); with n_outputs_max = slots·(1+n_draft) the middle does.
+// n_ubatch 512); with n_outputs_max = slots·(1+n_draft) the middle does, and
+// without flash attention a long context makes the KQ matrix the largest.
 type ComputeCoeffs struct {
 	Embd    float64 `json:"embd"`
 	OutEmbd float64 `json:"out_embd"`
 	MidFF   float64 `json:"mid_ff"`
-	// KQ is the share of the f32 KQ matrix that is alive at the middle peak
-	// when flash attention is off.
-	KQ float64 `json:"kq"`
+	KQFF    float64 `json:"kq_ff"`
 	// MaskFA and MaskNoFA are bytes per KV cell per ubatch token.
 	MaskFA       float64 `json:"mask_fa"`
 	MaskNoFA     float64 `json:"mask_no_fa"`
@@ -43,10 +44,12 @@ type ComputeCoeffs struct {
 // on the CPU backend (docs/STAGE1.md 1.3): llama-completion with the default
 // n_outputs_max at n_ubatch 128/256/512, n_ctx 4096/32768, one and four
 // sequences, with and without flash attention; llama-server with MTP
-// (n_outputs_max 4 and 16) for the middle peak and the drafter context.
+// (n_outputs_max 4 and 16) for the middle and KQ peaks and the drafter
+// context. The target fits within 2 %; the drafter, whose buffers are a few
+// tens of MiB, errs high.
 var cpuCoeffs = ComputeCoeffs{
-	Embd: 1.21, OutEmbd: 3.1, MidFF: 5.4, KQ: 0.6,
-	MaskFA: 2, MaskNoFA: 5.86, MaskNoFABase: 5_531_000,
+	Embd: 1.21, OutEmbd: 3.1, MidFF: 5.4, KQFF: 3.65,
+	MaskFA: 2, MaskNoFA: 4, MaskNoFABase: 9_405_000,
 	Calibrated: true,
 }
 
@@ -84,14 +87,16 @@ type ComputeShape struct {
 // ComputeBytes estimates one context's compute buffer.
 func (c ComputeCoeffs) ComputeBytes(h gguf.HParams, s ComputeShape) int64 {
 	p := c.peaks(h, s)
-	return max(p.tail, p.mid) + p.mask
+	return max(p.tail, p.mid, p.kq) + p.mask
 }
 
+// peaks are the candidates of ComputeBytes. The *Fixed parts are a peak
+// without its fitted coefficient; perEmbd and perFF are what one unit of Embd
+// or of MidFF/KQFF adds.
 type peaks struct {
-	logits, tail, mid, mask int64
-	// tailFixed and midFixed are the peaks without their fitted activation
-	// term; perEmbd and perFF are what one unit of Embd and of MidFF add.
-	tailFixed, midFixed, perEmbd, perFF float64
+	logits, tail, mid, kq, mask int64
+	tailFixed, kqFixed          float64
+	perEmbd, perFF              float64
 }
 
 func (c ComputeCoeffs) peaks(h gguf.HParams, s ComputeShape) peaks {
@@ -108,34 +113,38 @@ func (c ComputeCoeffs) peaks(h gguf.HParams, s ComputeShape) peaks {
 		c.OutEmbd*float64(h.EmbeddingLengthOut))
 	p.perEmbd = ub * 4 * float64(h.EmbeddingLength)
 	p.perFF = ub * 4 * float64(ff)
+	p.tail = int64(p.tailFixed + c.Embd*p.perEmbd)
+	p.mid = int64(c.MidFF * p.perFF)
+
 	cells := float64(s.NKV) * ub
 	if s.FlashAttention {
 		p.mask = int64(c.MaskFA * cells)
 	} else {
-		p.midFixed = c.KQ * float64(heads) * cells * 4
+		p.kqFixed = float64(heads) * cells * 4
+		p.kq = int64(p.kqFixed + c.KQFF*p.perFF)
 		p.mask = int64(c.MaskNoFA*cells) + c.MaskNoFABase
 	}
-	p.tail = int64(p.tailFixed + c.Embd*p.perEmbd)
-	p.mid = int64(p.midFixed + c.MidFF*p.perFF)
 	return p
 }
 
-// Calibrate fits the activation coefficient of whichever peak dominates this
-// shape to one measured compute buffer — the `compute buffer size` line
-// libllama logs — and marks the result calibrated. It is the hook stages 2–3
-// use for GPU backends (docs/STAGE1.md 1.4): measure once per backend at the
-// planned n_outputs_max and once at the default, store the coefficients,
-// plan from them.
+// Calibrate fits the coefficient of whichever peak dominates this shape to
+// one measured compute buffer — the `compute buffer size` line libllama logs
+// — and marks the result calibrated. It is the hook stages 2–3 use for GPU
+// backends (docs/STAGE1.md 1.4): measure a backend at the planned
+// n_outputs_max (the middle peak) and at the default (the tail), store the
+// coefficients, plan from them.
 func (c ComputeCoeffs) Calibrate(h gguf.HParams, s ComputeShape, measured int64) ComputeCoeffs {
 	out := c
 	out.Calibrated = true
 	p := c.peaks(h, s)
 	peak := float64(measured - p.mask)
 	switch {
-	case p.tail >= p.mid && p.perEmbd > 0:
+	case p.perEmbd > 0 && p.tail >= p.mid && p.tail >= p.kq:
 		out.Embd = max((peak-p.tailFixed)/p.perEmbd, 0)
+	case p.perFF > 0 && p.kq > p.mid:
+		out.KQFF = max((peak-p.kqFixed)/p.perFF, 0)
 	case p.perFF > 0:
-		out.MidFF = max((peak-p.midFixed)/p.perFF, 0)
+		out.MidFF = max(peak/p.perFF, 0)
 	}
 	return out
 }

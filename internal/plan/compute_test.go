@@ -37,10 +37,12 @@ func TestComputeMatchesLlamaLog(t *testing.T) {
 		{"mtp drafter ub256", true, ComputeShape{256, 1, 4096, true}, 12.38, 0.06},
 		{"mtp drafter ub128", true, ComputeShape{128, 1, 4096, true}, 6.19, 0.15}, // 0.8 MiB high
 		{"mtp drafter c32768", true, ComputeShape{512, 1, 32768, true}, 53.00, 0.02},
-		// Without flash attention the fit errs high, on purpose: it is the
-		// rare path, and an overestimate only costs context.
-		{"mtp target no FA", false, ComputeShape{512, 4, 4096, false}, 154.02, 0.07},
-		{"mtp drafter no FA", true, ComputeShape{512, 1, 4096, false}, 51.00, 0.15},
+		{"mtp target no FA", false, ComputeShape{512, 4, 4096, false}, 154.02, 0.02},
+		{"mtp target no FA c32768", false, ComputeShape{512, 4, 32768, false}, 658.02, 0.02},
+		// The drafter's KQ peak carries less besides the matrix than the
+		// target's; the shared fit errs high by 13 MiB.
+		{"mtp drafter no FA", true, ComputeShape{512, 1, 4096, false}, 51.00, 0.30},
+		{"mtp drafter no FA c32768", true, ComputeShape{512, 1, 32768, false}, 331.00, 0.05},
 	} {
 		h := target
 		if c.drafter {
@@ -55,11 +57,11 @@ func TestComputeMatchesLlamaLog(t *testing.T) {
 
 func TestCalibrate(t *testing.T) {
 	h := e4b(t).Target.HParams
-	// A GPU whose activations run 30% above the CPU fit, at both peaks.
-	for _, s := range []ComputeShape{{512, 2048, 4096, true}, {512, 4, 4096, true}} {
+	// A GPU whose activations run 30% above the CPU fit, at each peak.
+	for _, s := range []ComputeShape{{512, 2048, 4096, true}, {512, 4, 4096, true}, {512, 4, 32768, false}} {
 		start := uncalibrated(cpuCoeffs)
 		p := start.peaks(h, s)
-		measured := int64(float64(max(p.tail, p.mid))*1.3) + p.mask
+		measured := int64(float64(max(p.tail, p.mid, p.kq))*1.3) + p.mask
 		got := start.Calibrate(h, s, measured)
 		if !got.Calibrated {
 			t.Error("not marked calibrated")
