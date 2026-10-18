@@ -163,7 +163,8 @@ fetch() {
 
   # Only the libraries: the archives also carry llama-cli, llama-server and
   # friends, which the release does not ship.
-  copy_matching "$stage" "$out" 'libllama.*' 'llama.dll' 'libggml*' 'ggml*.dll' '*.metal'
+  # libomp.dll is ggml-base's OpenMP runtime in the Windows (clang-cl) builds.
+  copy_matching "$stage" "$out" 'libllama.*' 'llama.dll' 'libggml*' 'ggml*.dll' 'libomp*.dll' '*.metal'
   # The CUDA backend ships only in the add-on.
   rm -f "$out"/*ggml-cuda*
 

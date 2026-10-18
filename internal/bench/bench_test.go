@@ -10,7 +10,9 @@ import (
 )
 
 func TestScenariosOnFake(t *testing.T) {
-	m, err := fake.New(fake.Options{MaxDraft: 2, Acceptance: 0.5}).Load(context.Background(), backend.LoadSpec{NCtx: 8192, NBatch: 8192, DrafterPath: "d"})
+	// Rates give every scenario a measurable duration: an instant fake reads
+	// as zero on a coarse clock (Windows).
+	m, err := fake.New(fake.Options{MaxDraft: 2, Acceptance: 0.5, PrefillRate: 1e6, DecodeRate: 2e4}).Load(context.Background(), backend.LoadSpec{NCtx: 8192, NBatch: 8192, DrafterPath: "d"})
 	if err != nil {
 		t.Fatal(err)
 	}
