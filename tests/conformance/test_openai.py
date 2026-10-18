@@ -119,11 +119,12 @@ def test_errors(client, model):
 
 
 def test_completions(client, model):
-    r = client.completions.create(model=model, prompt="Once upon a time [[fake:loop]]", max_tokens=6)
+    # Greedy, so the streamed and the buffered answer must be the same text.
+    r = client.completions.create(model=model, prompt="Once upon a time [[fake:loop]]", max_tokens=6, temperature=0)
     assert r.object == "text_completion"
     assert r.choices[0].finish_reason == "length"
     assert r.usage.completion_tokens == 6
-    s = list(client.completions.create(model=model, prompt="Once upon a time [[fake:loop]]", max_tokens=6, stream=True))
+    s = list(client.completions.create(model=model, prompt="Once upon a time [[fake:loop]]", max_tokens=6, temperature=0, stream=True))
     assert "".join(c.choices[0].text for c in s if c.choices) == r.choices[0].text
 
 

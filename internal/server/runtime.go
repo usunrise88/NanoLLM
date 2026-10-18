@@ -81,7 +81,7 @@ func New(ctx context.Context, o Options) *Runtime {
 		o.Log = slog.Default()
 	}
 	if o.Place == nil {
-		o.Place = DefaultPlacer
+		o.Place = PlannerPlacer
 	}
 	r := &Runtime{
 		cfg: o.Config, catalog: o.Catalog, store: o.Store, backends: o.Backends, place: o.Place, log: o.Log,
@@ -236,9 +236,10 @@ func (r *Runtime) placement(ctx context.Context, m registry.Manifest, device str
 	return pl, nil
 }
 
-// DefaultPlacer is the placement before the planner: the configured context
-// and slots (4096 and one by default), everything on the chosen device,
-// weights mapped, KV f16, the drafter when the entry has one.
+// DefaultPlacer is the placement without the planner, for the fake backend
+// and for models without a measured inventory: the configured context and
+// slots (4096 and one by default), everything on the chosen device, weights
+// mapped, KV f16, the drafter when the entry has one.
 func DefaultPlacer(_ context.Context, req PlaceRequest) (Placement, error) {
 	ov := req.Override
 	nctx, slots := 4096, 1
@@ -253,7 +254,7 @@ func DefaultPlacer(_ context.Context, req PlaceRequest) (Placement, error) {
 		kv = config.KVF16
 	}
 	spec := backend.LoadSpec{
-		Path: req.ModelPath, Device: req.Device.Selector(), NCtx: nctx * slots, Slots: slots,
+		Path: req.ModelPath, Device: req.Device.Selector(), NCtx: nctx, Slots: slots,
 		NBatch: 512, NUBatch: 512, Threads: req.Threads, KVTypeK: kv, KVTypeV: kv,
 		FlashAttention: true, LoadMode: backend.LoadMMap, LazyMode: backend.LazyOff, SWAFull: true,
 	}
@@ -273,11 +274,14 @@ func DefaultPlacer(_ context.Context, req PlaceRequest) (Placement, error) {
 		}
 	}
 	f, _ := req.Manifest.File(registry.RoleModel)
-	key := pool.Key{
-		Model: req.Manifest.ID, Revision: f.Revision, Backend: req.Backend, Device: req.Device.ID,
-		Mode: ov.Mode, Preset: ov.Preset, NCtx: nctx,
+	return Placement{Key: planKey(req, f.Revision, ov.Mode, ov.Preset, nctx), Spec: spec, Plan: spec}, nil
+}
+
+func planKey(req PlaceRequest, revision, mode, preset string, nctx int) pool.Key {
+	return pool.Key{
+		Model: req.Manifest.ID, Revision: revision, Backend: req.Backend, Device: req.Device.ID,
+		Mode: mode, Preset: preset, NCtx: nctx,
 	}
-	return Placement{Key: key, Spec: spec, Plan: spec}, nil
 }
 
 // --- core.Admin ---

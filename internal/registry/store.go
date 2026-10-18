@@ -427,3 +427,52 @@ func (f *flight) finish(err error) {
 	f.cancel()
 	close(f.done)
 }
+
+// Adopt places files of the entry found in dir (by their catalog file name)
+// into the store, hard-linking where it can and copying otherwise, for an
+// offline installation. Pull then verifies them like any existing copy.
+func (s *Store) Adopt(m Manifest, dir string) (int, error) {
+	n := 0
+	for _, f := range m.Files {
+		src := filepath.Join(dir, path.Base(f.Path))
+		info, err := os.Stat(src)
+		if err != nil || info.Size() != f.Size {
+			continue
+		}
+		dst, err := s.FilePath(m, f.Role)
+		if err != nil {
+			return n, err
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return n, err
+		}
+		_ = os.Remove(dst)
+		if err := os.Link(src, dst); err != nil {
+			if err := copyFile(src, dst); err != nil {
+				return n, err
+			}
+		}
+		n++
+	}
+	return n, nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst + ".part")
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	return os.Rename(dst+".part", dst)
+}

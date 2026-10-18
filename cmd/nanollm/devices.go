@@ -106,8 +106,12 @@ func modelsCommand(args []string) error {
 		return showCatalog()
 	case "inspect":
 		return inspectCommand(args[1:], os.Stdout)
-	case "list", "pull", "rm":
-		return notYet("models "+sub, "v1.0")
+	case "list":
+		return modelsList(args[min(1, len(args)):])
+	case "pull":
+		return modelsPull(args[1:])
+	case "rm":
+		return modelsRemove(args[1:])
 	default:
 		return fmt.Errorf("models %s: unknown subcommand; use catalog, list, pull, rm or inspect", sub)
 	}
