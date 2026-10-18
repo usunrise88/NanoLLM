@@ -18,7 +18,7 @@ export CGO_ENABLED := 0
 # The five release platforms; darwin is built per architecture and merged.
 TARGETS     := linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/arm64 darwin/amd64
 
-.PHONY: all web build build-noui cross libs lint test test-race run tidy clean help
+.PHONY: all web build build-noui cross libs lint test test-race conformance run run-fake tidy clean help
 
 all: web build
 
@@ -65,6 +65,14 @@ test:
 ## test-race: the pool, the scheduler and the queue are only correct under -race (needs cgo)
 test-race:
 	CGO_ENABLED=1 $(GO) test -race ./...
+
+## conformance: the OpenAI client conformance suite against the fake backend (pip install -r tests/conformance/requirements.txt)
+conformance: build
+	NANOLLM_BIN=$(abspath $(DIST)/nanollm) python3 -m pytest -q tests/conformance
+
+## run-fake: the server on the scripted fake backend, for UI work without a model
+run-fake: build
+	NANOLLM_BACKENDS_ENABLED=fake $(DIST)/nanollm serve
 
 ## run: run the server against the example configuration's defaults (open, loopback)
 run: build

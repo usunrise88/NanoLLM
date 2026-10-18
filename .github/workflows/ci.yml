@@ -38,6 +38,22 @@ jobs:
           echo "server did not come up" >&2
           exit 1
 
+  # The official OpenAI Python client against the server on the fake backend:
+  # streaming, tools, logprobs, error shapes. The same suite runs against a
+  # real model with NANOLLM_BASE_URL set.
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r tests/conformance/requirements.txt
+      - run: make conformance
+
   # Unit tests on the other two platforms: path handling, the data-dir
   # defaults and library names differ per OS, and only a real runner shows it.
   test:
