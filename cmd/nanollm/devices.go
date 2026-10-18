@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/usunrise88/nanollm/internal/api/adapter"
 	"github.com/usunrise88/nanollm/internal/backend"
@@ -17,18 +18,20 @@ import (
 
 func printVersion() {
 	fmt.Printf("nanollm    %s\n", version)
-	fmt.Printf("llama.cpp  %s (minimum %s)\n", llamacpp.PinnedTag, llamacpp.MinTag)
+	fmt.Printf("llama.cpp  %s %s (minimum %s)\n", llamacpp.PinnedTag, shortCommit(llamacpp.PinnedCommit), llamacpp.MinTag)
 	fmt.Printf("backends   %v\n", backend.Registered())
 	fmt.Printf("dialects   %v\n", adapter.Available())
 	fmt.Printf("ui         %v\n", ui.Enabled)
 }
 
-// devicesCommand reports, per enabled backend, whether its libraries were
-// found and which devices it sees. Until the engine bindings land it answers
-// the first question only, which is already the one fetch-libs gets wrong.
+// devicesCommand reports, per enabled backend, whether its libraries load,
+// the build they are, the devices they see, and the backend libraries in
+// lib/ that did not load and why (a missing libvulkan.so.1, a CUDA driver
+// that is too old) — the questions fetch-libs and installers get wrong.
 func devicesCommand(args []string) error {
 	fs := flag.NewFlagSet("devices", flag.ExitOnError)
 	cfgPath := configFlag(fs)
+	libDirFlag := fs.String("lib-dir", "", "native library directory (overrides backends.lib_dir)")
 	if _, err := parseFlags(fs, args); err != nil {
 		return err
 	}
@@ -36,7 +39,7 @@ func devicesCommand(args []string) error {
 	if err != nil {
 		return err
 	}
-	libDir, err := backend.ResolveLibDir(cfg.Backends.LibDir)
+	libDir, err := resolveLibDir(cfg, *libDirFlag)
 	if err != nil {
 		return err
 	}
@@ -49,7 +52,6 @@ func devicesCommand(args []string) error {
 			continue
 		}
 		devs, err := b.Devices(context.Background())
-		_ = b.Close()
 		switch {
 		case errors.Is(err, backend.ErrNotImplemented):
 			fmt.Printf("%-10s %s: libraries found; %v\n", name, b.Version(), err)
@@ -59,13 +61,39 @@ func devicesCommand(args []string) error {
 			fmt.Printf("%-10s %s: no devices\n", name, b.Version())
 		default:
 			fmt.Printf("%-10s %s\n", name, b.Version())
+			if v, ok := b.(interface{ CPUVariant() string }); ok && v.CPUVariant() != "" {
+				fmt.Printf("  cpu variant %s\n", v.CPUVariant())
+			}
 			for _, d := range devs {
-				fmt.Printf("  %-22s %-4s %-32s %s free of %s\n", d.Selector(), d.Type, d.Name,
+				kind := string(d.Type)
+				if d.Unified {
+					kind += " (unified memory)"
+				}
+				fmt.Printf("  %-22s %-22s %-40s %s free of %s\n", d.Selector(), kind, d.Name,
 					gib(d.MemoryFree), gib(d.MemoryTotal))
 			}
 		}
+		if w, ok := b.(backend.Warner); ok {
+			for _, msg := range w.Warnings() {
+				fmt.Printf("  warning: %s\n", msg)
+			}
+		}
+		_ = b.Close()
 	}
 	return nil
+}
+
+// resolveLibDir applies the -lib-dir flag over backends.lib_dir.
+func resolveLibDir(cfg config.Config, flagValue string) (string, error) {
+	dir := cfg.Backends.LibDir
+	if flagValue != "" {
+		abs, err := filepath.Abs(flagValue)
+		if err != nil {
+			return "", err
+		}
+		dir = abs
+	}
+	return backend.ResolveLibDir(dir)
 }
 
 func modelsCommand(args []string) error {
@@ -104,6 +132,14 @@ func showCatalog() error {
 			m.ID, m.Arch, m.Params, m.Quant, m.Role, size, m.Pinned())
 	}
 	return nil
+}
+
+// shortCommit is the abbreviation llama.cpp itself reports (ggml_commit).
+func shortCommit(c string) string {
+	if len(c) > 9 {
+		return c[:9]
+	}
+	return c
 }
 
 func gib(b int64) string {

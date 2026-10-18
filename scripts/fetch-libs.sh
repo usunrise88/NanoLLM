@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fetch the native libraries of one pinned llama.cpp release (SPEC §10, step 1).
 #
-#   scripts/fetch-libs.sh [TAG] [TARGET...]
+#   scripts/fetch-libs.sh [--tools] [TAG] [TARGET...]
 #
 # TAG defaults to the contents of scripts/llama.cpp.tag. TARGET is any of
 # linux_amd64 linux_arm64 windows_amd64 windows_arm64 darwin_arm64
@@ -13,6 +13,12 @@
 # libllama and libggml* are unpacked into dist/<target>/lib/. An add-on target
 # gets only ggml-cuda and the CUDA runtime, to unpack over an installation.
 #
+# --tools also unpacks the whole archive — llama-cli, llama-completion,
+# llama-server, llama-tokenize, llama-perplexity and the libraries they link —
+# into dist/<target>/tools/. The golden tests, the KL-divergence tooling and
+# the MTP reference run take their reference output from the tools of the same
+# tag (STAGE1 1.5, 1.10); the release does not ship them.
+#
 # NanoLLM compiles no C code. If an upstream archive layout changes, this
 # script fails on the layout check below rather than shipping a lib/ that is
 # missing a backend (SPEC §14, risks).
@@ -21,6 +27,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 MIN_TAG=b9568 # keep in step with llamacpp.MinTag
+TOOLS=0
+if [[ "${1:-}" == --tools ]]; then
+  TOOLS=1
+  shift
+fi
 TAG="${1:-$(tr -d '[:space:]' < scripts/llama.cpp.tag)}"
 shift || true
 
@@ -155,6 +166,20 @@ fetch() {
   copy_matching "$stage" "$out" 'libllama.*' 'llama.dll' 'libggml*' 'ggml*.dll' '*.metal'
   # The CUDA backend ships only in the add-on.
   rm -f "$out"/*ggml-cuda*
+
+  if (( TOOLS )); then
+    # The tools resolve their libraries next to themselves ($ORIGIN, the DLL
+    # directory, @loader_path), so the archive is unpacked flat as it is.
+    local tools=dist/$target/tools
+    rm -rf "$tools"
+    mkdir -p "$tools"
+    find "$stage" \( -type f -o -type l \) -exec cp -P {} "$tools/" \;
+    if ! compgen -G "$tools/llama-server*" >/dev/null; then
+      echo "fetch-libs: $assets contains no llama-server; the archive layout changed" >&2
+      exit 1
+    fi
+    echo "$target: $(ls "$tools" | wc -l | tr -d ' ') files in $tools"
+  fi
 
   # Layout check: no libllama, or no CPU backend, means the archive changed
   # shape and the binary would start without an engine.
