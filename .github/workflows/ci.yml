@@ -232,3 +232,94 @@ jobs:
         env:
           CGO_ENABLED: "0"
         run: go run ./cmd/nanollm devices -lib-dir dist/${{ matrix.target }}/lib
+
+  # The installers end to end on each OS (STAGE1 1.9), from an archive built
+  # here rather than a release: install as a service, /healthz answers, an
+  # upgrade in place keeps the configuration and the keys, and uninstall
+  # --purge leaves nothing behind.
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: libgomp and the Vulkan loader
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libgomp1 libvulkan1
+      - name: a local archive for this machine
+        id: dist
+        run: |
+          archive="$(UI=0 VERSION=v0.0.0-ci OUT=out ./scripts/dist.sh)"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: install.sh, systemd
+        if: runner.os == 'Linux'
+        env:
+          ARCHIVE: ${{ steps.dist.outputs.archive }}
+        run: |
+          set -euo pipefail
+          sudo ./scripts/install.sh --archive "$ARCHIVE" --no-ui --no-download --addr 127.0.0.1:18080
+          systemctl is-active nanollm
+          grep -q '^LimitMEMLOCK=infinity$' /etc/systemd/system/nanollm.service
+          curl -fsS 127.0.0.1:18080/healthz
+          sudo /opt/nanollm/nanollm service status
+          before=$(sudo sha256sum /var/lib/nanollm/nanollm.yaml)
+          sudo ./scripts/install.sh --archive "$ARCHIVE" --no-ui --no-download
+          [ "$before" = "$(sudo sha256sum /var/lib/nanollm/nanollm.yaml)" ] || { echo "::error::the upgrade rewrote the configuration"; exit 1; }
+          curl -fsS 127.0.0.1:18080/healthz
+          sudo ./scripts/install.sh --uninstall --purge
+          for p in /etc/systemd/system/nanollm.service /opt/nanollm /var/lib/nanollm; do
+            [ ! -e "$p" ] || { echo "::error::$p survived --purge"; exit 1; }
+          done
+          ! id nanollm 2>/dev/null || { echo "::error::the nanollm account survived --purge"; exit 1; }
+
+      - name: install.sh, launchd agent
+        if: runner.os == 'macOS'
+        env:
+          ARCHIVE: ${{ steps.dist.outputs.archive }}
+        run: |
+          set -euo pipefail
+          data="$HOME/Library/Application Support/NanoLLM"
+          ./scripts/install.sh --archive "$ARCHIVE" --no-ui --no-download --addr 127.0.0.1:18080
+          curl -fsS 127.0.0.1:18080/healthz
+          /usr/local/nanollm/nanollm service status
+          before=$(shasum -a 256 "$data/nanollm.yaml")
+          ./scripts/install.sh --archive "$ARCHIVE" --no-ui --no-download
+          [ "$before" = "$(shasum -a 256 "$data/nanollm.yaml")" ] || { echo "::error::the upgrade rewrote the configuration"; exit 1; }
+          curl -fsS 127.0.0.1:18080/healthz
+          ./scripts/install.sh --uninstall --purge
+          for p in "$HOME/Library/LaunchAgents/com.github.usunrise88.nanollm.plist" /usr/local/nanollm "$data"; do
+            [ ! -e "$p" ] || { echo "::error::$p survived --purge"; exit 1; }
+          done
+
+      - name: install.ps1, Windows service
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ARCHIVE: ${{ steps.dist.outputs.archive }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $config = Join-Path $env:ProgramData 'NanoLLM\nanollm.yaml'
+          ./scripts/install.ps1 -Archive $env:ARCHIVE -NoDownload -Addr 127.0.0.1:18080
+          if ($LASTEXITCODE) { throw "install.ps1 failed" }
+          if ((Get-Service NanoLLM).Status -ne 'Running') { throw "the service is not running" }
+          Invoke-WebRequest -UseBasicParsing http://127.0.0.1:18080/healthz | Select-Object -ExpandProperty Content
+          & "$env:ProgramFiles\NanoLLM\nanollm.exe" service status
+          $before = (Get-FileHash $config).Hash
+          ./scripts/install.ps1 -Archive $env:ARCHIVE -NoDownload
+          if ($LASTEXITCODE) { throw "the upgrade failed" }
+          if ((Get-FileHash $config).Hash -ne $before) { throw "the upgrade rewrote the configuration" }
+          Invoke-WebRequest -UseBasicParsing http://127.0.0.1:18080/healthz | Out-Null
+          ./scripts/install.ps1 -Uninstall -Purge
+          if (Get-Service NanoLLM -ErrorAction SilentlyContinue) { throw "the service survived -Uninstall" }
+          foreach ($p in "$env:ProgramFiles\NanoLLM", "$env:ProgramData\NanoLLM") {
+            if (Test-Path $p) { throw "$p survived -Purge" }
+          }

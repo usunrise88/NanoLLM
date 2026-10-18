@@ -60,6 +60,9 @@ $SelfUrl = "https://github.com/$Repo/releases/latest/download/install.ps1"
 $Config  = Join-Path $DataDir 'nanollm.yaml'
 $Exe     = Join-Path $Prefix 'nanollm.exe'
 $LogFile = Join-Path $DataDir 'logs\nanollm.log'
+# Whether an address was asked for at all: an upgrade keeps the configuration,
+# so one that was asked for and not applied has to be reported.
+$AddrGiven = $PSBoundParameters.ContainsKey('Addr') -or [bool]$env:NANOLLM_ADDR
 if ($Archive)     { $Archive     = [IO.Path]::GetFullPath($Archive) }
 if ($CudaArchive) { $CudaArchive = [IO.Path]::GetFullPath($CudaArchive); $Cuda = [switch]$true }
 
@@ -114,8 +117,9 @@ function Invoke-Elevated {
         Invoke-WebRequest -UseBasicParsing -Uri $SelfUrl -OutFile $script
     }
     $a = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-NoExit', '-File', "`"$script`"",
-           '-Prefix', "`"$Prefix`"", '-DataDir', "`"$DataDir`"", '-Addr', "`"$Addr`"",
+           '-Prefix', "`"$Prefix`"", '-DataDir', "`"$DataDir`"",
            '-ServiceName', "`"$ServiceName`"", '-Repo', "`"$Repo`"")
+    if ($AddrGiven)   { $a += @('-Addr', "`"$Addr`"") }
     if ($Version)     { $a += @('-Version', "`"$Version`"") }
     if ($Archive)     { $a += @('-Archive', "`"$Archive`"") }
     if ($CudaArchive) { $a += @('-CudaArchive', "`"$CudaArchive`"") }
@@ -405,6 +409,15 @@ function Install-NanoLLM {
     $keys = @()
     if (Test-ConfigHasKeys) {
         Say "keeping the configuration in $Config"
+        # The server listens where the kept file says, not where -Addr says,
+        # and the health check and the summary have to ask the same place.
+        $line = Get-Content -LiteralPath $Config | Where-Object { $_ -like '  addr:*' } | Select-Object -First 1
+        if ($line -match '^  addr:\s*"?([^"#\s]+)' -and $Matches[1] -ne $Addr) {
+            if ($AddrGiven) {
+                Warn "-Addr was not applied: an upgrade keeps the configuration, and the server listens on $($Matches[1]). Set server.addr in $Config and run: nanollm service restart"
+            }
+            $script:Addr = $Matches[1]
+        }
     } else {
         Say "writing the configuration with two fresh API keys"
         $out  = Invoke-Native $Exe @('init', '-config', $Config, '-data-dir', $DataDir, '-addr', $Addr, '-force', '-no-download') -Quiet
