@@ -190,6 +190,9 @@ func (c *Config) Validate() error {
 				i, b, BackendLlamaCpp, BackendORTGenAI, BackendMLX)
 		}
 	}
+	if c.Server.MaxBody <= 0 {
+		return fmt.Errorf("server.max_body must be positive")
+	}
 	for i, m := range c.Registry.Mirrors {
 		if u, err := url.Parse(m); err != nil || u.Scheme != "https" || u.Host == "" {
 			return fmt.Errorf("registry.mirrors[%d]: %q must be an https URL", i, m)

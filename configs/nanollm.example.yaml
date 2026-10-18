@@ -11,6 +11,7 @@
 server:
   addr: 127.0.0.1:8080
   data_dir: /var/lib/nanollm
+  max_body: 16777216      # bytes; 16 MiB
 
 auth:
   mode: apikey            # open allowed only on loopback

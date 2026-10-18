@@ -30,6 +30,9 @@ type Server struct {
 	Addr string `yaml:"addr"`
 	// DataDir holds downloaded weights, the job database and the spool.
 	DataDir string `yaml:"data_dir"`
+	// MaxBody caps a request body in bytes. A long-context chat is a few
+	// megabytes of JSON; anything far beyond that is a mistake or an attack.
+	MaxBody int64 `yaml:"max_body"`
 }
 
 // Auth in mode "open" is accepted only when Server.Addr binds a loopback

@@ -18,6 +18,7 @@ func Default() Config {
 		Server: Server{
 			Addr:    "127.0.0.1:8080",
 			DataDir: DefaultDataDir(),
+			MaxBody: 16 << 20,
 		},
 		Auth: Auth{Mode: "open"},
 		API:  API{Dialects: []string{DialectOpenAI, DialectNative}},
