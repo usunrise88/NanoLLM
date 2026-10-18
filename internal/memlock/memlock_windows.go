@@ -71,7 +71,7 @@ func (p *Pin) lock() error {
 			addr uintptr
 			size uintptr
 		}{addr, uintptr(size)}
-		procPrefetchVirtualMemory.Call(uintptr(windows.CurrentProcess()), 1, uintptr(unsafe.Pointer(&entry)), 0)
+		_, _, _ = procPrefetchVirtualMemory.Call(uintptr(windows.CurrentProcess()), 1, uintptr(unsafe.Pointer(&entry)), 0)
 		if err := windows.VirtualLock(addr, uintptr(size)); err != nil {
 			return limitError(need, p.locked, "VirtualLock refused ("+err.Error()+")")
 		}
@@ -90,7 +90,7 @@ func (p *Pin) unlock() error {
 	}
 	p.sys.views, p.sys.sizes = nil, nil
 	if p.sys.mapping != 0 {
-		windows.CloseHandle(p.sys.mapping)
+		_ = windows.CloseHandle(p.sys.mapping)
 		p.sys.mapping = 0
 	}
 	p.locked = 0

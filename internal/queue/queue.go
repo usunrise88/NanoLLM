@@ -392,7 +392,7 @@ func (q *Queue) notifyWebhook(j *Job) {
 			if attempt > 0 {
 				time.Sleep(time.Duration(1<<attempt) * time.Second)
 			}
-			req, err := http.NewRequest(http.MethodPost, j.WebhookURL, bytes.NewReader(body))
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, j.WebhookURL, bytes.NewReader(body))
 			if err != nil {
 				return
 			}

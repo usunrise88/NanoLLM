@@ -15,6 +15,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -83,7 +84,7 @@ func run(args []string, base bool) error {
 		cmdArgs = append(cmdArgs, "--kl-divergence-base", *logits, "--kl-divergence")
 	}
 	cmdArgs = append(cmdArgs, extra...)
-	cmd := exec.Command(bin, cmdArgs...)
+	cmd := exec.CommandContext(context.Background(), bin, cmdArgs...)
 	cmd.Env = append(os.Environ(), "LD_LIBRARY_PATH="+*tools)
 	var log strings.Builder
 	cmd.Stdout = io.MultiWriter(&log, os.Stderr)

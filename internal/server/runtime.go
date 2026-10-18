@@ -150,7 +150,7 @@ func (r *Runtime) load(ctx context.Context, k pool.Key) (backend.Model, any, err
 			pin, err := memlock.PinFile(path, ranges)
 			if err != nil {
 				for _, p := range pins {
-					p.Close()
+					_ = p.Close()
 				}
 				return nil, nil, fmt.Errorf("range-lock %s: %w", role, err)
 			}
@@ -161,7 +161,7 @@ func (r *Runtime) load(ctx context.Context, k pool.Key) (backend.Model, any, err
 	m, err := b.Load(ctx, spec)
 	if err != nil {
 		for _, p := range pins {
-			p.Close()
+			_ = p.Close()
 		}
 		return nil, nil, err
 	}
@@ -184,7 +184,7 @@ type pinnedModel struct {
 func (m pinnedModel) Close() error {
 	err := m.Model.Close()
 	for _, p := range m.pins {
-		p.Close()
+		_ = p.Close()
 	}
 	return err
 }

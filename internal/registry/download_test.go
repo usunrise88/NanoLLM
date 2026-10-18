@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -244,7 +245,7 @@ func TestStorePullCancel(t *testing.T) {
 	s := &Store{Root: t.TempDir(), Downloader: &Downloader{Client: srv.Client(), Primary: srv.URL}}
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	if err := s.Pull(ctx, m, nil); err != context.DeadlineExceeded {
+	if err := s.Pull(ctx, m, nil); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("cancel: %v", err)
 	}
 }

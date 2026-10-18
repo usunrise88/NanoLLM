@@ -307,7 +307,7 @@ func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (
 		if err == nil {
 			err = jerr
 		}
-		return wr, enforcement, fmt.Errorf("worker: %v: %s", err, tail)
+		return wr, enforcement, fmt.Errorf("worker: %w: %s", err, tail)
 	}
 	if wr.Error != "" {
 		return wr, enforcement, errors.New(wr.Error)

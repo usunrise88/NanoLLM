@@ -2,6 +2,7 @@ package fake
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -192,7 +193,7 @@ func TestCancelAndFailure(t *testing.T) {
 	}
 	f := load(t, Options{}, backend.LoadSpec{})
 	toks, _ := f.Tokenize("[[fake:error]]", false, true)
-	if _, err := f.Step(context.Background(), []backend.SeqStep{{Seq: 0, Tokens: toks, Sample: true}}); err != errScenario {
+	if _, err := f.Step(context.Background(), []backend.SeqStep{{Seq: 0, Tokens: toks, Sample: true}}); !errors.Is(err, errScenario) {
 		t.Fatalf("scripted failure: %v", err)
 	}
 }

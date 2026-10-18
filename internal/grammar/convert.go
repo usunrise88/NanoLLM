@@ -305,7 +305,7 @@ func gbnfEscapeLength(p string, pos int) int {
 	if pos+1 >= len(p) || p[pos] != '\\' {
 		return 0
 	}
-	nHex := 0
+	var nHex int
 	switch p[pos+1] {
 	case 'x':
 		nHex = 2
@@ -322,7 +322,7 @@ func gbnfEscapeLength(p string, pos int) int {
 		return 0
 	}
 	for _, h := range p[pos+2 : pos+2+nHex] {
-		if !(h >= '0' && h <= '9' || h >= 'a' && h <= 'f' || h >= 'A' && h <= 'F') {
+		if (h < '0' || h > '9') && (h < 'a' || h > 'f') && (h < 'A' || h > 'F') {
 			return 0
 		}
 	}
@@ -480,11 +480,11 @@ func (c *converter) patternToRule(pattern, name string) string {
 
 		for i < length {
 			ch := sub[i]
-			switch {
-			case ch == '.':
+			switch ch {
+			case '.':
 				seq = append(seq, litOrRule{getDot(), false})
 				i++
-			case ch == '(':
+			case '(':
 				i++
 				if i < length && sub[i] == '?' {
 					if i+1 < length && sub[i+1] == ':' {
@@ -498,16 +498,16 @@ func (c *converter) patternToRule(pattern, name string) string {
 					panic(unsupportedPattern{"pattern nesting too deep"})
 				}
 				seq = append(seq, litOrRule{"(" + toRule(transform()) + ")", false})
-			case ch == ')':
+			case ')':
 				i++
 				if depth == 0 {
 					panic(invalidPattern{"unbalanced parentheses"})
 				}
 				depth--
 				return joinSeq()
-			case ch == '^' || ch == '$':
+			case '^', '$':
 				panic(unsupportedPattern{"anchor inside the pattern"})
-			case ch == '[':
+			case '[':
 				sb := "["
 				i++
 				for i < length && sub[i] != ']' {
@@ -529,16 +529,16 @@ func (c *converter) patternToRule(pattern, name string) string {
 				sb += "]"
 				i++
 				seq = append(seq, litOrRule{sb, false})
-			case ch == '|':
+			case '|':
 				seq = append(seq, litOrRule{"|", false})
 				i++
-			case ch == '*' || ch == '+' || ch == '?':
+			case '*', '+', '?':
 				if len(seq) == 0 {
 					panic(invalidPattern{"nothing to repeat"})
 				}
 				seq[len(seq)-1] = litOrRule{toRule(seq[len(seq)-1]) + string(ch), false}
 				i++
-			case ch == '{':
+			case '{':
 				cb := "{"
 				i++
 				for i < length && sub[i] != '}' {

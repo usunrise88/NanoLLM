@@ -2,6 +2,10 @@
 
 package memlock
 
+import "errors"
+
+var errUnsupported = errors.New("memlock: not supported on this platform")
+
 type pinSys struct{}
 
 func (p *Pin) lock() error {

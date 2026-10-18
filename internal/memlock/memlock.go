@@ -92,7 +92,7 @@ func PinFile(path string, ranges []Range) (*Pin, error) {
 	}
 	p := &Pin{f: f, size: st.Size(), ranges: align(ranges, st.Size())}
 	if err := p.lock(); err != nil {
-		p.Close()
+		_ = p.Close()
 		return nil, err
 	}
 	return p, nil
@@ -119,5 +119,3 @@ func (p *Pin) Close() error {
 func limitError(need, have int64, how string) error {
 	return fmt.Errorf("%w: %d MiB to lock, the limit allows %d MiB; %s", ErrLimit, need>>20, have>>20, how)
 }
-
-var errUnsupported = errors.New("memlock: not supported on this platform")

@@ -124,10 +124,10 @@ func TestAllFailed(t *testing.T) {
 func TestSubmitRefusesBadLines(t *testing.T) {
 	q := open(t, &stubService{}, Options{})
 	for body, want := range map[string]string{
-		"":                                 "no requests",
-		"{\"messages\":[]}\n":              "line 1: messages",
+		"":                    "no requests",
+		"{\"messages\":[]}\n": "line 1: messages",
 		"\n{\"messages\":[{\"role\":\"user\",\"content\":\"a\"}]}\n{oops}\n": "line 3",
-		"{\"messages\":[{\"role\":\"user\",\"content\":\"a\"}],\"bogus\":1}":  "line 1",
+		"{\"messages\":[{\"role\":\"user\",\"content\":\"a\"}],\"bogus\":1}": "line 1",
 	} {
 		_, err := q.Submit(context.Background(), []byte(body), "", "", "")
 		if err == nil || !strings.Contains(err.Error(), want) || core.AsError(err).Code != core.CodeInvalidRequest {

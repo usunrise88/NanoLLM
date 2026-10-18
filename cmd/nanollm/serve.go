@@ -122,7 +122,7 @@ func serve(args []string) error {
 		if err != nil {
 			return err
 		}
-		defer q.Close()
+		defer func() { _ = q.Close() }()
 		jobs = q
 	}
 	if err := adapter.MountAll(mux, cfg.API.Dialects, adapter.Deps{

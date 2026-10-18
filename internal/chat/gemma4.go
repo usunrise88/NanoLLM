@@ -173,7 +173,7 @@ func renderGemma4(messages []turn, tools []core.Tool, opts Options) string {
 		if role == core.RoleAssistant {
 			role = "model"
 		}
-		if !(role == "model" && prevNonTool == core.RoleAssistant) {
+		if role != "model" || prevNonTool != core.RoleAssistant {
 			sb.WriteString(turnOpen + role + "\n")
 		}
 
@@ -246,7 +246,7 @@ func renderGemma4(messages []turn, tools []core.Tool, opts Options) string {
 		case prevType == "tool_call" && !responded:
 			sb.WriteString(respOpen)
 		case continues:
-		case !(responded && !hasContent && !nextFound):
+		case !responded || hasContent || nextFound:
 			sb.WriteString(turnClose + "\n")
 		}
 		prevNonTool = m.Role

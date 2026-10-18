@@ -38,7 +38,7 @@ func parseSMBIOS(raw []byte) smbiosInfo {
 		// ending with an extra NUL.
 		rest := table[length:]
 		end := 0
-		for end+1 < len(rest) && !(rest[end] == 0 && rest[end+1] == 0) {
+		for end+1 < len(rest) && (rest[end] != 0 || rest[end+1] != 0) {
 			end++
 		}
 		var strs []string

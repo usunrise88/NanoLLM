@@ -2,6 +2,7 @@ package sched
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -146,7 +147,7 @@ func TestCancel(t *testing.T) {
 		}
 		ev, _ := h.Next(context.Background())
 		if ev.Done {
-			if ev.Err != context.Canceled {
+			if !errors.Is(ev.Err, context.Canceled) {
 				t.Fatalf("err %v", ev.Err)
 			}
 			break
@@ -191,7 +192,7 @@ func TestCloseEndsRequests(t *testing.T) {
 	for {
 		ev, _ := h.Next(context.Background())
 		if ev.Done {
-			if ev.Err != ErrClosed {
+			if !errors.Is(ev.Err, ErrClosed) {
 				t.Fatalf("err %v", ev.Err)
 			}
 			return

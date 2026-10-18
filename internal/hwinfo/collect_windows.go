@@ -37,7 +37,7 @@ func collect(ctx context.Context) benchfmt.Machine {
 		m.CPU.Model, _, _ = k.GetStringValue("ProcessorNameString")
 		vendor, _, _ := k.GetStringValue("VendorIdentifier")
 		m.CPU.Vendor = map[string]string{"GenuineIntel": "Intel", "AuthenticAMD": "AMD"}[vendor]
-		k.Close()
+		_ = k.Close()
 	}
 	m.CPU.Cores, m.CPU.Threads, m.CPU.PCores, m.CPU.ECores = processorCores()
 	m.CPU.ISA = isa()
@@ -101,7 +101,7 @@ func smbios() (smbiosInfo, bool) {
 func processorCores() (cores, threads, p, e int) {
 	const relationProcessorCore = 0
 	var size uint32
-	procGetLogicalProcessorInfoEx.Call(relationProcessorCore, 0, uintptr(unsafe.Pointer(&size)))
+	_, _, _ = procGetLogicalProcessorInfoEx.Call(relationProcessorCore, 0, uintptr(unsafe.Pointer(&size)))
 	if size == 0 {
 		return
 	}

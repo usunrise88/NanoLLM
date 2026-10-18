@@ -113,7 +113,7 @@ func openStore(path string) (*store, error) {
 	// One writer: SQLite serialises them anyway, and a single connection
 	// makes "database is locked" impossible rather than unlikely.
 	db.SetMaxOpenConns(1)
-	if _, err := db.Exec(schema); err != nil {
+	if _, err := db.ExecContext(context.Background(), schema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("queue database %s: %w", path, err)
 	}

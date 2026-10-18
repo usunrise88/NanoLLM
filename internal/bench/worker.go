@@ -68,7 +68,7 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 	if err != nil {
 		return res, err
 	}
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 	if cv, ok := b.(cpuVarianter); ok {
 		res.CPUVariant = cv.CPUVariant()
 	}
@@ -81,13 +81,13 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 		if err != nil {
 			return res, fmt.Errorf("range-lock: %w", err)
 		}
-		defer pin.Close()
+		defer func() { _ = pin.Close() }()
 	}
 	m, err := b.Load(ctx, spec.Load)
 	if err != nil {
 		return res, err
 	}
-	defer m.Close()
+	defer func() { _ = m.Close() }()
 	res.Metrics.LoadMS = ms(time.Since(start))
 	loop := sched.New(m)
 	defer loop.Close()

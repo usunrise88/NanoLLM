@@ -672,7 +672,7 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, core.Errorf(core.CodeInvalidRequest, "suffix is not supported").WithParam("suffix"))
 		return
 	}
-	smp, err := req.sampling.core()
+	smp, err := req.core()
 	if err != nil {
 		writeError(w, err)
 		return

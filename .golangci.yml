@@ -22,11 +22,20 @@ linters:
       # Close() on a read-only handle in a defer is noise, not a finding.
       exclude-functions:
         - (io.Closer).Close
+        - (*os.File).Close
+        - (*database/sql.DB).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.Tx).Rollback
+        # Terminal output: a failed write to stdout or stderr has nowhere
+        # better to be reported.
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
 
   exclusions:
     rules:
       - path: _test\.go
-        linters: [errcheck, bodyclose]
+        linters: [errcheck, bodyclose, noctx]
 
 formatters:
   enable:
