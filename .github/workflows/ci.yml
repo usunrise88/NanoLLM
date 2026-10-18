@@ -38,6 +38,21 @@ jobs:
           echo "server did not come up" >&2
           exit 1
 
+  # benchfmt is its own module (it moves out with the benchmark service), so
+  # the root ./... does not reach it.
+  benchfmt:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchfmt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: benchfmt/go.mod
+      - run: go vet ./...
+      - run: go test ./...
+
   # The official OpenAI Python client against the server on the fake backend:
   # streaming, tools, logprobs, error shapes. The same suite runs against a
   # real model with NANOLLM_BASE_URL set.

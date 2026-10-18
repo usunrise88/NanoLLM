@@ -1,0 +1,451 @@
+{
+  "$id": "https://nano.llmto.day/schema/nanollm.bench-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "client": {
+      "properties": {
+        "arch": {
+          "type": "string"
+        },
+        "ggml_cpu_variant": {
+          "type": "string"
+        },
+        "llama_cpp": {
+          "properties": {
+            "commit": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "commit",
+            "tag"
+          ],
+          "type": "object"
+        },
+        "nanollm": {
+          "type": "string"
+        },
+        "os": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "arch",
+        "llama_cpp",
+        "nanollm",
+        "os"
+      ],
+      "type": "object"
+    },
+    "consent_version": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string"
+    },
+    "duration_s": {
+      "type": "number"
+    },
+    "install_id": {
+      "type": "string"
+    },
+    "machine": {
+      "properties": {
+        "cpu": {
+          "properties": {
+            "cores": {
+              "type": "integer"
+            },
+            "e_cores": {
+              "type": "integer"
+            },
+            "isa": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "model": {
+              "type": "string"
+            },
+            "p_cores": {
+              "type": "integer"
+            },
+            "threads": {
+              "type": "integer"
+            },
+            "vendor": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "cores",
+            "model",
+            "threads",
+            "vendor"
+          ],
+          "type": "object"
+        },
+        "disk": {
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "extra": {
+          "items": {
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "value"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "gpus": {
+          "items": {
+            "properties": {
+              "cores": {
+                "type": "integer"
+              },
+              "driver_major": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "power_limit_w": {
+                "type": "integer"
+              },
+              "unified": {
+                "type": "boolean"
+              },
+              "vendor": {
+                "type": "string"
+              },
+              "vram_bytes": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "memory": {
+          "properties": {
+            "speed_mts": {
+              "type": "integer"
+            },
+            "total_bytes": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "total_bytes"
+          ],
+          "type": "object"
+        },
+        "os": {
+          "properties": {
+            "kernel_mm": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "wsl": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "power": {
+          "properties": {
+            "profile": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "system": {
+          "properties": {
+            "chassis": {
+              "type": "string"
+            },
+            "family": {
+              "type": "string"
+            },
+            "form_factor": {
+              "type": "string"
+            },
+            "product": {
+              "type": "string"
+            },
+            "user_entered": {
+              "type": "boolean"
+            },
+            "vendor": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "form_factor"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "cpu",
+        "disk",
+        "memory",
+        "os",
+        "power",
+        "system"
+      ],
+      "type": "object"
+    },
+    "model": {
+      "properties": {
+        "drafter_sha256": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "runs": {
+      "items": {
+        "properties": {
+          "metrics": {
+            "properties": {
+              "chat_tok_s": {
+                "type": "number"
+              },
+              "load_ms": {
+                "type": "number"
+              },
+              "mtp": {
+                "properties": {
+                  "acceptance": {
+                    "type": "number"
+                  },
+                  "speedup": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "acceptance",
+                  "speedup"
+                ],
+                "type": "object"
+              },
+              "peak_locked": {
+                "type": "integer"
+              },
+              "peak_page_cache": {
+                "type": "integer"
+              },
+              "peak_rss": {
+                "type": "integer"
+              },
+              "peak_vram": {
+                "type": "integer"
+              },
+              "pp_tok_s": {
+                "type": "number"
+              },
+              "stddev": {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              "tg_tok_s": {
+                "properties": {
+                  "d0": {
+                    "type": "number"
+                  },
+                  "dN": {
+                    "type": "number"
+                  },
+                  "depth_n": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              "ttft_ms": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "tg_tok_s"
+            ],
+            "type": "object"
+          },
+          "output": {
+            "properties": {
+              "sha256": {
+                "type": "string"
+              },
+              "tokens": {
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          },
+          "plan": {
+            "properties": {
+              "device": {
+                "type": "string"
+              },
+              "enforcement": {
+                "type": "string"
+              },
+              "fa": {
+                "type": "boolean"
+              },
+              "gpu_layers": {
+                "type": "integer"
+              },
+              "kv": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "mtp": {
+                "type": "boolean"
+              },
+              "n_ctx": {
+                "type": "integer"
+              },
+              "slots": {
+                "type": "integer"
+              },
+              "swa_full": {
+                "type": "boolean"
+              },
+              "threads": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "fa",
+              "gpu_layers",
+              "mtp",
+              "swa_full"
+            ],
+            "type": "object"
+          },
+          "plan_hash": {
+            "type": "string"
+          },
+          "preset": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "reps": {
+            "type": "integer"
+          },
+          "same_as": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "metrics",
+          "output",
+          "plan",
+          "preset",
+          "reps",
+          "status"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "type": "string"
+    },
+    "signature": {
+      "type": "string"
+    },
+    "suite": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "prompts_sha256": {
+          "type": "string"
+        },
+        "quick": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "prompts_sha256",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "client",
+    "date",
+    "duration_s",
+    "machine",
+    "model",
+    "runs",
+    "schema",
+    "suite"
+  ],
+  "title": "nanollm.bench/v1",
+  "type": "object"
+}
