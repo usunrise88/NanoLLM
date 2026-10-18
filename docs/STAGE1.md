@@ -342,8 +342,34 @@ v0.11.2 и NanoASR.
   - цель — точное совпадение; при расхождении отчёт даёт отрыв top-1/top-2
     логита в первой точке расхождения (шум GEMM/GEMV или баг);
   - acceptance > 0.
-- **Чеклист обновления тега:** staging API, имена символов, эталон
-  `llama-cli`.
+- **Итог на VM (b11600, E4B Q4_0 QAT + int4-драфтер, CPU sapphirerapids):**
+  - эталон — `llama-server --spec-type draft-mtp` (у `llama-cli` нет счётчиков):
+    64 токена, 111 драфтов, 25 принятых — совпадает токен в токен и по
+    счётчикам (`testdata/golden/b11600/*/cpu-mtp.json`);
+  - 5 промптов: greedy с драфтером и без совпадает точно, acceptance 35 %;
+  - decode 6,5 tok/s без MTP; n_max 2 — 8,2 tok/s (×1,26), n_max 3 —
+    ×1,17, n_max 4 — ×0,93: на CPU драфт окупается до n_max 2–3;
+  - цель маскирована (`set_embeddings_nextn(masked=true)`): драфтеру Gemma 4
+    нужна только строка перед следующим токеном, а n_outputs_max остаётся
+    slots × (1 + DraftMax).
+- **Крошечные фикстуры:** `tools/fixtures/make_tiny.py` — `tiny-random/gemma-4-e`
+  и случайный `Gemma4AssistantForCausalLM` (seed, torch 2.14.1, transformers
+  5.20.1); побайтно воспроизводимы, sha256 в `testdata/fixtures/tiny.sha256`.
+  CI собирает их в job `binding` и раздаёт job `native`.
+- **Чеклист обновления тега:**
+  1. `go run ./tools/bindgen -src <llama.cpp> -check-exports dist/*/lib` —
+     staging API (`src/llama-ext.h`): сигнатуры и декорированные имена
+     (Itanium, MSVC) всех семи функций есть в таблицах экспорта;
+  2. сверить `common_speculative_impl_draft_mtp` (ветка `is_mem_shared`) с
+     `internal/backend/llamacpp/mtp.go`: позиция драфта, маска nextn, top-k 10,
+     правило `p_min`, какая строка становится `pending_h`;
+  3. проверить исключения `llama_init_from_model` для MTP-контекста
+     (`ctx_other`, `n_layer_nextn`) и `GGML_ASSERT` на `n_outputs_max`;
+  4. перезаписать эталоны `tools/golden` (с `-drafter` и без) на E4B и
+     крошечной паре; `TestNativeMTPMatchesServer` и `TestNativeMTPEquivalence`
+     зелёные;
+  5. замерить `TestNativeMTPSpeed` (`NANOLLM_TEST_LONG=1`) и обновить
+     значения по умолчанию n_max/p_min, если выигрыш сместился.
 
 ## 1.6 Range-lock (механика)
 

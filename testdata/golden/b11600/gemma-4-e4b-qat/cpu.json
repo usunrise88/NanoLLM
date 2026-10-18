@@ -4,6 +4,7 @@
   "generator": "llama-server b11600 /tokenize + /completion, greedy (top_k 1)",
   "model_file": "e4b.gguf",
   "model_size": 4215695776,
+  "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
   "cpu_variant": "sapphirerapids",
   "cpu_features": "CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | AVX512 = 1 | AVX512_VBMI = 1 | AVX512_VNNI = 1 | AVX512_BF16 = 1 | AMX_INT8 = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1",
   "threads": 4,

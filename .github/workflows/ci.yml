@@ -173,12 +173,27 @@ jobs:
           args=()
           for d in dist/*/lib; do args+=(-check-exports "$d"); done
           go run ./tools/bindgen -src "$RUNNER_TEMP/llama.cpp" "${args[@]}"
+      # The tiny Gemma 4 target and its MTP assistant (random weights, fixed
+      # seed), converted by the tag's own converter, for the native jobs.
+      - name: tiny fixtures
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1
+          pip install transformers==5.20.1 safetensors sentencepiece protobuf
+          python3 tools/fixtures/make_tiny.py --llama-cpp "$RUNNER_TEMP/llama.cpp" --out "$RUNNER_TEMP/fixtures"
+          (cd "$RUNNER_TEMP/fixtures" && grep -v "^#" "$GITHUB_WORKSPACE/testdata/fixtures/tiny.sha256" | sha256sum -c) || echo "fixtures differ from testdata/fixtures/tiny.sha256: the tiny golden files will skip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tiny-fixtures
+          path: ${{ runner.temp }}/fixtures/*.gguf
+          retention-days: 7
 
   # Native tests on each platform's own runner: fetch-libs for the host, then
-  # the tests tagged native. Without a model they still check loading, the
-  # commit refusal and CPU enumeration; the model tests skip with the reason
-  # until the tiny fixtures land (STAGE1 1.0) or NANOLLM_TEST_MODEL is set.
+  # the tests tagged native against the tiny fixtures the binding job made:
+  # loading, tokenizer, state, grammar, KV shape, MTP mechanics and
+  # equivalence, the scheduler on the real backend. The golden files apply
+  # only where file hashes and the CPU variant match, and skip elsewhere.
   native:
+    needs: binding
     strategy:
       fail-fast: false
       matrix:
@@ -200,11 +215,17 @@ jobs:
       - name: fetch-libs for the host
         shell: bash
         run: ./scripts/fetch-libs.sh "" ${{ matrix.target }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: tiny-fixtures
+          path: fixtures
       - name: native tests
         shell: bash
         env:
           CGO_ENABLED: "0"
           NANOLLM_TEST_LIB_DIR: ${{ github.workspace }}/dist/${{ matrix.target }}/lib
+          NANOLLM_TEST_MODEL: ${{ github.workspace }}/fixtures/tiny-gemma4.gguf
+          NANOLLM_TEST_DRAFTER: ${{ github.workspace }}/fixtures/tiny-gemma4-mtp.gguf
         run: go test -tags native -count=1 -v ./internal/backend/llamacpp/...
       - name: devices
         shell: bash

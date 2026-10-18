@@ -1,0 +1,6 @@
+# sha256 of the tiny fixtures tools/fixtures/make_tiny.py writes, with torch
+# 2.14.1 (CPU), transformers 5.20.1 and the converter of llama.cpp b11600.
+# Other versions may initialize the assistant differently; the golden files
+# for the tiny pair then do not apply and their tests skip.
+53a47ea622f43c75f90399440c16789e0214acf5df23450ff8b24b76b4421a06  tiny-gemma4.gguf
+efbae5f9c04c0734dc6d68de18ffa31510a49d8785326aaef73812129ca95526  tiny-gemma4-mtp.gguf

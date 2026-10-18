@@ -1,6 +1,7 @@
 package llamacpp
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -81,6 +82,25 @@ func TestCheckPattern(t *testing.T) {
 		if err := checkPattern(bad); err == nil {
 			t.Errorf("%q accepted", bad)
 		}
+	}
+}
+
+func TestTopOfTopK(t *testing.T) {
+	row := make([]float32, 1000)
+	for i := range row {
+		row[i] = -10
+	}
+	row[7], row[500] = 5, 5-float32(math.Log(3)) // p(7) = 3/4 among the top 2
+	tok, p := topOfTopK(row, 2)
+	if tok != 7 || math.Abs(p-0.75) > 1e-6 {
+		t.Errorf("top-2: token %d p %f, want 7 0.75", tok, p)
+	}
+	// Ten equal candidates: 1/10 each, however many follow.
+	for i := range row {
+		row[i] = 0
+	}
+	if _, p := topOfTopK(row, 10); math.Abs(p-0.1) > 1e-6 {
+		t.Errorf("flat: p %f, want 0.1", p)
 	}
 }
 

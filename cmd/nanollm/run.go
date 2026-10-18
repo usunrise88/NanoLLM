@@ -26,6 +26,9 @@ func runCommand(args []string) error {
 	cfgPath := configFlag(fs)
 	libDirFlag := fs.String("lib-dir", "", "native library directory (overrides backends.lib_dir)")
 	modelPath := fs.String("model", "", "path to a GGUF file")
+	drafterPath := fs.String("drafter", "", "path to the model's MTP drafter GGUF; drafts tokens the model then verifies")
+	draftMax := fs.Int("draft-max", 3, "tokens drafted per step at most")
+	draftPMin := fs.Float64("draft-p-min", 0, "stop drafting below this probability")
 	prompt := fs.String("prompt", "", "the prompt; without it run is interactive (not in this build)")
 	raw := fs.Bool("raw", false, "send the prompt as is, without the chat turn markers")
 	nPredict := fs.Int("n", 256, "maximum tokens to generate")
@@ -87,6 +90,9 @@ func runCommand(args []string) error {
 		KVTypeK:        *kvType,
 		KVTypeV:        *kvType,
 		FlashAttention: !*noFA,
+		DrafterPath:    *drafterPath,
+		DraftMax:       *draftMax,
+		DraftPMin:      *draftPMin,
 	})
 	if err != nil {
 		return err
@@ -107,6 +113,10 @@ func runCommand(args []string) error {
 	fmt.Println()
 	fmt.Fprintf(os.Stderr, "prompt %d tokens, %.1f tok/s; generated %d tokens, %.2f tok/s\n",
 		r.promptTokens, r.prefillRate(), r.generated, r.decodeRate())
+	if r.drafted > 0 {
+		fmt.Fprintf(os.Stderr, "MTP: %d drafted, %d accepted (%.0f%%) in %d steps\n",
+			r.drafted, r.accepted, 100*float64(r.accepted)/float64(r.drafted), r.steps)
+	}
 	return nil
 }
 
@@ -126,6 +136,8 @@ type genResult struct {
 	generated    int
 	prefill      time.Duration
 	decode       time.Duration
+	// drafted and accepted count MTP draft tokens; steps counts decode steps.
+	drafted, accepted, steps int
 }
 
 func (r genResult) prefillRate() float64 {
@@ -176,30 +188,38 @@ func generate(ctx context.Context, m backend.Model, prompt string, n int, sp bac
 	start = time.Now()
 	pos := len(toks)
 	for {
-		tok := out[0].Tokens[0]
-		r.tokens = append(r.tokens, tok)
-		r.generated++
-		if out[0].EOG {
-			break
-		}
-		if w != nil {
-			piece, err := m.TokenPiece(tok)
-			if err != nil {
-				return r, err
+		r.drafted += out[0].Drafted
+		r.accepted += out[0].Accepted
+		toks := out[0].Tokens
+		for i, tok := range toks {
+			r.tokens = append(r.tokens, tok)
+			r.generated++
+			if out[0].EOG && i == len(toks)-1 {
+				r.decode = time.Since(start)
+				return r, nil
 			}
-			if _, err := io.WriteString(w, piece); err != nil {
-				return r, err
+			if w != nil {
+				piece, err := m.TokenPiece(tok)
+				if err != nil {
+					return r, err
+				}
+				if _, err := io.WriteString(w, piece); err != nil {
+					return r, err
+				}
+			}
+			if r.generated >= n {
+				r.decode = time.Since(start)
+				return r, nil
 			}
 		}
-		if r.generated >= n {
-			break
-		}
-		out, err = m.Step(ctx, []backend.SeqStep{{Seq: 0, Tokens: []backend.Token{tok}, Pos: pos, Sample: true, Logprobs: -1}})
+		// All but the last returned token are in the cache.
+		pos += len(toks) - 1
+		draft := min(caps.MaxDraft, n-r.generated-1)
+		out, err = m.Step(ctx, []backend.SeqStep{{Seq: 0, Tokens: toks[len(toks)-1:], Pos: pos, Sample: true, MaxDraft: max(draft, 0), Logprobs: -1}})
 		if err != nil {
 			return r, err
 		}
+		r.steps++
 		pos++
 	}
-	r.decode = time.Since(start)
-	return r, nil
 }
