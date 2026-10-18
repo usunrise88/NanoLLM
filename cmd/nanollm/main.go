@@ -44,7 +44,7 @@ func main() {
 	case "devices":
 		err = devicesCommand(args)
 	case "plan":
-		err = notYet("plan", "v0.1")
+		err = planCommand(args, os.Stdout)
 	case "bench":
 		err = notYet("bench", "v0.1")
 	case "eval":
@@ -83,7 +83,7 @@ func usage() {
   nanollm serve    [-config FILE] [-addr ADDR]
   nanollm run      MODEL [--device D] [--preset P] [--think] [--prompt TEXT]
   nanollm devices  [-config FILE]
-  nanollm plan     MODEL --preset P
+  nanollm plan     MODEL --preset P [--device D] [--device-memory SIZE] [--mode M] [--kv T] [--json]
   nanollm bench    MODEL
   nanollm eval     MODEL --suite NAME
   nanollm models   catalog | list | pull ID... | rm ID | inspect FILE|ID [--tensors] [--json] [--drafter FILE]
