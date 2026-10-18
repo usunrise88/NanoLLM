@@ -23,6 +23,11 @@ type Deps struct {
 	// Service is nil until the v1.0 core lands; dialects answer 501 for every
 	// route that needs it.
 	Service core.Service
+	// Admin is model and device management; nil like Service.
+	Admin core.Admin
+	// Extra carries optional route providers a dialect may recognise by
+	// interface (the job queue mounts its native routes through it).
+	Extra any
 	// Catalog is the built-in model catalog.
 	Catalog []registry.Manifest
 	// ConfigSnapshot returns the effective configuration with secrets already

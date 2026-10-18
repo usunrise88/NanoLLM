@@ -23,18 +23,25 @@ type Problem struct {
 // WriteProblem renders err as application/problem+json. Errors that are not
 // domain errors are reported as internal without their text.
 func WriteProblem(w http.ResponseWriter, err error) {
+	p := ProblemOf(err)
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(p.Status)
+	_ = json.NewEncoder(w).Encode(p)
+}
+
+// ProblemOf is err as a problem object, for an error event on a stream that
+// has already started.
+func ProblemOf(err error) Problem {
 	e := core.AsError(err)
 	status := e.Code.HTTPStatus()
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(Problem{
+	return Problem{
 		Type:   "about:blank",
 		Title:  http.StatusText(status),
 		Status: status,
 		Detail: e.Message,
 		Code:   string(e.Code),
 		Param:  e.Param,
-	})
+	}
 }
 
 // WriteJSON writes v with status.

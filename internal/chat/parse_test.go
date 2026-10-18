@@ -59,8 +59,8 @@ func every(t *testing.T, opts ParseOptions, text string) parsed {
 
 func TestParsePlain(t *testing.T) {
 	for in, want := range map[string]parsed{
-		"Hello <b>world</b>":                                  {content: "Hello <b>world</b>"},
-		"<|turn>model\nHi":                                    {content: "Hi"},
+		"Hello <b>world</b>": {content: "Hello <b>world</b>"},
+		"<|turn>model\nHi":   {content: "Hi"},
 		"<|channel>thought\n  Let me think.<channel|>Answer.": {content: "Answer.", reasoning: "Let me think."},
 		"<|channel><|channel>thought x<channel|>A":            {content: "A", reasoning: "x"},
 		"Answer.<channel|>":                                   {content: "Answer."},
