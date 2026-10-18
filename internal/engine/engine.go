@@ -276,6 +276,7 @@ type gen struct {
 	promptText  string
 	addSpecial  bool
 	interactive bool
+	warnings    []core.Warning
 }
 
 type genOut struct {
@@ -299,8 +300,14 @@ func (g *gen) constrain(req core.Generation, tools []core.Tool, choice string) e
 		spec = grammar.Spec{GBNF: req.Grammar, Root: "root"}
 	case req.ResponseFormat != nil && req.ResponseFormat.Type == core.FormatJSONObject:
 		spec = grammar.JSONObject()
+		if g.parse != nil {
+			spec = grammar.Gemma4JSON(spec)
+		}
 	case req.ResponseFormat != nil && req.ResponseFormat.Type == core.FormatJSONSchema:
 		spec, err = grammar.FromSchema(req.ResponseFormat.Schema)
+		if err == nil && g.parse != nil {
+			spec = grammar.Gemma4JSON(spec)
+		}
 	case len(tools) > 0 && choice == core.ToolChoiceRequired:
 		spec, err = grammar.Gemma4Tools(tools, true, true)
 	case len(tools) > 0:
@@ -312,11 +319,15 @@ func (g *gen) constrain(req core.Generation, tools []core.Tool, choice string) e
 	case req.ResponseFormat != nil && req.ResponseFormat.Type != core.FormatText && req.ResponseFormat.Type != "":
 		return core.Errorf(core.CodeInvalidRequest, "unknown response_format type %q", req.ResponseFormat.Type).WithParam("response_format")
 	}
-	if errors.Is(err, grammar.ErrNotPorted) {
-		return core.Errorf(core.CodeNotImplemented, "this constraint is not available yet").WithCause(err)
-	}
 	if err != nil {
-		return core.Errorf(core.CodeInvalidRequest, "%v", err).WithParam("response_format")
+		param := "response_format"
+		if len(tools) > 0 {
+			param = "tools"
+		}
+		return core.Errorf(core.CodeInvalidRequest, "%v", err).WithParam(param)
+	}
+	for _, w := range spec.Warnings {
+		g.warnings = append(g.warnings, core.Warning{Code: "grammar_relaxed", Message: w})
 	}
 	if req.ResponseFormat != nil && req.ResponseFormat.Type != core.FormatText && g.parse != nil {
 		g.parse.JSON = true
@@ -371,7 +382,7 @@ func samplerSpec(s core.Sampling, d *registry.SamplingDefaults) backend.SamplerS
 func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 	m := g.inst.Model
 	caps := m.Capabilities()
-	out := &genOut{}
+	out := &genOut{warnings: g.warnings}
 
 	toks, err := m.Tokenize(g.promptText, g.addSpecial, true)
 	if err != nil {

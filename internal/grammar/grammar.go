@@ -7,15 +7,6 @@
 // construction; nothing here validates output after the fact.
 package grammar
 
-import (
-	"errors"
-
-	"github.com/usunrise88/nanollm/internal/core"
-)
-
-// ErrNotPorted marks a construction whose port from llama.cpp has not landed.
-var ErrNotPorted = errors.New("grammar: not ported yet")
-
 // Spec is a grammar as the sampler takes it. With Triggers set the grammar is
 // lazy: generation is free until one of the trigger strings appears, and the
 // grammar applies from there (tool_choice auto).
@@ -23,6 +14,7 @@ type Spec struct {
 	GBNF     string
 	Root     string
 	Triggers []string
+	Warnings []string
 }
 
 // jsonGBNF is llama.cpp's grammars/json.gbnf with object as the root.
@@ -56,13 +48,12 @@ ws ::= | " " | "\n" [ \t]{0,20}
 func JSONObject() Spec { return Spec{GBNF: jsonGBNF, Root: "root"} }
 
 // FromSchema compiles a JSON Schema the way llama.cpp's json_schema_to_grammar
-// does, for response_format json_schema.
-func FromSchema(schema []byte) (Spec, error) { return Spec{}, ErrNotPorted }
-
-// Gemma4Tools is the grammar for Gemma 4 tool calls: one call (or several,
-// with parallel) of the declared tools in the model's own syntax. With
-// required the answer must be calls; otherwise the grammar is lazy and
-// triggers on "<|tool_call>".
-func Gemma4Tools(tools []core.Tool, required, parallel bool) (Spec, error) {
-	return Spec{}, ErrNotPorted
+// does, for response_format json_schema. Warnings name what the grammar
+// accepts more loosely than the schema says.
+func FromSchema(schema []byte) (Spec, error) {
+	g, warnings, err := SchemaToGBNF(schema)
+	if err != nil {
+		return Spec{}, err
+	}
+	return Spec{GBNF: g, Root: "root", Warnings: warnings}, nil
 }

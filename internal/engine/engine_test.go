@@ -161,9 +161,14 @@ func TestLogprobsAndErrors(t *testing.T) {
 		t.Fatalf("unknown model: %v", err)
 	}
 	_, err = s.Chat(context.Background(), core.ChatRequest{Messages: user("x"), Generation: core.Generation{
-		ResponseFormat: &core.ResponseFormat{Type: core.FormatJSONSchema, Schema: json.RawMessage(`{}`)}}}, nil)
-	if !errors.As(err, &ce) || ce.Code != core.CodeNotImplemented {
-		t.Fatalf("schema before the port: %v", err)
+		ResponseFormat: &core.ResponseFormat{Type: core.FormatJSONSchema, Schema: json.RawMessage(`{"type":"kaboom"}`)}}}, nil)
+	if !errors.As(err, &ce) || ce.Code != core.CodeInvalidRequest || ce.Param != "response_format" {
+		t.Fatalf("a bad schema: %v", err)
+	}
+	res, err = s.Chat(context.Background(), core.ChatRequest{Messages: user("[[fake:raw ```json\n{\"a\":1}```]]"), Generation: core.Generation{
+		ResponseFormat: &core.ResponseFormat{Type: core.FormatJSONSchema, Schema: json.RawMessage(`{"type":"object","properties":{"a":{"type":"integer"}}}`)}}}, nil)
+	if err != nil || res.Message.Content != `{"a":1}` {
+		t.Fatalf("schema answer: %v %+v", err, res)
 	}
 	_, err = s.Chat(context.Background(), core.ChatRequest{Messages: user("[[fake:error]]")}, nil)
 	if !errors.As(err, &ce) || ce.Code != core.CodeInternal {
