@@ -15,8 +15,11 @@ package llamacpp
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -27,6 +30,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/usunrise88/nanollm/internal/backend"
 )
@@ -142,27 +146,56 @@ func decode(t *testing.T, m *model, seq int, prompt []backend.Token, n int, sp b
 // continueFrom evaluates toks starting at pos and samples n tokens.
 func continueFrom(t *testing.T, m *model, seq int, toks []backend.Token, pos, n int) []backend.Token {
 	t.Helper()
+	return generate(t, m, seq, toks, pos, n, -1).toks
+}
+
+// genOut is one generation through Step, with its MTP counts.
+type genOut struct {
+	toks              []backend.Token
+	lps               []backend.TokenLogprobs
+	drafted, accepted int
+	steps             int
+	decode            time.Duration
+}
+
+// generate evaluates toks at pos, then decodes up to n tokens, drafting as
+// llama-server does: at most Capabilities().MaxDraft per step and never past
+// the token budget (n_remaining - 1).
+func generate(t *testing.T, m *model, seq int, toks []backend.Token, pos, n, logprobs int) genOut {
+	t.Helper()
 	var out []backend.SeqOut
 	var err error
 	for p := 0; p < len(toks); p += m.caps.NBatch {
 		end := min(p+m.caps.NBatch, len(toks))
-		out, err = m.Step(context.Background(), []backend.SeqStep{{Seq: seq, Tokens: toks[p:end], Pos: pos + p, Sample: end == len(toks), Logprobs: -1}})
+		out, err = m.Step(context.Background(), []backend.SeqStep{{Seq: seq, Tokens: toks[p:end], Pos: pos + p, Sample: end == len(toks), Logprobs: logprobs}})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	pos += len(toks)
-	var gen []backend.Token
+	var g genOut
+	start := time.Now()
 	for {
-		tok := out[0].Tokens[0]
-		gen = append(gen, tok)
-		if out[0].EOG || len(gen) >= n {
-			return gen
+		o := out[0]
+		g.drafted += o.Drafted
+		g.accepted += o.Accepted
+		for i, tok := range o.Tokens {
+			g.toks = append(g.toks, tok)
+			if i < len(o.Logprobs) {
+				g.lps = append(g.lps, o.Logprobs[i])
+			}
+			if (o.EOG && i == len(o.Tokens)-1) || len(g.toks) >= n {
+				g.decode = time.Since(start)
+				return g
+			}
 		}
-		out, err = m.Step(context.Background(), []backend.SeqStep{{Seq: seq, Tokens: []backend.Token{tok}, Pos: pos, Sample: true, Logprobs: -1}})
+		pos += len(o.Tokens) - 1
+		draft := max(0, min(m.caps.MaxDraft, n-len(g.toks)-1))
+		out, err = m.Step(context.Background(), []backend.SeqStep{{Seq: seq, Tokens: o.Tokens[len(o.Tokens)-1:], Pos: pos, Sample: true, MaxDraft: draft, Logprobs: logprobs}})
 		if err != nil {
 			t.Fatal(err)
 		}
+		g.steps++
 		pos++
 	}
 }
@@ -443,10 +476,12 @@ func TestNativeGrammarConstrains(t *testing.T) {
 	prompt := tokenize(t, m, chat(m, "Is the sky green? Answer in a full sentence."))
 	sp := backend.SamplerSpec{Temperature: 1.5, Seed: 7, Grammar: `root ::= "yes" | "no"`}
 	got := decode(t, m, 0, prompt, 8, sp)
-	text, _ := m.Detokenize(got)
+	if len(got) == 0 || !m.IsEOG(got[len(got)-1]) {
+		t.Fatalf("grammar output %v does not end the generation", got)
+	}
+	text, _ := m.Detokenize(got[:len(got)-1])
 	t.Logf("constrained: %q", text)
-	text = strings.TrimSpace(strings.TrimSuffix(text, "<turn|>"))
-	if text != "yes" && text != "no" || !m.IsEOG(got[len(got)-1]) {
+	if text != "yes" && text != "no" {
 		t.Errorf("grammar output %q (%v)", text, got)
 	}
 	if err := m.SetSampler(0, backend.SamplerSpec{Grammar: `root ::= "unterminated`}, nil); err == nil {
@@ -565,8 +600,11 @@ func TestNativeKVCellsMatchFormula(t *testing.T) {
 		{3000, 1, 512, false, false},
 		{3000, 1, 512, false, true}, // swa_full: SWA as large as the base
 	}
+	releaseSharedMTP()
 	for _, s := range grid {
 		spec := baseSpec(path)
+		// File-backed weights: the cache shape does not depend on them.
+		spec.Repack = false
 		spec.NCtx, spec.Slots, spec.NUBatch, spec.KVUnified, spec.SWAFull = s.nCtxPerSlot, s.slots, s.ubatch, s.unified, s.swaFull
 		mm, err := b.Load(context.Background(), spec)
 		if err != nil {
@@ -614,6 +652,7 @@ type golden struct {
 	Tag          string  `json:"tag"`
 	Commit       string  `json:"commit"`
 	ModelSize    int64   `json:"model_size"`
+	ModelSHA256  string  `json:"model_sha256"`
 	CPUVariant   string  `json:"cpu_variant"`
 	Threads      int     `json:"threads"`
 	NCtx         int     `json:"n_ctx"`
@@ -624,6 +663,12 @@ type golden struct {
 	NPredict     int     `json:"n_predict"`
 	Tokens       []int32 `json:"tokens"`
 	Text         string  `json:"text"`
+	DrafterSize  int64   `json:"drafter_size"`
+	DrafterSHA   string  `json:"drafter_sha256"`
+	DraftMax     int     `json:"draft_max"`
+	DraftPMin    float64 `json:"draft_p_min"`
+	Drafted      int     `json:"drafted"`
+	Accepted     int     `json:"accepted"`
 }
 
 // TestNativeGolden compares greedy decoding with llama-server's output of the
@@ -641,6 +686,7 @@ func TestNativeGolden(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	releaseSharedMTP()
 	ran := false
 	for _, f := range files {
 		data, err := os.ReadFile(f)
@@ -651,8 +697,8 @@ func TestNativeGolden(t *testing.T) {
 		if err := json.Unmarshal(data, &g); err != nil {
 			t.Fatalf("%s: %v", f, err)
 		}
-		if g.ModelSize != fi.Size() {
-			t.Logf("%s: recorded for a %d-byte model, this one is %d", f, g.ModelSize, fi.Size())
+		if g.ModelSize != fi.Size() || g.ModelSHA256 != "" && g.ModelSHA256 != fileSHA256(t, path) {
+			t.Logf("%s: recorded for another model file", f)
 			continue
 		}
 		if g.CPUVariant != b.CPUVariant() {
@@ -691,6 +737,28 @@ func TestNativeGolden(t *testing.T) {
 	if !ran {
 		t.Skip("no golden file matches this model and CPU variant")
 	}
+}
+
+var shaCache sync.Map
+
+// fileSHA256 hashes a file once per test binary.
+func fileSHA256(t *testing.T, path string) string {
+	t.Helper()
+	if v, ok := shaCache.Load(path); ok {
+		return v.(string)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		t.Fatal(err)
+	}
+	sum := hex.EncodeToString(h.Sum(nil))
+	shaCache.Store(path, sum)
+	return sum
 }
 
 func TestNativeMetadata(t *testing.T) {

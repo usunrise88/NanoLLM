@@ -12,12 +12,19 @@
 // the server picked. Greedy decoding on the same CPU kernels is
 // deterministic, so the test compares ids exactly; on another CPU variant
 // the kernels differ and the test skips.
+//
+// With -drafter the server runs with the MTP drafter (--spec-type
+// draft-mtp, greedy drafting) and the file also records how many tokens it
+// drafted and accepted, the reference for the binding's MTP state machine
+// (STAGE1 1.5.M): same tokens, same counts.
 package main
 
 import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -38,23 +45,32 @@ import (
 
 // Golden is the file format, shared with the native test by copy.
 type Golden struct {
-	Tag          string   `json:"tag"`
-	Commit       string   `json:"commit"`
-	Generator    string   `json:"generator"`
-	ModelFile    string   `json:"model_file"`
-	ModelSize    int64    `json:"model_size"`
-	CPUVariant   string   `json:"cpu_variant"`
-	CPUFeatures  string   `json:"cpu_features,omitempty"`
-	Threads      int      `json:"threads"`
-	NCtx         int      `json:"n_ctx"`
-	NBatch       int      `json:"n_batch"`
-	NUBatch      int      `json:"n_ubatch"`
-	Prompt       string   `json:"prompt"`
-	PromptTokens []int32  `json:"prompt_tokens"`
-	NPredict     int      `json:"n_predict"`
-	Tokens       []int32  `json:"tokens"`
-	Text         string   `json:"text"`
-	Notes        []string `json:"notes,omitempty"`
+	Tag          string  `json:"tag"`
+	Commit       string  `json:"commit"`
+	Generator    string  `json:"generator"`
+	ModelFile    string  `json:"model_file"`
+	ModelSize    int64   `json:"model_size"`
+	ModelSHA256  string  `json:"model_sha256"`
+	CPUVariant   string  `json:"cpu_variant"`
+	CPUFeatures  string  `json:"cpu_features,omitempty"`
+	Threads      int     `json:"threads"`
+	NCtx         int     `json:"n_ctx"`
+	NBatch       int     `json:"n_batch"`
+	NUBatch      int     `json:"n_ubatch"`
+	Prompt       string  `json:"prompt"`
+	PromptTokens []int32 `json:"prompt_tokens"`
+	NPredict     int     `json:"n_predict"`
+	Tokens       []int32 `json:"tokens"`
+	Text         string  `json:"text"`
+	// MTP, when the golden was recorded with a drafter.
+	DrafterFile string   `json:"drafter_file,omitempty"`
+	DrafterSize int64    `json:"drafter_size,omitempty"`
+	DrafterSHA  string   `json:"drafter_sha256,omitempty"`
+	DraftMax    int      `json:"draft_max,omitempty"`
+	DraftPMin   float64  `json:"draft_p_min,omitempty"`
+	Drafted     int      `json:"drafted,omitempty"`
+	Accepted    int      `json:"accepted,omitempty"`
+	Notes       []string `json:"notes,omitempty"`
 }
 
 // DefaultPrompt is the chat-wrapped Gemma 4 prompt the test uses.
@@ -67,12 +83,15 @@ func main() {
 	prompt := flag.String("prompt", DefaultPrompt, "prompt, sent as is with BOS")
 	n := flag.Int("n", 32, "tokens to generate")
 	threads := flag.Int("threads", 4, "CPU threads")
+	drafter := flag.String("drafter", "", "MTP drafter GGUF: record a speculative run")
+	draftMax := flag.Int("draft-max", 3, "tokens drafted per step at most")
+	draftPMin := flag.Float64("draft-p-min", 0, "draft probability floor")
 	flag.Parse()
 	if *model == "" || *out == "" {
 		fmt.Fprintln(os.Stderr, "golden: -model and -out are required")
 		os.Exit(2)
 	}
-	if err := run(*tools, *model, *out, *prompt, *n, *threads); err != nil {
+	if err := run(*tools, *model, *out, *prompt, *n, *threads, *drafter, *draftMax, *draftPMin); err != nil {
 		fmt.Fprintln(os.Stderr, "golden:", err)
 		os.Exit(1)
 	}
@@ -82,7 +101,7 @@ func defaultTools() string {
 	return filepath.Join("dist", runtime.GOOS+"_"+runtime.GOARCH, "tools")
 }
 
-func run(tools, model, out, prompt string, n, threads int) error {
+func run(tools, model, out, prompt string, n, threads int, drafter string, draftMax int, draftPMin float64) error {
 	st, err := os.Stat(model)
 	if err != nil {
 		return err
@@ -110,20 +129,32 @@ func run(tools, model, out, prompt string, n, threads int) error {
 	g := Golden{
 		Tag: tag, Commit: commit,
 		Generator: "llama-server " + tag + " /tokenize + /completion, greedy (top_k 1)",
-		ModelFile: filepath.Base(model), ModelSize: st.Size(),
+		ModelFile: filepath.Base(model), ModelSize: st.Size(), ModelSHA256: sha256File(model),
 		Threads: threads, NCtx: 4096, NBatch: 512, NUBatch: 512,
 		Prompt: prompt, NPredict: n,
 	}
+	var extra []string
+	if drafter != "" {
+		dst, err := os.Stat(drafter)
+		if err != nil {
+			return err
+		}
+		g.DrafterFile, g.DrafterSize, g.DraftMax, g.DraftPMin = filepath.Base(drafter), dst.Size(), draftMax, draftPMin
+		g.DrafterSHA = sha256File(drafter)
+		g.Generator += ", MTP draft-mtp"
+		extra = []string{"-md", drafter, "--spec-type", "draft-mtp",
+			"--spec-draft-n-max", strconv.Itoa(draftMax), "--spec-draft-p-min", strconv.FormatFloat(draftPMin, 'f', -1, 64)}
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, server,
+	cmd := exec.CommandContext(ctx, server, append([]string{
 		"-m", model, "--host", "127.0.0.1", "--port", strconv.Itoa(port),
 		"-c", strconv.Itoa(g.NCtx), "-np", "1", "-t", strconv.Itoa(threads), "-tb", strconv.Itoa(threads),
 		"-b", strconv.Itoa(g.NBatch), "-ub", strconv.Itoa(g.NUBatch),
 		"-fa", "on", "-ctk", "f16", "-ctv", "f16", "--no-webui",
 		// -v: the CPU variant and features are logged at a level the
 		// default verbosity hides.
-		"-v")
+		"-v"}, extra...)...)
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
@@ -185,16 +216,23 @@ func run(tools, model, out, prompt string, n, threads int) error {
 		Content string  `json:"content"`
 		Tokens  []int32 `json:"tokens"`
 		Stop    string  `json:"stop_type"`
+		Timings struct {
+			DraftN         int `json:"draft_n"`
+			DraftNAccepted int `json:"draft_n_accepted"`
+		} `json:"timings"`
 	}
 	if err := post(ctx, base+"/completion", map[string]any{
 		"prompt": prompt, "n_predict": n,
-		"samplers": []string{"top_k"}, "top_k": 1,
+		// Greedy: top-k 1 as the last sampler; temperature 0 also keeps the
+		// server from verifying drafts by rejection sampling.
+		"samplers": []string{"top_k"}, "top_k": 1, "temperature": 0,
 		"cache_prompt": false, "return_tokens": true, "n_probs": 0,
 	}, &comp); err != nil {
 		return err
 	}
 	g.Tokens = comp.Tokens
 	g.Text = comp.Content
+	g.Drafted, g.Accepted = comp.Timings.DraftN, comp.Timings.DraftNAccepted
 	if comp.Stop != "" && comp.Stop != "limit" {
 		g.Notes = append(g.Notes, "stopped by "+comp.Stop)
 	}
@@ -212,7 +250,8 @@ func run(tools, model, out, prompt string, n, threads int) error {
 	if err := os.WriteFile(out, append(data, '\n'), 0o644); err != nil {
 		return err
 	}
-	fmt.Printf("%s: %d prompt tokens, %d generated, cpu %s\n%s\n", out, len(g.PromptTokens), len(g.Tokens), g.CPUVariant, g.Text)
+	fmt.Printf("%s: %d prompt tokens, %d generated, cpu %s, drafted %d accepted %d\n%s\n",
+		out, len(g.PromptTokens), len(g.Tokens), g.CPUVariant, g.Drafted, g.Accepted, g.Text)
 	return nil
 }
 
@@ -252,6 +291,21 @@ func post(ctx context.Context, url string, body, out any) error {
 		return fmt.Errorf("%s: %s: %s", url, resp.Status, data)
 	}
 	return json.Unmarshal(data, out)
+}
+
+// sha256File identifies a model file: the size alone does not, since a
+// regenerated fixture has the same shape and different weights.
+func sha256File(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func readTrimmed(path string) (string, error) {
