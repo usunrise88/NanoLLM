@@ -19,8 +19,10 @@ import (
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/backend/llamacpp"
 	"github.com/usunrise88/nanollm/internal/config"
+	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/httpx"
 	"github.com/usunrise88/nanollm/internal/registry"
+	"github.com/usunrise88/nanollm/internal/server"
 	"github.com/usunrise88/nanollm/internal/ui"
 )
 
@@ -70,6 +72,11 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
+	rt := server.New(ctx, server.Options{
+		Config: cfg, Catalog: catalog, Store: newStore(cfg), Backends: backends, Log: log,
+	})
+	defer rt.Close()
+	go rt.Preload(ctx)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -77,14 +84,17 @@ func serve(args []string) error {
 			"status": "ok", "version": version, "llama_cpp": llamacpp.PinnedTag, "backends": loaded,
 		})
 	})
-	// Not ready until the default model is loaded (SPEC §12). Nothing loads a
-	// model before the v1.0 core, so this answers 503 for now, and says why:
-	// a load balancer only needs the status, an operator needs the reason.
+	// Not ready until the default model is loaded (SPEC §12), and the answer
+	// says why: a load balancer only needs the status, an operator needs the
+	// reason.
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
-		httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]any{
-			"status": "not_ready", "reason": "the default model is not loaded",
-			"model": cfg.Models.Default,
-		})
+		if ok, reason := rt.Ready(); !ok {
+			httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"status": "not_ready", "reason": reason, "model": cfg.Models.Default,
+			})
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"status": "ready", "model": cfg.Models.Default})
 	})
 
 	snapshot := func() any {
@@ -96,6 +106,9 @@ func serve(args []string) error {
 		return out
 	}
 	if err := adapter.MountAll(mux, cfg.API.Dialects, adapter.Deps{
+		Service:        rt.Engine,
+		Admin:          rt,
+		DefaultModel:   cfg.Models.Default,
 		Catalog:        catalog,
 		ConfigSnapshot: snapshot,
 	}); err != nil {
@@ -116,16 +129,25 @@ func serve(args []string) error {
 		}
 	}
 
-	mw := []httpx.Middleware{httpx.Recover(log), httpx.AccessLog(log)}
+	mw := []httpx.Middleware{
+		httpx.WithRequestID(), httpx.Recover(log), httpx.SecurityHeaders(), httpx.AccessLog(log),
+		httpx.LimitBody(cfg.Server.MaxBody),
+	}
 	if cfg.Auth.Mode == "open" {
 		log.Warn("authentication disabled", "addr", cfg.Server.Addr,
 			"note", "open mode is only permitted on a loopback address")
+		// Whoever is on the loopback is the interactive user.
+		mw = append(mw, func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				next.ServeHTTP(w, r.WithContext(core.WithInteractive(r.Context(), true)))
+			})
+		})
 	} else {
 		keys, err := httpx.NewKeyStore(keySpecs(cfg.Auth.Keys))
 		if err != nil {
 			return err
 		}
-		mw = append(mw, httpx.Auth(keys, public...))
+		mw = append(mw, httpx.Auth(keys, public...), httpx.RateLimit(httpx.NewRateLimiter()))
 		log.Info("authentication enabled", "keys", keys.Names(), "public", public)
 	}
 
@@ -153,6 +175,15 @@ func serve(args []string) error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)
+}
+
+// newStore is the on-disk model store the configuration describes.
+func newStore(cfg config.Config) *registry.Store {
+	return &registry.Store{
+		Root:          cfg.ModelsPath(),
+		Downloader:    &registry.Downloader{Mirrors: cfg.Registry.Mirrors},
+		StrictLicense: cfg.Registry.StrictLicense,
+	}
 }
 
 // openBackends opens every enabled backend that can be opened. A backend whose

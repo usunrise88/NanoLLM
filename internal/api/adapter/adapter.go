@@ -28,6 +28,8 @@ type Deps struct {
 	// Extra carries optional route providers a dialect may recognise by
 	// interface (the job queue mounts its native routes through it).
 	Extra any
+	// DefaultModel is models.default, the model a request without one gets.
+	DefaultModel string
 	// Catalog is the built-in model catalog.
 	Catalog []registry.Manifest
 	// ConfigSnapshot returns the effective configuration with secrets already
