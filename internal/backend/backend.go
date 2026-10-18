@@ -106,7 +106,9 @@ type LoadSpec struct {
 	LazyMode  LazyMode
 	// Repack enables the CPU repacked kernels (use_extra_bufts), which copy
 	// weights into anonymous memory and so defeat file-backed modes.
-	Repack  bool
+	Repack bool
+	// NCtx is tokens per slot, as Capabilities reports it; the engine's
+	// context holds NCtx·Slots. Zero means 4096.
 	NCtx    int
 	Slots   int
 	NBatch  int
@@ -143,7 +145,9 @@ type SamplerSpec struct {
 	PresencePenalty  float64
 	FrequencyPenalty float64
 	LogitBias        map[Token]float64
-	Seed             int64
+	// Seed seeds the sampler; a negative seed is random. Zero is a seed like
+	// any other, so a zero SamplerSpec is reproducible.
+	Seed int64
 	// Grammar is GBNF; empty means unconstrained. GrammarRoot defaults to
 	// "root". With GrammarTriggers set the grammar is lazy: unconstrained
 	// until the output contains one of the trigger strings (tool_choice auto).
@@ -237,6 +241,9 @@ type DeviceMemory struct {
 // any goroutine.
 type Model interface {
 	Tokenize(text string, addSpecial, parseSpecial bool) ([]Token, error)
+	// Detokenize and TokenPiece render special tokens as their text: the
+	// turn, thinking and tool-call markers of a chat format are special
+	// tokens, and the parser above the backend needs to see them.
 	Detokenize(tokens []Token) (string, error)
 	// TokenPiece is the text of one token, for streaming.
 	TokenPiece(t Token) (string, error)
@@ -271,6 +278,13 @@ type Model interface {
 	RestoreSeq(seq int, state []byte) error
 
 	Close() error
+}
+
+// Warner is implemented by a backend that loaded with problems worth showing
+// but not fatal: a GPU library in lib/ that did not load, and why (SPEC §3:
+// a missing backend is never fatal). `nanollm devices` prints them.
+type Warner interface {
+	Warnings() []string
 }
 
 // ErrNotImplemented marks a backend whose engine binding has not landed yet.
