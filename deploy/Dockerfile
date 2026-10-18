@@ -98,7 +98,7 @@ COPY LICENSE NOTICE /opt/nanollm/
 ARG VERSION=dev
 ARG FLAVOUR
 LABEL org.opencontainers.image.title="NanoLLM" \
-      org.opencontainers.image.description="Offline LLM inference server (${FLAVOUR})" \
+      org.opencontainers.image.description="Decent LLM for any device: offline inference server (${FLAVOUR})" \
       org.opencontainers.image.source="https://github.com/usunrise88/NanoLLM" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.licenses="MIT"

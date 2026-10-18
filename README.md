@@ -1,5 +1,7 @@
 # NanoLLM
 
+**Decent LLM for any device.**
+
 Offline LLM inference server: one Go binary plus a `lib/` directory, local
 inference of small models on CPU, GPU and NPU, an OpenAI-compatible HTTP API
 and an embedded web interface. No prompt leaves the machine; network access is

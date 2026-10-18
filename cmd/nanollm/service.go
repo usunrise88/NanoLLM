@@ -18,7 +18,7 @@ const (
 	serviceWindowsName = "NanoLLM"
 	serviceLabel       = "com.github.usunrise88.nanollm"
 	serviceDisplayName = "NanoLLM local LLM server"
-	serviceDescription = "Offline LLM inference. Serves the OpenAI-compatible and native HTTP APIs and the web UI on one port."
+	serviceDescription = "Decent LLM for any device: offline inference. Serves the OpenAI-compatible and native HTTP APIs and the web UI on one port."
 )
 
 // serviceVerbs are the subcommands of `nanollm service`, in the order the help

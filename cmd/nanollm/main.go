@@ -87,7 +87,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `nanollm — offline LLM inference server
+	fmt.Fprint(os.Stderr, `nanollm — decent LLM for any device
 
   nanollm init     [-config FILE] [-data-dir DIR] [-addr ADDR] [-model ID] [-no-download] [-force]
   nanollm serve    [-config FILE] [-addr ADDR] [-log-file FILE]
