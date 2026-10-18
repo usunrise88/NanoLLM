@@ -1,0 +1,40 @@
+# nano.llmto.day: benchd owns /benchmarks, /api/v1 and /admin; the rest of
+# the site is the owner's stack (replace the last handle with it).
+#
+# Access logs carry no client address: the filter drops remote_ip,
+# client_ip, the port and every request header. benchd sees the address
+# only in X-Forwarded-For, which Caddy sets to the connection's address
+# (an incoming one is ignored: no trusted_proxies), hashes it with a
+# daily in-memory salt for the rate limit, and never stores it.
+
+{$SITE_ADDRESS:nano.llmto.day} {
+	encode zstd gzip
+
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>headers delete
+				request>tls delete
+				resp_headers delete
+				user_id delete
+			}
+		}
+	}
+
+	@bench path /benchmarks /benchmarks/* /api/v1/* /admin /admin/*
+	handle @bench {
+		request_body {
+			max_size 300KB
+		}
+		reverse_proxy benchd:8080
+	}
+
+	handle {
+		respond "nano.llmto.day" 200
+	}
+}

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>benchd admin</title>
+<link rel="stylesheet" href="/benchmarks/static/style.css">
+<script src="/benchmarks/static/admin.js" defer></script>
+</head>
+<body class="admin">
+<header class="top"><span class="brand">benchd admin</span>
+  <nav><a href="/benchmarks">/benchmarks</a> <a href="#" id="logout">forget token</a></nav>
+</header>
+<main>
+<p class="status" id="status"></p>
+
+<section>
+  <h2>Moderation</h2>
+  <form class="row" id="queue-form">
+    <select name="state"><option>queued</option><option>hidden</option><option>published</option></select>
+    <button>List</button>
+  </form>
+  <div class="scroll"><table class="results" id="queue"><thead><tr>
+    <th>id</th><th>received</th><th>reason</th><th>by</th><th>system / cpu / gpu</th><th>model</th><th></th>
+  </tr></thead><tbody></tbody></table></div>
+  <pre id="detail"></pre>
+</section>
+
+<section>
+  <h2>Aliases</h2>
+  <p class="note">The pattern is the normalized name as the pages show it (matched case-blind); every change reindexes.</p>
+  <form class="row" id="alias-form">
+    <select name="kind"><option>system</option><option>cpu</option><option>gpu</option><option>vendor</option></select>
+    <input name="pattern" placeholder="pattern" required>
+    <input name="name" placeholder="shown as" required>
+    <button>Save</button>
+  </form>
+  <div class="scroll"><table class="results" id="aliases"><thead><tr><th>kind</th><th>pattern</th><th>name</th><th></th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section>
+  <h2>Vendor-verified installs</h2>
+  <form class="row" id="verified-form">
+    <input name="submission_id" placeholder="a submission id of the install">
+    <input name="label" placeholder="label (e.g. owner EPYC)">
+    <button>Grant</button>
+  </form>
+  <div class="scroll"><table class="results" id="verified"><thead><tr><th>install</th><th>label</th><th></th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section>
+  <h2>Maintenance</h2>
+  <button id="reindex">Reindex now</button>
+</section>
+</main>
+</body>
+</html>

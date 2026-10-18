@@ -1,0 +1,6 @@
+{{define "content"}}
+<p class="crumbs"><a href="/benchmarks">{{t .Lang "nav.results"}}</a> › {{t .Lang (printf "kind.%s" .Kind)}}</p>
+<h1>{{.Name}}</h1>
+{{template "groups" .}}
+<p class="exports"><a href="/api/v1/export?format=csv&amp;{{.ExportQuery}}">CSV</a> · <a href="/api/v1/export?format=json&amp;{{.ExportQuery}}">JSON</a></p>
+{{end}}

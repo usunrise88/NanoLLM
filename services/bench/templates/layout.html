@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · {{t .Lang "site"}}</title>
+<link rel="stylesheet" href="/benchmarks/static/style.css">
+<script src="/benchmarks/static/app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/benchmarks">{{t .Lang "site"}}</a>
+  <nav>
+    <a href="/benchmarks">{{t .Lang "nav.results"}}</a>
+    <a href="/benchmarks/how-to-run">{{t .Lang "nav.howto"}}</a>
+    <a href="/benchmarks/privacy">{{t .Lang "nav.privacy"}}</a>
+    <a href="{{.OtherURL}}" hreflang="{{.OtherLang}}" class="lang">{{t .Lang "lang.other"}}</a>
+  </nav>
+</header>
+<main>
+{{template "content" .}}
+</main>
+<footer>
+  {{t .Lang "footer.license"}}
+  {{if .LicenseURL}}<a href="{{.LicenseURL}}" rel="license">{{.License}}</a>{{else}}{{.License}}{{end}} ·
+  <a href="/api/v1/export?format=csv">CSV</a> ·
+  <a href="/api/v1/export?format=json">JSON</a> ·
+  <a href="/api/v1/export?format=csv&amp;what=runs">{{t .Lang "export.runs"}}</a>
+</footer>
+</body>
+</html>
+
+{{define "stat"}}{{if .}}<span class="med">{{num .Median}}</span>{{if gt .N 1}} <span class="iqr">({{num .P25}}–{{num .P75}})</span>{{end}}{{else}}—{{end}}{{end}}
+
+{{define "groups"}}
+{{$lang := .Lang}}
+{{if .Groups}}
+<div class="scroll">
+<table class="results">
+<thead><tr>
+  <th>{{t $lang "c.system"}}</th>
+  <th>{{t $lang "c.preset"}}</th>
+  <th class="n">{{t $lang "c.tg"}}</th>
+  <th class="n">{{t $lang "c.tgn"}}</th>
+  <th class="n">{{t $lang "c.pp"}}</th>
+  <th class="n">{{t $lang "c.chat"}}</th>
+  <th class="n">{{t $lang "c.mtp"}}</th>
+  <th class="n">{{t $lang "c.installs"}}</th>
+</tr></thead>
+<tbody>
+{{range .Groups}}
+<tr>
+  <td>
+    <a href="/benchmarks/systems/{{.SystemSlug}}">{{.System}}</a>{{if .Verified}} <span class="badge" title="{{t $lang "badge.verified"}}">✓ {{t $lang "badge.verified"}}</span>{{end}}
+    <div class="sub">
+      <a href="/benchmarks/cpu/{{.CPUSlug}}">{{.CPU}}</a>{{if ne .GPU "none"}} · <a href="/benchmarks/gpu/{{.GPUSlug}}">{{.GPU}}</a>{{end}}
+      · {{.OS}} · {{ff $lang .FormFactor}} · {{.Model}}
+    </div>
+  </td>
+  <td><code>{{.Preset}}</code></td>
+  <td class="n">{{template "stat" (stat .Metrics "tg_d0")}}</td>
+  <td class="n">{{template "stat" (stat .Metrics "tg_dn")}}</td>
+  <td class="n">{{template "stat" (stat .Metrics "pp_tok_s")}}</td>
+  <td class="n">{{template "stat" (stat .Metrics "chat_tok_s")}}</td>
+  <td class="n">{{with stat .Metrics "mtp_speedup"}}×{{printf "%.2f" .Median}}{{else}}—{{end}}</td>
+  <td class="n">{{.Installs}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+</div>
+<p class="note">{{t $lang "note.range"}}</p>
+{{else}}
+<p class="empty">{{t $lang "empty"}}</p>
+{{end}}
+{{end}}

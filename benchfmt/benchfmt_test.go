@@ -105,3 +105,15 @@ func TestSchemaIsCurrent(t *testing.T) {
 		t.Fatal("schema.json is stale: go test ./ -update, and review the diff — v1 changes must be additive")
 	}
 }
+
+func TestOutputPrefixes(t *testing.T) {
+	r := sample()
+	r.Runs[0].Output.Prefixes = []Prefix{{Tokens: 16, SHA256: strings.Repeat("cd", 32)}}
+	if err := r.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	r.Runs[0].Output.Prefixes = append(r.Runs[0].Output.Prefixes, Prefix{Tokens: 0, SHA256: "x"})
+	if err := r.Validate(); err == nil || !strings.Contains(err.Error(), "prefixes[1]") {
+		t.Fatalf("a malformed prefix must be refused, got %v", err)
+	}
+}

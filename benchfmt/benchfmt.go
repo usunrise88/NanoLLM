@@ -230,6 +230,17 @@ type MTP struct {
 type Output struct {
 	SHA256 string `json:"sha256,omitempty"`
 	Tokens int    `json:"tokens,omitempty"`
+	// Prefixes hash the first Tokens tokens of the output at a few
+	// checkpoints (16, 32, 64, …), so the service can tell how long a prefix
+	// two runs share rather than only whether they agree to the end: greedy
+	// decoding on different kernels drifts late, not early. Optional.
+	Prefixes []Prefix `json:"prefixes,omitempty"`
+}
+
+// Prefix is the sha256 of the output's first Tokens token ids.
+type Prefix struct {
+	Tokens int    `json:"tokens"`
+	SHA256 string `json:"sha256"`
 }
 
 var (
@@ -244,6 +255,7 @@ const (
 	MaxRuns      = 64
 	MaxTextField = 128
 	MaxTokS      = 100000
+	MaxPrefixes  = 16
 )
 
 // Validate checks a document against v1: required fields, formats and ranges.
@@ -320,6 +332,14 @@ func (r *Result) Validate() error {
 		}
 		if run.Output.SHA256 != "" && !hex64.MatchString(run.Output.SHA256) {
 			bad("runs[%d].output.sha256 is not a sha256", i)
+		}
+		if len(run.Output.Prefixes) > MaxPrefixes {
+			bad("runs[%d].output.prefixes: at most %d", i, MaxPrefixes)
+		}
+		for j, p := range run.Output.Prefixes {
+			if p.Tokens <= 0 || !hex64.MatchString(p.SHA256) {
+				bad("runs[%d].output.prefixes[%d] needs tokens > 0 and a sha256", i, j)
+			}
 		}
 	}
 	return errors.Join(errs...)

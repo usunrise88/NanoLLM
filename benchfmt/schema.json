@@ -323,6 +323,24 @@
           },
           "output": {
             "properties": {
+              "prefixes": {
+                "items": {
+                  "properties": {
+                    "sha256": {
+                      "type": "string"
+                    },
+                    "tokens": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "sha256",
+                    "tokens"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "sha256": {
                 "type": "string"
               },

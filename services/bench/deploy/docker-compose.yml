@@ -1,0 +1,55 @@
+# benchd behind Caddy. From this directory:
+#
+#   BENCHD_ADMIN_TOKEN=$(openssl rand -hex 32) docker compose up -d --build
+#
+# Caddy terminates TLS for the site, routes /benchmarks, /api/v1 and /admin
+# to benchd and everything else to the rest of the site, and logs requests
+# without client addresses (Caddyfile). benchd itself writes no access log.
+services:
+  benchd:
+    build:
+      context: ../../..
+      dockerfile: services/bench/Dockerfile
+    image: nanollm-benchd
+    restart: unless-stopped
+    environment:
+      BENCHD_PUBLIC_URL: ${BENCHD_PUBLIC_URL:-https://nano.llmto.day}
+      BENCHD_ADMIN_TOKEN: ${BENCHD_ADMIN_TOKEN:?set BENCHD_ADMIN_TOKEN}
+      # The open data licence is the owner's decision: CC-BY-4.0 or CC0-1.0.
+      BENCHD_DATA_LICENSE: ${BENCHD_DATA_LICENSE:-CC-BY-4.0}
+      BENCHD_MODERATION: ${BENCHD_MODERATION:-auto}
+      BENCHD_RETIRED_SUITES: ${BENCHD_RETIRED_SUITES:-}
+      # A daily snapshot kept 30 days: a withdrawn submission leaves the
+      # backups within that time. Copy /data/backups off the host as well.
+      BENCHD_BACKUP_EVERY: 24h
+      BENCHD_BACKUP_KEEP: 720h
+    volumes:
+      - bench-data:/data
+    expose:
+      - "8080"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    depends_on:
+      - benchd
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-nano.llmto.day}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  bench-data:
+  caddy-data:
+  caddy-config:

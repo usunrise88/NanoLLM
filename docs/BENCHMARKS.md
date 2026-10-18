@@ -85,7 +85,9 @@ NanoLLM прогоняет на железе пользователя пресе
     mtp{acceptance, speedup}, peak_rss, peak_vram, peak_locked,
     peak_page_cache}`;
   - `reps`, `stddev`;
-  - `output{sha256, tokens}`;
+  - `output{sha256, tokens, prefixes[]?}` — `prefixes` (необязательно):
+    sha256 первых N токенов на нескольких отметках, чтобы сервис видел длину
+    общего префикса в когорте;
   - `status`, `reason`.
 - **Подвал:** `date`, `duration_s`, `install_id`, `signature`.
 - **Эволюция формата:**
@@ -153,6 +155,8 @@ NanoLLM прогоняет на железе пользователя пресе
     здесь. `go.work` не коммитится. CI идёт по каждому модулю отдельно.
   - После выноса (`git subtree split -P services/bench`) сервис зависит от
     тегированного `benchfmt`, а не от всего NanoLLM.
+- **Реализация:** запуск, настройка и деплой — в
+  [services/bench/README.md](../services/bench/README.md).
 - **Структура:** `cmd/benchd`, `internal/{ingest,store,normalize,aggregate,web,admin}`,
   `migrations/` (встроенные нумерованные SQL, таблица `schema_version`,
   пересборка таблиц из-за ограничений ALTER в SQLite), `templates/`,
@@ -226,7 +230,8 @@ NanoLLM прогоняет на железе пользователя пресе
 - Хостинг, юрисдикция и DNS nano.llmto.day.
 - Стек остального сайта.
 - Политика модерации (по умолчанию авто-публикация с проверками).
-- Лицензия открытых данных (CC0 или CC-BY).
+- Лицензия открытых данных (CC0 или CC-BY): в сервисе это
+  `BENCHD_DATA_LICENSE`, по умолчанию `CC-BY-4.0`.
 - Юридическая проверка политики приватности и текста согласия.
 
 ## Отложено
