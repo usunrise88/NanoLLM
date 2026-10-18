@@ -69,6 +69,69 @@ jobs:
       - run: pip install -r tests/conformance/requirements.txt
       - run: make conformance
 
+  # The SPA (STAGE1 1.8): lint, typecheck, unit tests and the production
+  # build, which the e2e job embeds. A few seconds; no server needed.
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+  # The SPA embedded in the real binary, in Chromium, against `serve` on the
+  # fake backend: one server in open mode and one demanding a key, both
+  # started by playwright.config.ts. Screens whose backend lands later (jobs,
+  # bench) are checked against both today's 501/404 and the planned API.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: internal/ui/dist
+      - name: the binary embeds the SPA
+        run: NANOLLM_REQUIRE_UI=1 go test -count=1 -v -run 'TestHasSPA|TestEmbeddedSPA' ./internal/ui
+      - run: make build
+      - run: ./dist/nanollm version | grep -E '^ui +true$'
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: npm run test:e2e
+        working-directory: web
+        env:
+          NANOLLM_BIN: ${{ github.workspace }}/dist/nanollm
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-trace
+          path: web/test-results
+
   # Unit tests on the other two platforms: path handling, the data-dir
   # defaults and library names differ per OS, and only a real runner shows it.
   test:

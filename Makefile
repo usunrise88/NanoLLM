@@ -21,17 +21,26 @@ export CGO_ENABLED := 0
 # The five release platforms; darwin is built per architecture and merged.
 TARGETS     := linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/arm64 darwin/amd64
 
-.PHONY: all web build build-noui cross libs tools bindgen layout test-native lint test test-race conformance run run-fake tidy clean help
+.PHONY: all web web-check e2e build build-noui cross libs tools bindgen layout test-native lint test test-race conformance run run-fake tidy clean help
 
 all: web build
 
 ## web: build the SPA and stage it for embedding (Node 22+)
 web:
-	@test -f web/package.json || { echo "web/: the SPA sources land with v1.0 (SPEC §11)"; exit 1; }
 	cd web && $(NPM) ci --no-audit --no-fund
 	cd web && $(NPM) run build
 	rm -rf $(UI_DIST)
 	cp -r web/dist $(UI_DIST)
+
+## web-check: lint, typecheck and unit-test the SPA, as CI's web job does
+web-check:
+	cd web && $(NPM) ci --no-audit --no-fund
+	cd web && $(NPM) run lint && $(NPM) run typecheck && $(NPM) test
+
+## e2e: the SPA in Chromium against `serve` on the fake backend (PLAYWRIGHT_CHROMIUM picks a browser)
+e2e: web build
+	NANOLLM_REQUIRE_UI=1 $(GO) test -count=1 -run 'TestHasSPA|TestEmbeddedSPA' ./internal/ui
+	cd web && NANOLLM_BIN=$(abspath $(DIST)/nanollm) $(NPM) run test:e2e
 
 ## build: the server binary for this machine (run `make web` first, or it starts without a UI)
 build:
@@ -102,8 +111,10 @@ run: build
 tidy:
 	$(GO) mod tidy
 
+# `make web` replaces the committed placeholder index.html; clean restores it.
 clean:
 	rm -rf $(DIST) web/dist $(UI_DIST)/assets
+	git checkout -- $(UI_DIST)/index.html 2>/dev/null || true
 
 help:
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## //'
