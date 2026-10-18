@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"path/filepath"
+	"path"
 	"strings"
 	"text/template"
 )
@@ -190,9 +190,11 @@ func renderLaunchd(p unitParams) (string, error) {
 	if p.LogFile != "" {
 		args = append(args, "-log-file", p.LogFile)
 	}
-	stderr := filepath.Join(filepath.Dir(p.LogFile), "nanollm.stderr.log")
+	// A launchd plist only ever describes macOS paths: slash-joined, so the
+	// rendering is the same wherever it runs (the shipped-units test).
+	stderr := path.Join(path.Dir(p.LogFile), "nanollm.stderr.log")
 	if p.LogFile == "" {
-		stderr = filepath.Join(p.DataDir, "logs", "nanollm.stderr.log")
+		stderr = path.Join(p.DataDir, "logs", "nanollm.stderr.log")
 	}
 	esc := make([]string, len(args))
 	for i, a := range args {
