@@ -17,7 +17,7 @@ import (
 
 func printVersion() {
 	fmt.Printf("nanollm    %s\n", version)
-	fmt.Printf("llama.cpp  %s (minimum %s)\n", llamacpp.PinnedTag, llamacpp.MinTag)
+	fmt.Printf("llama.cpp  %s %s (minimum %s)\n", llamacpp.PinnedTag, shortCommit(llamacpp.PinnedCommit), llamacpp.MinTag)
 	fmt.Printf("backends   %v\n", backend.Registered())
 	fmt.Printf("dialects   %v\n", adapter.Available())
 	fmt.Printf("ui         %v\n", ui.Enabled)
@@ -129,6 +129,14 @@ func showCatalog() error {
 			m.ID, m.Arch, m.Params, m.Quant, m.Role, size, m.Pinned())
 	}
 	return nil
+}
+
+// shortCommit is the abbreviation llama.cpp itself reports (ggml_commit).
+func shortCommit(c string) string {
+	if len(c) > 9 {
+		return c[:9]
+	}
+	return c
 }
 
 func gib(b int64) string {
