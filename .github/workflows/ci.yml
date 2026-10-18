@@ -53,3 +53,67 @@ jobs:
       - run: go test ./...
         env:
           CGO_ENABLED: "0"
+
+  # The libllama binding against the pinned release (STAGE1 1.5): the struct
+  # layout per target with zig cc, the export tables of every archive (C and
+  # decorated C++ names), and that zz_generated.go is what bindgen makes of
+  # the tag's headers. All of it runs on one Linux runner.
+  binding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: llama.cpp sources at the pinned tag
+        run: git clone --depth 1 --branch "$(tr -d '[:space:]' < scripts/llama.cpp.tag)" https://github.com/ggml-org/llama.cpp "$RUNNER_TEMP/llama.cpp"
+      - name: zig
+        run: pip install ziglang
+      - name: struct layout on every target
+        run: ./scripts/check-layout.sh "$RUNNER_TEMP/llama.cpp"
+      - name: generated binding is current
+        run: NANOLLM_LLAMA_SRC="$RUNNER_TEMP/llama.cpp" go test -run TestGeneratedIsCurrent -v ./tools/bindgen
+      - name: export tables
+        run: |
+          ./scripts/fetch-libs.sh "" linux_amd64 linux_arm64 windows_amd64 windows_arm64 darwin_arm64 darwin_amd64
+          args=()
+          for d in dist/*/lib; do args+=(-check-exports "$d"); done
+          go run ./tools/bindgen -src "$RUNNER_TEMP/llama.cpp" "${args[@]}"
+
+  # Native tests on each platform's own runner: fetch-libs for the host, then
+  # the tests tagged native. Without a model they still check loading, the
+  # commit refusal and CPU enumeration; the model tests skip with the reason
+  # until the tiny fixtures land (STAGE1 1.0) or NANOLLM_TEST_MODEL is set.
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: linux_amd64 }
+          - { os: ubuntu-24.04-arm, target: linux_arm64 }
+          - { os: windows-latest, target: windows_amd64 }
+          - { os: windows-11-arm, target: windows_arm64 }
+          - { os: macos-latest, target: darwin_arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: libgomp for the Linux CPU backends
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libgomp1
+      - name: fetch-libs for the host
+        shell: bash
+        run: ./scripts/fetch-libs.sh "" ${{ matrix.target }}
+      - name: native tests
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+          NANOLLM_TEST_LIB_DIR: ${{ github.workspace }}/dist/${{ matrix.target }}/lib
+        run: go test -tags native -count=1 -v ./internal/backend/llamacpp/...
+      - name: devices
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+        run: go run ./cmd/nanollm devices -lib-dir dist/${{ matrix.target }}/lib
