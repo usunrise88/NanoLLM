@@ -17,6 +17,8 @@ import (
 	"github.com/usunrise88/nanollm/internal/config"
 	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/engine"
+	"github.com/usunrise88/nanollm/internal/memlock"
+	"github.com/usunrise88/nanollm/internal/plan"
 	"github.com/usunrise88/nanollm/internal/pool"
 	"github.com/usunrise88/nanollm/internal/registry"
 )
@@ -60,6 +62,7 @@ type Runtime struct {
 	mu      sync.Mutex
 	devices []backend.Device // probed once; Devices refreshes
 	specs   map[pool.Key]backend.LoadSpec
+	plans   map[pool.Key]any
 	byName  map[string]backend.Backend
 	pinned  map[string]bool
 }
@@ -85,7 +88,7 @@ func New(ctx context.Context, o Options) *Runtime {
 	}
 	r := &Runtime{
 		cfg: o.Config, catalog: o.Catalog, store: o.Store, backends: o.Backends, place: o.Place, log: o.Log,
-		specs: map[pool.Key]backend.LoadSpec{}, byName: map[string]backend.Backend{}, pinned: map[string]bool{},
+		specs: map[pool.Key]backend.LoadSpec{}, plans: map[pool.Key]any{}, byName: map[string]backend.Backend{}, pinned: map[string]bool{},
 	}
 	for _, b := range o.Backends {
 		r.byName[b.Name()] = b
@@ -126,12 +129,64 @@ func (r *Runtime) load(ctx context.Context, k pool.Key) (backend.Model, any, err
 	if !ok || b == nil {
 		return nil, nil, fmt.Errorf("no placement recorded for %s", k)
 	}
+	r.mu.Lock()
+	info := r.plans[k]
+	r.mu.Unlock()
 	r.log.Info("loading model", "key", k.String(), "gpu_layers", spec.GPULayers, "n_ctx", spec.NCtx, "slots", spec.Slots)
+	// Range-lock (M7, M8) pins the planned ranges before the engine maps
+	// the file, so the first inference already reads locked pages.
+	var pins []*memlock.Pin
+	if p, ok := info.(*plan.Plan); ok {
+		for role, path := range map[string]string{registry.RoleModel: spec.Path, registry.RoleDrafter: spec.DrafterPath} {
+			var ranges []memlock.Range
+			for _, lr := range p.LockRanges {
+				if lr.Role == role {
+					ranges = append(ranges, memlock.Range{Off: lr.Offset, Len: lr.Length})
+				}
+			}
+			if len(ranges) == 0 || path == "" {
+				continue
+			}
+			pin, err := memlock.PinFile(path, ranges)
+			if err != nil {
+				for _, p := range pins {
+					p.Close()
+				}
+				return nil, nil, fmt.Errorf("range-lock %s: %w", role, err)
+			}
+			r.log.Info("range-lock", "role", role, "locked_mib", pin.Locked()>>20)
+			pins = append(pins, pin)
+		}
+	}
 	m, err := b.Load(ctx, spec)
 	if err != nil {
+		for _, p := range pins {
+			p.Close()
+		}
 		return nil, nil, err
 	}
-	return m, spec, nil
+	if info == nil {
+		info = spec
+	}
+	if len(pins) > 0 {
+		m = pinnedModel{Model: m, pins: pins}
+	}
+	return m, info, nil
+}
+
+// pinnedModel releases range-lock when the model is closed: the pin lives
+// exactly as long as the model (docs/STAGE1.md 1.6).
+type pinnedModel struct {
+	backend.Model
+	pins []*memlock.Pin
+}
+
+func (m pinnedModel) Close() error {
+	err := m.Model.Close()
+	for _, p := range m.pins {
+		p.Close()
+	}
+	return err
 }
 
 func (r *Runtime) manifest(id string) (registry.Manifest, error) {
@@ -232,6 +287,7 @@ func (r *Runtime) placement(ctx context.Context, m registry.Manifest, device str
 	}
 	r.mu.Lock()
 	r.specs[pl.Key] = pl.Spec
+	r.plans[pl.Key] = pl.Plan
 	r.mu.Unlock()
 	return pl, nil
 }

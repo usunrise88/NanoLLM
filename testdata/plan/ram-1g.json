@@ -134,13 +134,17 @@
       "mode": "ram-ple-disk",
       "id": "M7",
       "fits": false,
-      "skipped": "needs range-lock (docs/STAGE1.md 1.6), not proven yet"
+      "shortfall": {
+        "ram": 2044480081
+      }
     },
     {
       "mode": "ram-hybrid",
       "id": "M8",
       "fits": false,
-      "skipped": "needs range-lock (docs/STAGE1.md 1.6), not proven yet"
+      "shortfall": {
+        "ram": 186534481
+      }
     },
     {
       "mode": "mmap",

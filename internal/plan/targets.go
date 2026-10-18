@@ -50,24 +50,38 @@ func TargetFor(preset string) Target {
 // not proven.
 type ProvenModes map[Mode]bool
 
-// DefaultProven is the state of stage 1 (docs/STAGE1.md 1.4). M7 and M8 need
-// range-lock (1.6), which is not in yet. M2 is allowed: it is what upstream
-// does by default — per_layer_token_embd is an input-layer tensor and stays
-// in host memory — and 1.5 confirms the placement on lavapipe.
+// DefaultProven is the state of stage 1 (docs/STAGE1.md 1.4). M2 is
+// allowed: it is what upstream does by default — per_layer_token_embd is an
+// input-layer tensor and stays in host memory — and 1.5 confirms the
+// placement. M7 and M8 rest on range-lock (1.6), proven by residency on
+// Linux and by a working-set test on Windows; macOS only measures it, so
+// ProvenFor turns them off there.
 var DefaultProven = ProvenModes{
 	VRAMFull:    true,
 	VRAMPLEHost: true,
 	VRAMPLEDisk: true,
 	VRAMPartial: true,
 	RAMFull:     true,
-	RAMPLEDisk:  false,
-	RAMHybrid:   false,
+	RAMPLEDisk:  true,
+	RAMHybrid:   true,
 	MMap:        true,
 }
 
+// ProvenFor is DefaultProven on one OS.
+func ProvenFor(goos string) ProvenModes {
+	out := ProvenModes{}
+	for m, ok := range DefaultProven {
+		out[m] = ok
+	}
+	if goos == "darwin" {
+		out[RAMPLEDisk], out[RAMHybrid] = false, false
+	}
+	return out
+}
+
 var unprovenWhy = map[Mode]string{
-	RAMPLEDisk: "needs range-lock (docs/STAGE1.md 1.6), not proven yet",
-	RAMHybrid:  "needs range-lock (docs/STAGE1.md 1.6), not proven yet",
+	RAMPLEDisk: "needs range-lock (docs/STAGE1.md 1.6), proven on Linux and Windows only",
+	RAMHybrid:  "needs range-lock (docs/STAGE1.md 1.6), proven on Linux and Windows only",
 }
 
 func (p ProvenModes) why(m Mode) string {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"runtime"
 	"strings"
 
 	"github.com/usunrise88/nanollm/internal/backend"
@@ -38,7 +39,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		return Placement{}, err
 	}
 	r := plan.Request{
-		Model: model, Preset: preset, Mode: mode, KVType: ov.KVType,
+		Model: model, Preset: preset, Mode: mode, KVType: ov.KVType, Proven: plan.ProvenFor(runtime.GOOS),
 		NCtx: ov.NCtx.N, Slots: ov.Slots.N,
 		NoMTP: ov.Speculative.Type == config.SpecNone, DraftMax: ov.Speculative.NMax, DraftPMin: ov.Speculative.PMin,
 	}

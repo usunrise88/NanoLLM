@@ -1,8 +1,8 @@
 {
   "model": "gemma-4-e4b-qat",
   "preset": "ram-1.5g",
-  "mode": "mmap",
-  "mode_id": "M9",
+  "mode": "ram-hybrid",
+  "mode_id": "M8",
   "gpu_layers": 0,
   "layers_on_gpu": 0,
   "n_ctx": 4096,
@@ -23,8 +23,395 @@
     "bytes": 234881024
   },
   "load_mode": "mmap",
-  "lazy_mode": "off",
+  "lazy_mode": "on",
   "repack": false,
+  "lock_ranges": [
+    {
+      "role": "model",
+      "offset": 15822944,
+      "length": 15494144
+    },
+    {
+      "role": "model",
+      "offset": 1616764000,
+      "length": 654249120
+    },
+    {
+      "role": "model",
+      "offset": 2300504320,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2315260160,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2352904480,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2367660320,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2405304640,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2420060480,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2457704800,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2472460640,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2510104960,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2524860800,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2562505120,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2577260960,
+      "length": 15527968
+    },
+    {
+      "role": "model",
+      "offset": 2622280128,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2637035968,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2674680288,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2689436128,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2727080448,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2741836288,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2779480608,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2794236448,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2831880768,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2846636608,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2884280928,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2899036768,
+      "length": 15527968
+    },
+    {
+      "role": "model",
+      "offset": 2944055936,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2958811776,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 2996456096,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3011211936,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 3048856256,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3063612096,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 3101256416,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3116012256,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 3153656576,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3168412416,
+      "length": 8153120
+    },
+    {
+      "role": "model",
+      "offset": 3206056736,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3220812576,
+      "length": 15527968
+    },
+    {
+      "role": "model",
+      "offset": 3265831744,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3280587584,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3316756320,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3331512160,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3367680896,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3382436736,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3418605472,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3433361312,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3469530048,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3484285888,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3520454624,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3535210464,
+      "length": 12576800
+    },
+    {
+      "role": "model",
+      "offset": 3577278464,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3592034304,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3628203040,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3642958880,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3679127616,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3693883456,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3730052192,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3744808032,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3780976768,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3795732608,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3831901344,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3846657184,
+      "length": 12576800
+    },
+    {
+      "role": "model",
+      "offset": 3888725184,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3903481024,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3939649760,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3954405600,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 3990574336,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4005330176,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 4041498912,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4056254752,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 4092423488,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4107179328,
+      "length": 6677536
+    },
+    {
+      "role": "model",
+      "offset": 4143348064,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4158103904,
+      "length": 12576800
+    },
+    {
+      "role": "model",
+      "offset": 4200171904,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4214927744,
+      "length": 768032
+    },
+    {
+      "role": "drafter",
+      "offset": 15786176,
+      "length": 43891840
+    }
+  ],
   "mtp": {
     "enabled": true,
     "reason": "the drafter (41.9 MiB) runs on the CPU with the target's output layer and reads its KV cache",
@@ -33,8 +420,8 @@
   "groups": {
     "G0": {
       "vram": 0,
-      "ram_locked": 0,
-      "file_backed": 377487360,
+      "ram_locked": 377487360,
+      "file_backed": 0,
       "disk": 0
     },
     "G1": {
@@ -45,20 +432,20 @@
     },
     "G2": {
       "vram": 0,
-      "ram_locked": 0,
-      "file_backed": 376750080,
+      "ram_locked": 376750080,
+      "file_backed": 0,
       "disk": 0
     },
     "G3": {
       "vram": 0,
-      "ram_locked": 0,
-      "file_backed": 1857945600,
+      "ram_locked": 221184000,
+      "file_backed": 1636761600,
       "disk": 0
     },
     "G4": {
       "vram": 0,
-      "ram_locked": 0,
-      "file_backed": 2241704,
+      "ram_locked": 2241704,
+      "file_backed": 0,
       "disk": 0
     },
     "G5": {
@@ -69,8 +456,8 @@
     },
     "G6": {
       "vram": 0,
-      "ram_locked": 0,
-      "file_backed": 43891728,
+      "ram_locked": 43891728,
+      "file_backed": 0,
       "disk": 0
     },
     "G7": {
@@ -83,10 +470,10 @@
   "memory": {
     "ram": {
       "budget": 1610612736,
-      "used": 585734553,
+      "used": 1607289425,
       "budgeted": true
     },
-    "file_backed": 4243763384,
+    "file_backed": 3222208512,
     "overhead_ram": 201326592
   },
   "compute_calibrated": true,
@@ -95,7 +482,8 @@
     "slots": 1
   },
   "warnings": [
-    "4047.2 MiB stays file-backed: outside every budget, and cold pages fault in from disk"
+    "3072.9 MiB stays file-backed: outside every budget, and cold pages fault in from disk",
+    "210.9 MiB of 1771.9 MiB of FFN weights are pinned; decode reads the rest from disk"
   ],
   "tried": [
     {
@@ -134,17 +522,13 @@
       "mode": "ram-ple-disk",
       "id": "M7",
       "fits": false,
-      "skipped": "needs range-lock (docs/STAGE1.md 1.6), not proven yet"
+      "shortfall": {
+        "ram": 1507609169
+      }
     },
     {
       "mode": "ram-hybrid",
       "id": "M8",
-      "fits": false,
-      "skipped": "needs range-lock (docs/STAGE1.md 1.6), not proven yet"
-    },
-    {
-      "mode": "mmap",
-      "id": "M9",
       "fits": true
     }
   ]

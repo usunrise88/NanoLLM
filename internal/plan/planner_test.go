@@ -112,7 +112,7 @@ func TestTiedOutputOnGPU(t *testing.T) {
 		t.Errorf("M1 overrides %v", m1.Overrides)
 	}
 	// On the CPU a mapped head aliases the input copy; a repacked one does not.
-	m9 := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-2g")})
+	m9 := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-2g"), Mode: MMap})
 	if m9.Mode != MMap || m9.Groups[gguf.G0].Total() != g0 {
 		t.Errorf("M9 G0 %+v", m9.Groups[gguf.G0])
 	}
@@ -210,8 +210,9 @@ func TestRangeLockModes(t *testing.T) {
 		t.Errorf("M8 G3 %+v, RAM %+v", g3, m8.Memory.RAM)
 	}
 
-	// By default range-lock modes are skipped with the reason.
-	p := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-3g")})
+	// Where range-lock is not proven (macOS), its modes are skipped with
+	// the reason.
+	p := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-3g"), Proven: ProvenFor("darwin")})
 	for _, a := range p.Tried {
 		if (a.Mode == RAMPLEDisk || a.Mode == RAMHybrid) && !strings.Contains(a.Skipped, "range-lock") {
 			t.Errorf("%s: %+v", a.ID, a)
