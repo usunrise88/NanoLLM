@@ -19,8 +19,9 @@ var initTemplate string
 
 // initCommand writes a working configuration with two fresh keys (SPEC §9).
 //
-// The model download it ends with arrives with the registry in v1.0; until
-// then it names the model and says so, rather than pretending.
+// It ends by downloading the default model and its drafter, verified, unless
+// -no-download; a failed download leaves the configuration in place and says
+// how to resume.
 func initCommand(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
 	cfgPath := fs.String("config", "nanollm.yaml", "configuration file to write")
@@ -72,7 +73,10 @@ func initCommand(args []string) error {
 	fmt.Printf("  user key   %s\n\n", userKey)
 	fmt.Println("The keys are in the file and shown only this once here.")
 	if !*noDownload {
-		fmt.Printf("Downloading %s is not implemented yet (the registry lands in v1.0).\n", *model)
+		fmt.Printf("\nDownloading %s; Ctrl-C stops, and the same command resumes.\n", *model)
+		if err := modelsPull([]string{"-config", *cfgPath, *model}); err != nil {
+			return fmt.Errorf("%w\nthe configuration is written; resume the download with: nanollm models pull -config %s %s", err, *cfgPath, *model)
+		}
 	}
 	fmt.Printf("Start the server with: nanollm serve -config %s\n", *cfgPath)
 	return nil
