@@ -34,6 +34,9 @@ func TestDocumentKeepsCommentsAndEditsKeys(t *testing.T) {
 		t.Fatalf("remove: %+v", d.Keys())
 	}
 	// The edited file loads.
+	if out, err = d.Bytes(); err != nil {
+		t.Fatal(err)
+	}
 	cfg := Default()
 	if err := decode(out, &cfg); err != nil {
 		t.Fatal(err)
