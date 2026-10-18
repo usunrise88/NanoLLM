@@ -496,6 +496,25 @@ v0.11.2 и NanoASR.
 - **Подпись macOS:** codesign каждой dylib с hardened runtime, notarytool;
   включается при наличии секретов.
 - **Smoke установщиков** на трёх ОС из локального архива.
+- **Итог на VM:**
+  - `scripts/dist.sh [TARGET… | all]` собирает все архивы и оба CUDA add-on
+    с одного Linux (`GOWORK=off`, `CGO_ENABLED=0`); архив плоский, чтобы
+    распаковываться поверх установки. Для своей платформы архив перед
+    упаковкой спрашивает у бинаря версию и строку `ui`;
+  - конфигурация служб лежит в каталоге данных (`/var/lib/nanollm`,
+    `~/Library/Application Support/NanoLLM`, `C:\ProgramData\NanoLLM`):
+    `--uninstall` без `--purge` сохраняет ключи вместе с весами;
+  - unit-файлы пишет сам бинарь (`nanollm service install`), установщики его
+    вызывают. `deploy/nanollm.service` и `deploy/nanollm.plist` —
+    отрендеренные шаблоны с путями установщиков, тест держит их актуальными;
+  - Windows-архивы llama.cpp (clang-cl) импортируют `libomp.dll` и рантайм
+    MSVC. `libomp.dll` и его лицензия едут в `lib/`, `install.ps1`
+    проверяет `VCRUNTIME140.dll`, `VCRUNTIME140_1.dll`, `MSVCP140.dll`;
+  - проверено на VM: `dist.sh` для всех целей, `install.sh --archive` без
+    systemd (установка, обновление на месте с CUDA add-on и без,
+    `--uninstall`, `--purge`), оба Docker-образа (`/healthz`, healthcheck,
+    `run --prompt` на крошечной модели в CPU-образе). systemd, launchd,
+    служба Windows, подпись и нотаризация проверяются только в CI.
 
 ## 1.10 Инструменты оценки (без выводов)
 
