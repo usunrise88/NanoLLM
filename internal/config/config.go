@@ -231,6 +231,10 @@ type UI struct {
 type Log struct {
 	Level  string `yaml:"level"`  // debug | info | warn | error
 	Format string `yaml:"format"` // json | text
+	// File appends the log to this file, rolled over at 64 MiB with one
+	// previous generation kept, instead of writing it to stderr. A Windows
+	// service and a launchd agent have no console to write to.
+	File string `yaml:"file"`
 }
 
 // DialectEnabled reports whether this dialect is mounted.

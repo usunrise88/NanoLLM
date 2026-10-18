@@ -1,0 +1,363 @@
+name: release
+
+# Every archive of SPEC §10 for a tag: built on one Ubuntu runner (the binary
+# is CGO_ENABLED=0 and the libraries come from the pinned llama.cpp release),
+# the darwin ones signed and notarized on a Mac when the secrets are there,
+# each one smoke-tested on its own platform against the tiny fixture model,
+# and published with sha256sums.txt and the installers.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and release"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  # Built once and shared, so every UI archive serves byte-identical assets.
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+  # The tiny Gemma 4 target (random weights) for `nanollm run --prompt` on
+  # every platform, converted by the pinned tag's own converter, as in ci.yml.
+  fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: llama.cpp sources at the pinned tag
+        run: git clone --depth 1 --branch "$(tr -d '[:space:]' < scripts/llama.cpp.tag)" https://github.com/ggml-org/llama.cpp "$RUNNER_TEMP/llama.cpp"
+      - name: tiny fixtures
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1
+          pip install transformers==5.20.1 safetensors sentencepiece protobuf
+          python3 tools/fixtures/make_tiny.py --llama-cpp "$RUNNER_TEMP/llama.cpp" --out "$RUNNER_TEMP/fixtures"
+          (cd "$RUNNER_TEMP/fixtures" && grep -v "^#" "$GITHUB_WORKSPACE/testdata/fixtures/tiny.sha256" | sha256sum -c) || echo "fixtures differ from testdata/fixtures/tiny.sha256; the smoke test only needs them to load"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tiny-fixtures
+          path: ${{ runner.temp }}/fixtures/*.gguf
+          retention-days: 3
+
+  # Every archive from one runner, as SPEC §10 has it, outside any go.work.
+  build:
+    needs: web
+    runs-on: ubuntu-latest
+    env:
+      GOWORK: "off"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: internal/ui/dist
+      - name: llvm-lipo for the darwin universal binary and dylibs
+        run: |
+          lipo=$(command -v llvm-lipo || ls /usr/bin/llvm-lipo-* 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$lipo" ]; then sudo apt-get install -y llvm >/dev/null; lipo=$(command -v llvm-lipo); fi
+          mkdir -p "$RUNNER_TEMP/bin" && ln -sf "$lipo" "$RUNNER_TEMP/bin/llvm-lipo"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: the archives
+        run: VERSION="$TAG" OUT=out ./scripts/dist.sh all
+      - run: ls -l out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: archives
+          path: |
+            out/nanollm-*
+            !out/nanollm-*-darwin-*
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: archives-darwin-unsigned
+          path: out/nanollm-*-darwin-*
+          compression-level: 0
+
+  # codesign every dylib and the binary with the hardened runtime, then
+  # notarize, when the Developer ID secrets exist; otherwise pass the
+  # archives through unsigned and say so. Gatekeeper then refuses to load
+  # them if they arrive quarantined, which install.sh clears.
+  #
+  # Secrets: MACOS_CERTIFICATE (base64 .p12), MACOS_CERTIFICATE_PASSWORD,
+  # MACOS_SIGN_IDENTITY ("Developer ID Application: … (TEAMID)"), and for
+  # notarization APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD.
+  sign-macos:
+    needs: build
+    runs-on: macos-latest
+    env:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: archives-darwin-unsigned
+          path: in
+      - name: keychain
+        if: env.MACOS_CERTIFICATE != ''
+        run: |
+          kc="$RUNNER_TEMP/signing.keychain-db"
+          pw=$(uuidgen)
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$pw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$pw" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$pw" "$kc" >/dev/null
+          # The existing search list, one word per keychain, with ours first.
+          # shellcheck disable=SC2046
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+      - name: sign and notarize
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          if [ -z "$MACOS_CERTIFICATE" ]; then
+            echo "::warning::no MACOS_CERTIFICATE secret: the darwin archives are released unsigned"
+            cp in/* out/
+            exit 0
+          fi
+          for archive in in/*.tar.gz; do
+            name=$(basename "$archive")
+            stage="$RUNNER_TEMP/stage-$name"
+            mkdir -p "$stage"
+            tar -xzf "$archive" -C "$stage"
+            # Every Mach-O file in lib/, then the binary, which loads them.
+            # Symlinks are names for the same files and are not signed.
+            find "$stage/lib" -type f -name '*.dylib' -print0 |
+              xargs -0 codesign --force --timestamp --options runtime --sign "$MACOS_SIGN_IDENTITY"
+            codesign --force --timestamp --options runtime \
+              --entitlements deploy/macos-entitlements.plist \
+              --sign "$MACOS_SIGN_IDENTITY" "$stage/nanollm"
+            codesign --verify --strict --verbose=2 "$stage/nanollm"
+            find "$stage/lib" -type f -name '*.dylib' -print0 | xargs -0 -n1 codesign --verify --strict
+            if [ -n "$APPLE_ID" ]; then
+              # notarytool takes a zip, not a tarball. Loose binaries cannot
+              # be stapled; Gatekeeper looks the ticket up online.
+              ditto -c -k --keepParent "$stage" "$RUNNER_TEMP/$name.zip"
+              xcrun notarytool submit "$RUNNER_TEMP/$name.zip" \
+                --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" \
+                --wait --timeout 30m
+            else
+              echo "::warning::no APPLE_ID secret: $name is signed but not notarized"
+            fi
+            tar -C "$stage" --uid 0 --gid 0 -czf "out/$name" .
+          done
+          ls -l out
+      - name: remove the keychain
+        if: always() && env.MACOS_CERTIFICATE != ''
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: archives-darwin
+          path: out/*
+          compression-level: 0
+
+  # A release nobody can run is worse than none. Each archive on its own
+  # platform: the version is the tag and the ui line matches the variant,
+  # the libraries load (`devices`), the tiny model generates, and the UI
+  # build serves /healthz and /ui/.
+  smoke:
+    needs: [build, sign-macos, fixtures]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: linux-amd64, ext: tar.gz, artifact: archives }
+          - { os: ubuntu-24.04-arm, target: linux-arm64, ext: tar.gz, artifact: archives }
+          - { os: windows-latest, target: windows-amd64, ext: zip, artifact: archives }
+          - { os: windows-11-arm, target: windows-arm64, ext: zip, artifact: archives }
+          - { os: macos-latest, target: darwin-universal, ext: tar.gz, artifact: archives-darwin }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: archives
+      - uses: actions/download-artifact@v4
+        with:
+          name: tiny-fixtures
+          path: fixtures
+      - name: libgomp and the Vulkan loader
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libgomp1 libvulkan1
+      - name: smoke
+        env:
+          TARGET: ${{ matrix.target }}
+          EXT: ${{ matrix.ext }}
+        run: |
+          set -euo pipefail
+          exe=nanollm; [ "$RUNNER_OS" = Windows ] && exe=nanollm.exe
+          for variant in "" -noui; do
+            archive="archives/nanollm-$TAG-$TARGET$variant.$EXT"
+            dir="check$variant"
+            mkdir -p "$dir"
+            case "$EXT" in
+              zip) 7z x -o"$dir" -bso0 -bsp0 "$archive" ;;
+              *) tar -xzf "$archive" -C "$dir" ;;
+            esac
+            out=$("./$dir/$exe" version)
+            echo "$out"
+            want_ui=$([ -z "$variant" ] && echo true || echo false)
+            grep -Eq "^ui +$want_ui\$" <<<"$out" || { echo "::error::$archive: ui is not $want_ui"; exit 1; }
+            grep -q "^nanollm  *$TAG\$" <<<"$out" || { echo "::error::$archive: the version is not $TAG"; exit 1; }
+          done
+
+          ./check/$exe devices | tee devices.txt
+          grep -q "^llamacpp .*unavailable" devices.txt && { echo "::error::libllama did not load"; exit 1; }
+
+          ./check/$exe run --model fixtures/tiny-gemma4.gguf --prompt "Hello" -n 16 2>run.err | tee run.out
+          cat run.err
+          speed=$(grep '^prompt ' run.err)
+          [ -n "$speed" ] || { echo "::error::run printed no speed line"; exit 1; }
+          echo "| $TARGET | $RUNNER_ARCH | $speed |" > "smoke-$TARGET.md"
+
+          ./check/$exe serve -addr 127.0.0.1:18080 > serve.log 2>&1 &
+          pid=$!
+          ok=0
+          for _ in $(seq 30); do
+            if curl -fsS 127.0.0.1:18080/healthz; then ok=1; break; fi
+            sleep 1
+          done
+          curl -fsS -o /dev/null 127.0.0.1:18080/ui/ || ok=0
+          kill "$pid" || true
+          [ "$ok" = 1 ] || { cat serve.log; echo "::error::serve did not answer /healthz and /ui/"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.target }}
+          path: smoke-${{ matrix.target }}.md
+
+  release:
+    needs: smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      # By name: archives-darwin-unsigned carries the same file names as the
+      # signed archives-darwin and must not be the one that lands.
+      - uses: actions/download-artifact@v4
+        with:
+          name: archives
+          path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: archives-darwin
+          path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: smoke-*
+          path: smoke
+          merge-multiple: true
+
+      # The installers ship as release assets so that the one-liners always
+      # point at a script and the archives it knows how to install.
+      - name: stage the installers and the checksums
+        run: |
+          cp scripts/install.sh scripts/install.ps1 artifacts/
+          # Named rather than globbed so that sha256sums.txt cannot list itself.
+          (cd artifacts && sha256sum nanollm-* install.sh install.ps1 > sha256sums.txt)
+          cat artifacts/sha256sums.txt
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            cat <<EOF
+          ## Install
+
+          Linux (systemd) and macOS (launchd):
+
+              curl -fsSL https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/install.sh | bash
+
+              # with the CUDA libraries, on Linux x86-64 with an NVIDIA GPU
+              curl -fsSL https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/install.sh | bash -s -- --cuda
+
+          Windows, in PowerShell (it asks for administrator rights):
+
+              irm https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/install.ps1 | iex
+
+          Either one verifies what it downloads against \`sha256sums.txt\`, writes a
+          configuration with an admin and a user key, fetches the default model and
+          leaves a running service behind. Run it again to upgrade; the configuration,
+          the keys and the weights are kept. \`--uninstall\` (\`-Uninstall\`) removes it,
+          \`--purge\` also the data. Linux needs \`libgomp1\` (and \`libvulkan1\` for a GPU);
+          the installer says so when they are missing.
+
+          Docker: \`deploy/Dockerfile\` (CPU + Vulkan, or \`--build-arg FLAVOUR=cuda\`).
+
+          ## Archives
+
+          | file | contents |
+          |---|---|
+          | \`nanollm-${TAG}-linux-amd64.tar.gz\`, \`-linux-arm64\` | CPU + Vulkan, web UI |
+          | \`nanollm-${TAG}-windows-amd64.zip\`, \`-windows-arm64\` | CPU + Vulkan, web UI |
+          | \`nanollm-${TAG}-darwin-universal.tar.gz\` | CPU + Metal, arm64 and x86_64, web UI |
+          | \`nanollm-${TAG}-<os>-amd64-cuda.<ext>\` | add-on: ggml-cuda and the CUDA 12 runtime, unpacked over an installation |
+          | \`*-noui.*\` | the same without the web UI |
+
+          Unpack the whole archive: the binary loads the libraries from \`lib/\` beside
+          it, and nowhere else. llama.cpp $(tr -d '[:space:]' < scripts/llama.cpp.tag).
+
+          ## Smoke test
+
+          \`nanollm run\` on each platform's runner, on a tiny model with random weights.
+          These numbers check that the engine runs; they are not a benchmark.
+
+          | target | runner | result |
+          |---|---|---|
+          EOF
+            cat smoke/*.md
+          } > notes.md
+          cat notes.md
+          # Idempotent: re-running the workflow for a tag replaces the assets.
+          # A draft written by hand before the tag is pushed is matched by
+          # tag_name and keeps its title and notes.
+          existing=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq "[.[] | select(.tag_name == \"$TAG\") | .id] | first // empty")
+          if [ -n "$existing" ]; then
+            echo "release $TAG exists (id $existing), uploading assets to it"
+            gh release upload "$TAG" artifacts/* --clobber
+          else
+            gh release create "$TAG" artifacts/* --title "$TAG" --notes-file notes.md
+          fi

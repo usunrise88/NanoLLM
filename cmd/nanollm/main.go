@@ -14,7 +14,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -33,6 +32,16 @@ func main() {
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(2)
+	}
+	// Asked before the arguments are looked at: the Windows service control
+	// manager starts the registered command line, and a process that does not
+	// report in over its pipe is killed after thirty seconds.
+	if handled, err := runAsService(); handled {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "nanollm:", err)
+			os.Exit(1)
+		}
+		return
 	}
 	var err error
 	switch verb, args := os.Args[1], os.Args[2:]; verb {
@@ -55,7 +64,7 @@ func main() {
 	case "key", "keys":
 		err = keyCommand(args)
 	case "service":
-		err = notYet("service", "v1.0")
+		err = serviceCommand(args)
 	case "version":
 		printVersion()
 	case "-h", "--help", "help":
@@ -63,8 +72,8 @@ func main() {
 	default:
 		// `nanollm --install` is how a Windows program that registers itself
 		// is invoked, so the service verbs answer to that spelling too.
-		if _, ok := serviceFlag(verb); ok {
-			err = notYet("service", "v1.0")
+		if v, ok := serviceFlag(verb); ok {
+			err = serviceCommand(append([]string{v}, args...))
 			break
 		}
 		fmt.Fprintf(os.Stderr, "nanollm: unknown command %q\n\n", verb)
@@ -81,7 +90,7 @@ func usage() {
 	fmt.Fprint(os.Stderr, `nanollm — offline LLM inference server
 
   nanollm init     [-config FILE] [-data-dir DIR] [-addr ADDR] [-model ID] [-no-download] [-force]
-  nanollm serve    [-config FILE] [-addr ADDR]
+  nanollm serve    [-config FILE] [-addr ADDR] [-log-file FILE]
   nanollm run      [MODEL] [--prompt TEXT] [--preset P] [--device D] [--think] [--system TEXT] [-n N] [--temp T]
   nanollm run      --model FILE.gguf --prompt TEXT [--drafter FILE] [--device D] [-n N] [--temp T]
   nanollm devices  [-config FILE] [-lib-dir DIR]
@@ -90,7 +99,8 @@ func usage() {
   nanollm eval     [MODEL] --suite NAME|FILE [--thinking off|on|both] | rate REPORT | compare A B | suites
   nanollm models   catalog | list | pull ID... | rm ID | inspect FILE|ID [--tensors] [--json] [--drafter FILE]
   nanollm key      list | issue NAME [-admin] [-interactive] [-rps N] [-hash] | remove NAME
-  nanollm service  install | uninstall | start | stop | restart | status
+  nanollm service  install | uninstall | start | stop | restart | status | unit
+                   (also nanollm --install, --uninstall, --start, --stop, --restart, --status)
   nanollm version
 
 Start here: "nanollm init" writes a configuration, issues an admin and a user
@@ -98,22 +108,6 @@ key, and names the default model, gemma-4-e4b-qat.
 
 Configuration precedence: flags > NANOLLM_* env > config file > defaults.
 `)
-}
-
-// errNotYet marks a command that is part of the CLI but not of this build.
-var errNotYet = errors.New("not implemented yet")
-
-func notYet(verb, milestone string) error {
-	return fmt.Errorf("%s: %w; it lands in %s (see SPEC §14)", verb, errNotYet, milestone)
-}
-
-// serviceFlag maps the Windows-style spelling of a service verb onto the verb.
-func serviceFlag(arg string) (string, bool) {
-	switch arg {
-	case "--install", "--uninstall", "--start", "--stop", "--restart", "--status":
-		return strings.TrimPrefix(arg, "--"), true
-	}
-	return "", false
 }
 
 // parseFlags parses fs from args given in any order and returns the positional

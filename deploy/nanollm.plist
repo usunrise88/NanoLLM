@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.github.usunrise88.nanollm</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/nanollm/nanollm</string>
+		<string>serve</string>
+		<string>-config</string>
+		<string>/Library/Application Support/NanoLLM/nanollm.yaml</string>
+		<string>-log-file</string>
+		<string>/Library/Logs/NanoLLM/nanollm.log</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/Library/Application Support/NanoLLM</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>ThrottleInterval</key>
+	<integer>5</integer>
+	<key>ExitTimeOut</key>
+	<integer>45</integer>
+	<key>StandardErrorPath</key>
+	<string>/Library/Logs/NanoLLM/nanollm.stderr.log</string>
+	<key>UserName</key>
+	<string>root</string>
+</dict>
+</plist>

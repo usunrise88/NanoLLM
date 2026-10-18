@@ -24,10 +24,60 @@ Bootstrap. What works today:
 | Config | Full schema from SPEC §8, strict keys, `NANOLLM_*` env overrides, validation |
 | Memory modes and presets | M1–M10 and all 19 presets defined and validated (`internal/plan`) |
 | Build | `CGO_ENABLED=0` cross-compilation for all release targets; llama.cpp pinned to `b11600`, `scripts/fetch-libs.sh` verified in CI for every target and the CUDA add-ons |
+| Delivery | `scripts/dist.sh` release archives, `install.sh` / `install.ps1`, `nanollm service` (systemd, launchd, Windows service), Docker images, `release.yml` |
 
 Next is milestone v0.1 — the engine spike: purego binding to `libllama`,
 `nanollm run` / `plan` / `bench` with Gemma 4 E4B + MTP (SPEC §14). The
 development plan by stage and machine is in [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Install
+
+From a release, as a service that starts at boot (Linux, systemd) or at
+login (macOS, launchd agent; `--daemon` for the whole machine):
+
+```sh
+curl -fsSL https://github.com/usunrise88/NanoLLM/releases/latest/download/install.sh | bash
+curl -fsSL .../install.sh | bash -s -- --cuda          # Linux x86-64 with an NVIDIA GPU
+curl -fsSL .../install.sh | bash -s -- --uninstall     # --purge also deletes the data
+```
+
+Windows, in PowerShell (it asks for administrator rights):
+
+```powershell
+irm https://github.com/usunrise88/NanoLLM/releases/latest/download/install.ps1 | iex
+```
+
+The installer verifies the archive against `sha256sums.txt`, unpacks it into
+`/opt/nanollm` (`/usr/local/nanollm`, `C:\Program Files\NanoLLM`), writes
+`nanollm.yaml` with an admin and a user key into the data directory
+(`/var/lib/nanollm`, `~/Library/Application Support/NanoLLM`,
+`C:\ProgramData\NanoLLM`), fetches the default model and starts the service.
+Running it again upgrades in place and keeps the configuration, the keys and
+the weights. `--help` (`-Help`) lists the flags; each has a `NANOLLM_*`
+variable for the piped form, and `--archive PATH` installs a local archive.
+
+Linux needs `libgomp.so.1` (every CPU backend links it) and, for a GPU,
+`libvulkan.so.1`; Windows needs the Visual C++ runtime. None of them ships in the
+archive, and the installers name what is missing and how to add it.
+
+The service is managed by the binary on every platform:
+
+```sh
+nanollm service install | uninstall | start | stop | restart | status
+nanollm --install        # the same verbs, spelled as Windows programs do
+nanollm service unit     # print the systemd unit or launchd plist install would write
+```
+
+Docker, CPU + Vulkan or CUDA, with the weights in a volume and the
+configuration in `NANOLLM_*` variables:
+
+```sh
+make docker              # or: docker build -f deploy/Dockerfile [--build-arg FLAVOUR=cuda] .
+docker run -d -p 8080:8080 -v nanollm-data:/data --ulimit memlock=-1 \
+  -e NANOLLM_AUTH_KEYS=sk-nanollm-... nanollm:<version>
+```
+
+`deploy/docker-compose.yml` runs either flavour.
 
 ## Build
 
@@ -37,6 +87,8 @@ Requirements: Go 1.25+, and Node 22+ for the web UI.
 make web build    # the SPA into internal/ui/dist, then dist/nanollm with it embedded
 make build        # without `make web` first, a binary that serves no UI
 make cross        # every release target, with and without the UI
+make dist         # release archives for this machine into dist/ (scripts/dist.sh)
+make dist-all     # every release archive and the CUDA add-ons (darwin needs llvm-lipo)
 make test lint
 make web-check    # the SPA's lint, typecheck and unit tests
 make e2e          # the SPA in Chromium against `serve` on the fake backend
@@ -82,7 +134,8 @@ internal/queue/         SQLite jobs, SSE, webhooks (v1.0)
 internal/config/        YAML load/validate, env overrides
 internal/ui/            embedded SPA (built from web/)
 web/                    SPA sources: React, Vite, TanStack, Tailwind
-scripts/                fetch-libs, release tooling
+scripts/                fetch-libs, dist, install.sh, install.ps1
+deploy/                 systemd unit, launchd plist, Dockerfile, compose
 ```
 
 ## License

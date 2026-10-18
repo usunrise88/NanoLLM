@@ -1,0 +1,17 @@
+# The build context of deploy/Dockerfile: sources only. The image builds the
+# SPA, fetches the libraries and compiles the binary itself.
+.git
+.claude
+.cache
+.models
+dist
+nanollm
+nanollm.exe
+*.gguf
+*.db
+web/node_modules
+web/dist
+web/test-results
+web/playwright-report
+internal/ui/dist/assets
+bench/results

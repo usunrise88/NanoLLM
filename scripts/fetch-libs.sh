@@ -103,7 +103,7 @@ download() {
   fi
   if [[ ! -f "$CACHE/$asset" ]]; then
     echo "fetching $asset"
-    curl -fL --retry 3 -o "$CACHE/$asset.part" \
+    curl -fL --retry 3 --retry-all-errors -o "$CACHE/$asset.part" \
       "https://github.com/ggml-org/llama.cpp/releases/download/$TAG/$asset"
     mv "$CACHE/$asset.part" "$CACHE/$asset"
   fi
@@ -163,8 +163,9 @@ fetch() {
 
   # Only the libraries: the archives also carry llama-cli, llama-server and
   # friends, which the release does not ship.
-  # libomp.dll is ggml-base's OpenMP runtime in the Windows (clang-cl) builds.
-  copy_matching "$stage" "$out" 'libllama.*' 'llama.dll' 'libggml*' 'ggml*.dll' 'libomp*.dll' '*.metal'
+  # libomp.dll is ggml-base's OpenMP runtime in the Windows (clang-cl) builds;
+  # its licence (Apache-2.0 WITH LLVM-exception) travels with it.
+  copy_matching "$stage" "$out" 'libllama.*' 'llama.dll' 'libggml*' 'ggml*.dll' 'libomp*.dll' 'LICENSE-LLVM-OpenMP' '*.metal'
   # The CUDA backend ships only in the add-on.
   rm -f "$out"/*ggml-cuda*
 
@@ -199,7 +200,8 @@ fetch() {
 # step 2). llvm-lipo does the same job on a Linux runner.
 universal() {
   local lipo out f name
-  lipo=$(command -v lipo || command -v llvm-lipo || true)
+  # Debian and Ubuntu install llvm-lipo versioned, as llvm-lipo-18.
+  lipo=$(command -v lipo || command -v llvm-lipo || compgen -c llvm-lipo- | sort -V | tail -1 || true)
   if [[ -z "$lipo" ]]; then
     echo "fetch-libs: darwin_universal needs lipo or llvm-lipo" >&2
     exit 1

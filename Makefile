@@ -21,7 +21,7 @@ export CGO_ENABLED := 0
 # The five release platforms; darwin is built per architecture and merged.
 TARGETS     := linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/arm64 darwin/amd64
 
-.PHONY: all web web-check e2e build build-noui cross libs tools bindgen layout test-native lint test test-race conformance run run-fake tidy clean help
+.PHONY: all web web-check e2e build build-noui cross dist dist-all docker docker-cuda libs tools bindgen layout test-native lint test test-race conformance run run-fake tidy clean help
 
 all: web build
 
@@ -59,6 +59,22 @@ cross:
 		GOOS=$$os GOARCH=$$arch $(GO) build -ldflags "$(LDFLAGS)" -o $$out/nanollm$$ext ./cmd/nanollm; \
 		GOOS=$$os GOARCH=$$arch $(GO) build -tags noui -ldflags "$(LDFLAGS)" -o $$out/nanollm-noui$$ext ./cmd/nanollm; \
 	done
+
+## dist: the release archives for this machine, with and without the UI, into dist/
+dist: web
+	VERSION=$(VERSION) ./scripts/dist.sh
+
+## dist-all: every release archive and both CUDA add-ons (darwin needs lipo or llvm-lipo)
+dist-all: web
+	VERSION=$(VERSION) ./scripts/dist.sh all
+
+## docker: the CPU + Vulkan image, nanollm:$(VERSION) (deploy/Dockerfile)
+docker:
+	docker build -f deploy/Dockerfile --build-arg VERSION=$(VERSION) -t nanollm:$(VERSION) .
+
+## docker-cuda: the CUDA image, nanollm:$(VERSION)-cuda (linux/amd64)
+docker-cuda:
+	docker build -f deploy/Dockerfile --build-arg FLAVOUR=cuda --build-arg VERSION=$(VERSION) -t nanollm:$(VERSION)-cuda .
 
 ## libs: fetch the pinned llama.cpp libraries for this machine into dist/<os>_<arch>/lib
 libs:

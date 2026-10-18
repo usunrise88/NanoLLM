@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements of the signed nanollm binary (hardened runtime, release.yml).
+  Every dylib in lib/ is signed with the same identity, so library validation
+  would pass on its own; it is disabled because SPEC §10 lets an operator put
+  their own runtime (onnxruntime-genai, an NPU provider) into lib/, which is
+  signed by somebody else or not at all.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

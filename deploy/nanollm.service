@@ -1,0 +1,34 @@
+[Unit]
+Description=NanoLLM local LLM server
+Documentation=https://github.com/usunrise88/NanoLLM
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=nanollm
+Group=nanollm
+WorkingDirectory=/var/lib/nanollm
+ExecStart=/opt/nanollm/nanollm serve -config /var/lib/nanollm/nanollm.yaml
+Restart=on-failure
+RestartSec=5s
+# In-flight requests get 30 s after SIGTERM (serve's shutdown grace).
+TimeoutStopSec=45s
+KillSignal=SIGTERM
+# Range-lock pins weights in RAM with mlock (SPEC §4); the default 8 MiB
+# limit would make every locked memory mode fall back.
+LimitMEMLOCK=infinity
+LimitNOFILE=65536
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/nanollm
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
