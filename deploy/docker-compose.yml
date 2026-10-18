@@ -1,0 +1,61 @@
+# NanoLLM with Docker Compose.
+#
+#   NANOLLM_AUTH_KEYS=sk-nanollm-... docker compose -f deploy/docker-compose.yml up -d --build
+#   docker compose -f deploy/docker-compose.yml run --rm nanollm models pull
+#
+# The CUDA image, on a host with the NVIDIA container toolkit:
+#
+#   docker compose -f deploy/docker-compose.yml --profile cuda up -d --build nanollm-cuda
+#
+# Both share the weights volume; run one at a time on the same port.
+services:
+  nanollm:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: nanollm:dev
+    ports:
+      - "8080:8080"
+    volumes:
+      # Weights are gigabytes and fetched once: a volume, never the image.
+      - nanollm-data:/data
+    environment:
+      NANOLLM_AUTH_KEYS: "${NANOLLM_AUTH_KEYS:?set NANOLLM_AUTH_KEYS to one or more comma-separated API keys}"
+    # Range-lock pins weights with mlock (SPEC §4); Docker's default limit
+    # of 8 MiB would make every locked memory mode fall back.
+    ulimits:
+      memlock: -1
+    # In-flight requests get 30 s after SIGTERM.
+    stop_grace_period: 40s
+    restart: unless-stopped
+    # Vulkan on AMD or Intel: build with EXTRA_PACKAGES=mesa-vulkan-drivers
+    # and uncomment.
+    # devices:
+    #   - /dev/dri:/dev/dri
+
+  nanollm-cuda:
+    profiles: ["cuda"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        FLAVOUR: cuda
+    image: nanollm:dev-cuda
+    ports:
+      - "8080:8080"
+    volumes:
+      - nanollm-data:/data
+    environment:
+      NANOLLM_AUTH_KEYS: "${NANOLLM_AUTH_KEYS:?set NANOLLM_AUTH_KEYS to one or more comma-separated API keys}"
+    ulimits:
+      memlock: -1
+    stop_grace_period: 40s
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+
+volumes:
+  nanollm-data:

@@ -103,7 +103,7 @@ download() {
   fi
   if [[ ! -f "$CACHE/$asset" ]]; then
     echo "fetching $asset"
-    curl -fL --retry 3 -o "$CACHE/$asset.part" \
+    curl -fL --retry 3 --retry-all-errors -o "$CACHE/$asset.part" \
       "https://github.com/ggml-org/llama.cpp/releases/download/$TAG/$asset"
     mv "$CACHE/$asset.part" "$CACHE/$asset"
   fi
