@@ -11,7 +11,7 @@ import type { BenchProgress, BenchResult, BenchRun, BenchStarted } from './types
  */
 
 /** The consent text's version; it travels with a submission (docs/BENCHMARKS.md). */
-export const CONSENT_VERSION = 'draft-1'
+export const CONSENT_VERSION = '2026-10'
 
 export interface PresetState {
   preset: string

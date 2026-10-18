@@ -115,6 +115,10 @@ func serve(args []string) error {
 		return err
 	}
 
+	if libDir, err := backend.ResolveLibDir(cfg.Backends.LibDir); err == nil {
+		rt.MountBench(mux, server.BenchInfo{LibDir: libDir, Version: version, Tag: llamacpp.PinnedTag, Commit: llamacpp.PinnedCommit})
+	}
+
 	public := []string{"/healthz", "/readyz"}
 	if cfg.UI.Enabled {
 		if h, err := ui.Handler(); err != nil {

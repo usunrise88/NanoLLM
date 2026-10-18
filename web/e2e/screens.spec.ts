@@ -154,10 +154,10 @@ test('bench against the planned API: progress, results, consent, submit', async 
   // The consent preview is the exact document, consent version included.
   const json = page.getByLabel('The exact document')
   await expect(json).toContainText('"schema": "nanollm.bench/v1"')
-  await expect(json).toContainText('"consent_version": "draft-1"')
+  await expect(json).toContainText('"consent_version": "2026-10"')
 
   await page.getByText('Anonymous', { exact: true }).click()
   await page.getByRole('button', { name: 'Submit', exact: true }).click()
   await expect(page.getByText('Submitted as s_42.')).toBeVisible()
-  expect(submit).toEqual({ consent_version: 'draft-1', anonymous: true })
+  expect(submit).toEqual({ consent_version: '2026-10', anonymous: true })
 })

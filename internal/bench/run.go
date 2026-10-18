@@ -19,7 +19,6 @@ import (
 	"github.com/usunrise88/nanollm/internal/memlock"
 	"github.com/usunrise88/nanollm/internal/plan"
 	"github.com/usunrise88/nanollm/internal/registry"
-	"github.com/usunrise88/nanollm/internal/server"
 )
 
 // Options describe one benchmark run.
@@ -207,7 +206,7 @@ func choosePresets(o Options, cpu, gpu *backend.Device) []string {
 		dev = *gpu
 	}
 	out := []string{}
-	if p, err := server.DerivedPreset(dev); err == nil {
+	if p, err := plan.DerivedPreset(dev); err == nil {
 		out = append(out, p.Name)
 	}
 	reps := []string{"ram-8g", "ram-4g"}
@@ -324,4 +323,33 @@ func userScopes() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return exec.CommandContext(ctx, "systemd-run", "--user", "--scope", "--quiet", "true").Run() == nil
+}
+
+// ChoosePresets is the preset list Run would use, for a caller that wants to
+// show it before the run starts.
+func ChoosePresets(ctx context.Context, o Options) ([]string, error) {
+	if len(o.Presets) > 0 {
+		return o.Presets, nil
+	}
+	devs, err := o.Backend.Devices(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var cpu, gpu *backend.Device
+	for i := range devs {
+		switch d := &devs[i]; d.Type {
+		case backend.CPU:
+			if cpu == nil {
+				cpu = d
+			}
+		case backend.GPU:
+			if gpu == nil {
+				gpu = d
+			}
+		}
+	}
+	if cpu == nil {
+		return nil, errors.New("bench: the backend lists no CPU device")
+	}
+	return choosePresets(o, cpu, gpu), nil
 }

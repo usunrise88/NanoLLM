@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"math"
 	"runtime"
 	"strings"
 
@@ -31,7 +30,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		if preset, err = plan.LookupPreset(ov.Preset); err != nil {
 			return Placement{}, err
 		}
-	} else if preset, err = DerivedPreset(req.Device); err != nil {
+	} else if preset, err = plan.DerivedPreset(req.Device); err != nil {
 		return Placement{}, err
 	}
 	mode, err := plan.ParseMode(ov.Mode)
@@ -46,7 +45,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	if req.Device.Type != backend.CPU {
 		r.Device = &plan.Device{
 			Selector: req.Device.Selector(), Backend: strings.TrimRight(req.Device.ID, "0123456789"),
-			Memory: deviceMemory(req.Device), Unified: req.Device.Unified,
+			Memory: plan.DeviceMemory(req.Device), Unified: req.Device.Unified,
 		}
 	}
 	p, err := plan.Make(r)
@@ -70,34 +69,4 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	f, _ := req.Manifest.File(registry.RoleModel)
 	key := planKey(req, f.Revision, string(p.Mode), preset.Name, p.NCtx)
 	return Placement{Key: key, Spec: spec, Plan: p}, nil
-}
-
-func deviceMemory(d backend.Device) int64 {
-	if d.MemoryFree > 0 {
-		return d.MemoryFree
-	}
-	return d.MemoryTotal
-}
-
-// DerivedPreset is the budget a device offers when the configuration names
-// none: what it has free, rounded down to half a GiB, as a vram-, uma- or
-// ram- budget. The host keeps a quarter of its free memory for everything
-// else that runs on it.
-func DerivedPreset(d backend.Device) (plan.Preset, error) {
-	free := deviceMemory(d)
-	if free <= 0 {
-		return plan.Preset{}, fmt.Errorf("device %s reports no memory; set models.overrides.<id>.preset", d.Selector())
-	}
-	kind := "vram"
-	switch {
-	case d.Unified:
-		kind = "uma"
-	case d.Type == backend.CPU:
-		kind, free = "ram", free*3/4
-	}
-	gib := math.Floor(float64(free)/float64(plan.GiB)*2) / 2
-	if gib < 0.5 {
-		return plan.Preset{}, fmt.Errorf("device %s has %d MiB free, too little for any preset", d.Selector(), free>>20)
-	}
-	return plan.ParsePreset(fmt.Sprintf("%s-%gg", kind, gib))
 }
