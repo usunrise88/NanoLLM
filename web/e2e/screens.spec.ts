@@ -36,6 +36,21 @@ test('jobs runs a batch on the real queue', async ({ page }) => {
   await expect(page.locator(`[data-item="${id}"]`)).toContainText('succeeded')
 })
 
+test('jobs says when the queue is off, with the server\'s reason', async ({ page }) => {
+  const reason = 'the job queue is off on this server: queue.enabled is false'
+  await page.route('**/api/v1/jobs**', (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: 'application/problem+json',
+      json: { type: 'about:blank', title: 'Conflict', status: 409, detail: reason, code: 'capability_unavailable' },
+    }),
+  )
+  await page.goto('/ui/jobs')
+  await expect(page.getByText('The job queue is off on this server', { exact: true })).toBeVisible()
+  await expect(page.getByText(reason)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Enqueue' })).toBeDisabled()
+})
+
 /**
  * The jobs screen against recorded answers, for the states a live fake
  * finishes too fast to show: running, progress, cancel.

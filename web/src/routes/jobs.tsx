@@ -16,7 +16,7 @@ import {
   Textarea,
   type Tone,
 } from '@/components/ui'
-import { errorText, getJob, isNotYet, validateJsonl } from '@/lib/api/client'
+import { ApiError, errorText, getJob, isNotYet, validateJsonl } from '@/lib/api/client'
 import { useCancelJob, useJob, useJobHistory, useJobStream, useModels, useSubmitJob } from '@/lib/api/hooks'
 import { isTerminal, type Job, type JobStatus } from '@/lib/api/types'
 import { when } from '@/lib/format'
@@ -66,11 +66,14 @@ function JobsPage() {
   const loading = useDelayedPending(history.isLoading)
   const jobs = history.data?.pages.flatMap((p) => p.data ?? []) ?? []
   const notYet = history.isError && isNotYet(history.error)
+  // The server has the queue but it is switched off or could not open its
+  // database; the server's own reason says which.
+  const off = history.isError && history.error instanceof ApiError && history.error.code === 'capability_unavailable'
 
   return (
     <Page>
       <Section title={t('jobs.submit')} description={t('jobs.submitHint')}>
-        <SubmitForm disabled={notYet} />
+        <SubmitForm disabled={notYet || off} />
       </Section>
 
       <Section
@@ -91,7 +94,12 @@ function JobsPage() {
             <EmptyState title={t('jobs.notYet')} description={t('jobs.notYetHint')} />
           </Card>
         )}
-        {history.isError && !notYet && (
+        {off && (
+          <Card>
+            <EmptyState title={t('jobs.off')} description={errorText(history.error)} />
+          </Card>
+        )}
+        {history.isError && !notYet && !off && (
           <ErrorState
             title={t('common.error')}
             detail={errorText(history.error)}
