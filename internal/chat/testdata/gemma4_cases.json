@@ -1,0 +1,89 @@
+[
+ {"name": "single_user", "messages": [{"role": "user", "content": "  Привет!  "}]},
+ {"name": "no_generation_prompt", "add_generation_prompt": false,
+  "messages": [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}]},
+ {"name": "system_and_multiturn", "messages": [
+   {"role": "system", "content": "\nYou are terse.\n"},
+   {"role": "user", "content": "One"},
+   {"role": "assistant", "content": "1"},
+   {"role": "user", "content": "Two"}]},
+ {"name": "developer_role", "messages": [{"role": "developer", "content": "Rules."}, {"role": "user", "content": "x"}]},
+ {"name": "thinking_on", "enable_thinking": true, "messages": [{"role": "user", "content": "Why?"}]},
+ {"name": "thinking_with_system", "enable_thinking": true, "messages": [{"role": "system", "content": "Sys"}, {"role": "user", "content": "Why?"}]},
+ {"name": "assistant_strip_thinking", "messages": [
+   {"role": "user", "content": "q"},
+   {"role": "assistant", "content": "<|channel>thought\nhidden<channel|>  visible  "},
+   {"role": "user", "content": "q2"}]},
+ {"name": "reasoning_after_last_user", "add_generation_prompt": false, "messages": [
+   {"role": "user", "content": "q"},
+   {"role": "assistant", "content": "a", "reasoning_content": "because"}]},
+ {"name": "reasoning_before_last_user", "messages": [
+   {"role": "user", "content": "q"},
+   {"role": "assistant", "content": "a", "reasoning_content": "dropped"},
+   {"role": "user", "content": "q2"}]},
+ {"name": "tools_declared", "tools": [
+   {"type": "function", "function": {"name": "get_weather", "description": "Weather for a city",
+    "parameters": {"type": "object", "properties": {
+      "city": {"type": "string", "description": "City name"},
+      "unit": {"type": "string", "enum": ["c", "f"]},
+      "days": {"type": "integer"},
+      "Zeta": {"type": "boolean", "nullable": true}},
+     "required": ["city"]}}}],
+  "messages": [{"role": "user", "content": "Weather in Paris?"}]},
+ {"name": "tools_nested_schema", "tools": [
+   {"type": "function", "function": {"name": "book", "description": "Book things",
+    "parameters": {"type": "object", "properties": {
+      "guests": {"type": "array", "description": "People", "items": {"type": "object",
+        "properties": {"name": {"type": "string"}, "age": {"type": "number"}}, "required": ["name"]}},
+      "tags": {"type": "array", "items": {"type": "string"}},
+      "kinds": {"type": "array", "items": {"type": ["string", "null"], "minItems": 1}},
+      "address": {"type": "object", "description": "Where", "properties": {"street": {"type": "string"}, "zip": {"type": "string"}}, "required": ["street"]},
+      "meta": {"type": "object", "additionalProperties": {"type": "string"}, "extra": 3}}}}},
+   {"type": "function", "function": {"name": "noop", "description": "Does nothing"}},
+   {"type": "function", "function": {"name": "empty_params", "description": "", "parameters": {"type": "object", "properties": {}}}}],
+  "messages": [{"role": "system", "content": "Use tools."}, {"role": "user", "content": "go"}]},
+ {"name": "tool_call_and_response", "tools": [
+   {"type": "function", "function": {"name": "get_weather", "description": "w", "parameters": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}}}],
+  "messages": [
+   {"role": "user", "content": "Weather in Paris?"},
+   {"role": "assistant", "content": "", "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "get_weather", "arguments": "{\"city\": \"Paris\", \"n\": 2, \"x\": 1.5, \"big\": 1e20, \"ok\": true, \"nil\": null, \"list\": [1, \"a\", {\"B\": 1, \"a\": 2}]}"}}]},
+   {"role": "tool", "tool_call_id": "c1", "content": "{\"temp\": 21}"}]},
+ {"name": "tool_response_then_thinking", "enable_thinking": true, "messages": [
+   {"role": "user", "content": "w?"},
+   {"role": "assistant", "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "get_weather", "arguments": "{}"}}]},
+   {"role": "tool", "tool_call_id": "c1", "content": "sunny"}]},
+ {"name": "parallel_calls", "messages": [
+   {"role": "user", "content": "both"},
+   {"role": "assistant", "content": null, "tool_calls": [
+     {"id": "a", "type": "function", "function": {"name": "f", "arguments": "{\"x\": 1}"}},
+     {"id": "b", "type": "function", "function": {"name": "g", "arguments": "{\"y\": \"z\"}"}}]},
+   {"role": "tool", "tool_call_id": "b", "content": "G"},
+   {"role": "tool", "tool_call_id": "a", "content": "F"},
+   {"role": "assistant", "content": "done"},
+   {"role": "user", "content": "thanks"}]},
+ {"name": "tool_call_no_response", "add_generation_prompt": true, "messages": [
+   {"role": "user", "content": "x"},
+   {"role": "assistant", "tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": "not json"}}]}]},
+ {"name": "tool_call_string_args_object", "messages": [
+   {"role": "user", "content": "x"},
+   {"role": "assistant", "tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": "[1,2]"}}]},
+   {"role": "tool", "tool_call_id": "zz", "name": "named", "content": "r"}]},
+ {"name": "unknown_tool_name", "messages": [
+   {"role": "user", "content": "x"},
+   {"role": "assistant", "tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": "{}"}}]},
+   {"role": "tool", "tool_call_id": "zz", "content": "r"}]},
+ {"name": "consecutive_assistants", "messages": [
+   {"role": "user", "content": "x"},
+   {"role": "assistant", "content": "part one"},
+   {"role": "assistant", "content": "part two"}]},
+ {"name": "tool_then_answer_same_turn", "add_generation_prompt": false, "messages": [
+   {"role": "user", "content": "x"},
+   {"role": "assistant", "content": "calling", "tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": "{\"q\": \"Ünïcödé\"}"}}]},
+   {"role": "tool", "tool_call_id": "a", "content": "res"},
+   {"role": "assistant", "content": "final"}]},
+ {"name": "floats", "messages": [
+   {"role": "user", "content": "x"},
+   {"role": "assistant", "tool_calls": [{"id": "a", "type": "function", "function": {"name": "f", "arguments": "{\"a\": 0.0001, \"b\": 0.00001, \"c\": 1e15, \"d\": 1e16, \"e\": 100, \"f\": 2.50, \"g\": -0.0, \"h\": 123456789012345678901234567890, \"i\": 1E+2}"}}]},
+   {"role": "tool", "tool_call_id": "a", "content": ""}]},
+ {"name": "whitespace_content", "messages": [{"role": "user", "content": "\t\n "}, {"role": "assistant", "content": "  "}, {"role": "user", "content": "x "}]}
+]

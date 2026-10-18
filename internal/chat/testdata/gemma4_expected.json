@@ -1,0 +1,86 @@
+{
+ "assistant_strip_thinking": {
+  "prompt": "<bos><|turn>user\nq<turn|>\n<|turn>model\nvisible<turn|>\n<|turn>user\nq2<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>user\nq<turn|>\n<|turn>model\nvisible<turn|>\n<|turn>user\nq2<turn|>\n<|turn>model\n"
+ },
+ "consecutive_assistants": {
+  "prompt": "<bos><|turn>user\nx<turn|>\n<|turn>model\npart onepart two<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>user\nx<turn|>\n<|turn>model\npart onepart two<turn|>\n<|turn>model\n"
+ },
+ "developer_role": {
+  "prompt": "<bos><|turn>system\nRules.<turn|>\n<|turn>user\nx<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>system\nRules.<turn|>\n<|turn>user\nx<turn|>\n<|turn>model\n"
+ },
+ "floats": {
+  "prompt": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{a:0.0001,b:1e-05,c:1000000000000000.0,d:1e+16,e:100,f:2.5,g:-0.0,h:123456789012345678901234567890,i:100.0}<tool_call|><|tool_response>response:f{value:<|\"|><|\"|>}<tool_response|>",
+  "template": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{a:0.0001,b:1e-05,c:1000000000000000.0,d:1e+16,e:100,f:2.5,g:-0.0,h:123456789012345678901234567890,i:100.0}<tool_call|><|tool_response>response:f{value:<|\"|><|\"|>}<tool_response|>"
+ },
+ "no_generation_prompt": {
+  "prompt": "<bos><|turn>user\nhi<turn|>\n<|turn>model\nhello<turn|>\n",
+  "template": "<bos><|turn>user\nhi<turn|>\n<|turn>model\nhello<turn|>\n"
+ },
+ "parallel_calls": {
+  "prompt": "<bos><|turn>user\nboth<turn|>\n<|turn>model\n<|tool_call>call:f{x:1}<tool_call|><|tool_call>call:g{y:<|\"|>z<|\"|>}<tool_call|><|tool_response>response:g{value:<|\"|>G<|\"|>}<tool_response|><|tool_response>response:f{value:<|\"|>F<|\"|>}<tool_response|>done<turn|>\n<|turn>user\nthanks<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>user\nboth<turn|>\n<|turn>model\n<|tool_call>call:f{x:1}<tool_call|><|tool_call>call:g{y:<|\"|>z<|\"|>}<tool_call|><|tool_response>response:g{value:<|\"|>G<|\"|>}<tool_response|><|tool_response>response:f{value:<|\"|>F<|\"|>}<tool_response|>done<turn|>\n<|turn>user\nthanks<turn|>\n<|turn>model\n"
+ },
+ "reasoning_after_last_user": {
+  "prompt": "<bos><|turn>user\nq<turn|>\n<|turn>model\n<|channel>thought\nbecause\n<channel|>a<turn|>\n",
+  "template": "<bos><|turn>user\nq<turn|>\n<|turn>model\n<|channel>thought\nbecause\n<channel|>a<turn|>\n"
+ },
+ "reasoning_before_last_user": {
+  "prompt": "<bos><|turn>user\nq<turn|>\n<|turn>model\na<turn|>\n<|turn>user\nq2<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>user\nq<turn|>\n<|turn>model\na<turn|>\n<|turn>user\nq2<turn|>\n<|turn>model\n"
+ },
+ "single_user": {
+  "prompt": "<bos><|turn>user\nПривет!<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>user\nПривет!<turn|>\n<|turn>model\n"
+ },
+ "system_and_multiturn": {
+  "prompt": "<bos><|turn>system\nYou are terse.<turn|>\n<|turn>user\nOne<turn|>\n<|turn>model\n1<turn|>\n<|turn>user\nTwo<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>system\nYou are terse.<turn|>\n<|turn>user\nOne<turn|>\n<|turn>model\n1<turn|>\n<|turn>user\nTwo<turn|>\n<|turn>model\n"
+ },
+ "thinking_on": {
+  "prompt": "<bos><|turn>system\n<|think|>\n<turn|>\n<|turn>user\nWhy?<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>system\n<|think|>\n<turn|>\n<|turn>user\nWhy?<turn|>\n<|turn>model\n"
+ },
+ "thinking_with_system": {
+  "prompt": "<bos><|turn>system\n<|think|>\nSys<turn|>\n<|turn>user\nWhy?<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>system\n<|think|>\nSys<turn|>\n<|turn>user\nWhy?<turn|>\n<|turn>model\n"
+ },
+ "tool_call_and_response": {
+  "prompt": "<bos><|turn>system\n<|tool>declaration:get_weather{description:<|\"|>w<|\"|>,parameters:{properties:{city:{type:<|\"|>STRING<|\"|>}},required:[<|\"|>city<|\"|>],type:<|\"|>OBJECT<|\"|>}}<tool|><turn|>\n<|turn>user\nWeather in Paris?<turn|>\n<|turn>model\n<|tool_call>call:get_weather{big:1e+20,city:<|\"|>Paris<|\"|>,list:[1,<|\"|>a<|\"|>,{a:2,B:1}],n:2,nil:null,ok:true,x:1.5}<tool_call|><|tool_response>response:get_weather{temp:21}<tool_response|>",
+  "template": "<bos><|turn>system\n<|tool>declaration:get_weather{description:<|\"|>w<|\"|>,parameters:{properties:{city:{type:<|\"|>STRING<|\"|>}},required:[<|\"|>city<|\"|>],type:<|\"|>OBJECT<|\"|>}}<tool|><turn|>\n<|turn>user\nWeather in Paris?<turn|>\n<|turn>model\n<|tool_call>call:get_weather{big:1e+20,city:<|\"|>Paris<|\"|>,list:[1,<|\"|>a<|\"|>,{a:2,B:1}],n:2,nil:null,ok:true,x:1.5}<tool_call|><|tool_response>response:get_weather{value:<|\"|>{\"temp\": 21}<|\"|>}<tool_response|>"
+ },
+ "tool_call_no_response": {
+  "prompt": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{not json}<tool_call|><|tool_response>",
+  "template": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{not json}<tool_call|><|tool_response>"
+ },
+ "tool_call_string_args_object": {
+  "prompt": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{[1,2]}<tool_call|><|tool_response>response:f{value:<|\"|>r<|\"|>}<tool_response|>",
+  "template": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{[1,2]}<tool_call|><|tool_response>response:named{value:<|\"|>r<|\"|>}<tool_response|>"
+ },
+ "tool_response_then_thinking": {
+  "prompt": "<bos><|turn>system\n<|think|>\n<turn|>\n<|turn>user\nw?<turn|>\n<|turn>model\n<|tool_call>call:get_weather{}<tool_call|><|tool_response>response:get_weather{value:<|\"|>sunny<|\"|>}<tool_response|><|channel>thought\n",
+  "template": "<bos><|turn>system\n<|think|>\n<turn|>\n<|turn>user\nw?<turn|>\n<|turn>model\n<|tool_call>call:get_weather{}<tool_call|><|tool_response>response:get_weather{value:<|\"|>sunny<|\"|>}<tool_response|><|channel>thought\n"
+ },
+ "tool_then_answer_same_turn": {
+  "prompt": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{q:<|\"|>Ünïcödé<|\"|>}<tool_call|><|tool_response>response:f{value:<|\"|>res<|\"|>}<tool_response|>final<turn|>\n",
+  "template": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{q:<|\"|>Ünïcödé<|\"|>}<tool_call|><|tool_response>response:f{value:<|\"|>res<|\"|>}<tool_response|>callingfinal<turn|>\n"
+ },
+ "tools_declared": {
+  "prompt": "<bos><|turn>system\n<|tool>declaration:get_weather{description:<|\"|>Weather for a city<|\"|>,parameters:{properties:{city:{description:<|\"|>City name<|\"|>,type:<|\"|>STRING<|\"|>},days:{type:<|\"|>INTEGER<|\"|>},unit:{enum:[<|\"|>c<|\"|>,<|\"|>f<|\"|>],type:<|\"|>STRING<|\"|>},Zeta:{nullable:true,type:<|\"|>BOOLEAN<|\"|>}},required:[<|\"|>city<|\"|>],type:<|\"|>OBJECT<|\"|>}}<tool|><turn|>\n<|turn>user\nWeather in Paris?<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>system\n<|tool>declaration:get_weather{description:<|\"|>Weather for a city<|\"|>,parameters:{properties:{city:{description:<|\"|>City name<|\"|>,type:<|\"|>STRING<|\"|>},days:{type:<|\"|>INTEGER<|\"|>},unit:{enum:[<|\"|>c<|\"|>,<|\"|>f<|\"|>],type:<|\"|>STRING<|\"|>},Zeta:{nullable:true,type:<|\"|>BOOLEAN<|\"|>}},required:[<|\"|>city<|\"|>],type:<|\"|>OBJECT<|\"|>}}<tool|><turn|>\n<|turn>user\nWeather in Paris?<turn|>\n<|turn>model\n"
+ },
+ "tools_nested_schema": {
+  "prompt": "<bos><|turn>system\nUse tools.<|tool>declaration:book{description:<|\"|>Book things<|\"|>,parameters:{properties:{address:{description:<|\"|>Where<|\"|>,properties:{street:{type:<|\"|>STRING<|\"|>},zip:{type:<|\"|>STRING<|\"|>}},required:[<|\"|>street<|\"|>],type:<|\"|>OBJECT<|\"|>},guests:{description:<|\"|>People<|\"|>,items:{properties:{age:{type:<|\"|>NUMBER<|\"|>},name:{type:<|\"|>STRING<|\"|>}},required:[<|\"|>name<|\"|>],type:<|\"|>OBJECT<|\"|>},type:<|\"|>ARRAY<|\"|>},kinds:{items:{minItems:1,type:[<|\"|>STRING<|\"|>,<|\"|>NULL<|\"|>]},type:<|\"|>ARRAY<|\"|>},meta:{properties:{additionalProperties:{type:<|\"|>STRING<|\"|>},extra:{type:<|\"|><|\"|>}},type:<|\"|>OBJECT<|\"|>},tags:{items:{type:<|\"|>STRING<|\"|>},type:<|\"|>ARRAY<|\"|>}},type:<|\"|>OBJECT<|\"|>}}<tool|><|tool>declaration:noop{description:<|\"|>Does nothing<|\"|>}<tool|><|tool>declaration:empty_params{description:<|\"|><|\"|>,parameters:{type:<|\"|>OBJECT<|\"|>}}<tool|><turn|>\n<|turn>user\ngo<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>system\nUse tools.<|tool>declaration:book{description:<|\"|>Book things<|\"|>,parameters:{properties:{address:{description:<|\"|>Where<|\"|>,properties:{street:{type:<|\"|>STRING<|\"|>},zip:{type:<|\"|>STRING<|\"|>}},required:[<|\"|>street<|\"|>],type:<|\"|>OBJECT<|\"|>},guests:{description:<|\"|>People<|\"|>,items:{properties:{age:{type:<|\"|>NUMBER<|\"|>},name:{type:<|\"|>STRING<|\"|>}},required:[<|\"|>name<|\"|>],type:<|\"|>OBJECT<|\"|>},type:<|\"|>ARRAY<|\"|>},kinds:{items:{minItems:1,type:[<|\"|>STRING<|\"|>,<|\"|>NULL<|\"|>]},type:<|\"|>ARRAY<|\"|>},meta:{properties:{additionalProperties:{type:<|\"|>STRING<|\"|>},extra:{type:<|\"|><|\"|>}},type:<|\"|>OBJECT<|\"|>},tags:{items:{type:<|\"|>STRING<|\"|>},type:<|\"|>ARRAY<|\"|>}},type:<|\"|>OBJECT<|\"|>}}<tool|><|tool>declaration:noop{description:<|\"|>Does nothing<|\"|>}<tool|><|tool>declaration:empty_params{description:<|\"|><|\"|>,parameters:{type:<|\"|>OBJECT<|\"|>}}<tool|><turn|>\n<|turn>user\ngo<turn|>\n<|turn>model\n"
+ },
+ "unknown_tool_name": {
+  "prompt": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{}<tool_call|><|tool_response>response:f{value:<|\"|>r<|\"|>}<tool_response|>",
+  "template": "<bos><|turn>user\nx<turn|>\n<|turn>model\n<|tool_call>call:f{}<tool_call|><|tool_response>response:unknown{value:<|\"|>r<|\"|>}<tool_response|>"
+ },
+ "whitespace_content": {
+  "prompt": "<bos><|turn>user\n<turn|>\n<|turn>model\n<turn|>\n<|turn>user\nx<turn|>\n<|turn>model\n",
+  "template": "<bos><|turn>user\n<turn|>\n<|turn>model\n<turn|>\n<|turn>user\nx<turn|>\n<|turn>model\n"
+ }
+}
