@@ -323,3 +323,47 @@ jobs:
           foreach ($p in "$env:ProgramFiles\NanoLLM", "$env:ProgramData\NanoLLM") {
             if (Test-Path $p) { throw "$p survived -Purge" }
           }
+
+  # Both container images (deploy/Dockerfile). The CPU one serves: healthy,
+  # keys enforced, a reply from the tiny model. The CUDA one runs without a
+  # GPU here and must fall back to the CPU and say why; on a GPU it is
+  # exercised from stage 3.
+  docker:
+    needs: binding
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: tiny-fixtures
+          path: fixtures
+      - name: build the CPU image
+        run: docker build -f deploy/Dockerfile -t nanollm:ci .
+      - name: build the CUDA image
+        run: docker build -f deploy/Dockerfile --build-arg FLAVOUR=cuda -t nanollm:ci-cuda .
+      - name: the CPU image serves
+        run: |
+          key=sk-ci-0123456789abcdef
+          docker run -d --name nl -p 127.0.0.1:18080:8080 -e NANOLLM_AUTH_KEYS=$key nanollm:ci
+          for i in $(seq 60); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' nl)" = healthy ] && break
+            sleep 2
+          done
+          docker inspect -f '{{.State.Health.Status}}' nl | grep -qx healthy || { docker logs nl; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' 127.0.0.1:18080/v1/models)
+          [ "$code" = 401 ] || { echo "::error::without a key: $code, want 401"; exit 1; }
+          curl -sf -H "Authorization: Bearer $key" 127.0.0.1:18080/v1/models >/dev/null
+          docker rm -f nl
+      - name: run --prompt on the tiny model in each image
+        run: |
+          for img in nanollm:ci nanollm:ci-cuda; do
+            out=$(docker run --rm -v "$PWD/fixtures:/fx:ro" -e NANOLLM_AUTH_KEYS=sk-ci-0123456789abcdef \
+              "$img" run --model /fx/tiny-gemma4.gguf --prompt hi -n 4 2>&1) || { echo "$out"; exit 1; }
+            echo "$img: $out" | tail -3
+          done
+      - name: the CUDA image without a GPU falls back and says why
+        run: |
+          out=$(docker run --rm -e NANOLLM_AUTH_KEYS=sk-ci-0123456789abcdef nanollm:ci-cuda devices 2>&1)
+          echo "$out"
+          grep -q "llamacpp:cpu" <<<"$out"
+          grep -qi "cuda" <<<"$out" || { echo "::error::the CUDA image does not say why CUDA is missing"; exit 1; }
