@@ -259,7 +259,7 @@ func (m *Model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.Se
 		}
 		if !continued {
 			prompt, _ := detokenize(s.kv)
-			sc := scenario(prompt)
+			sc := resume(prompt)
 			s.genStart, s.out, s.endless, s.fail = len(s.kv), sc.tokens(), sc.endless, sc.fail
 			s.drafted, s.accepted = 0, 0
 		}

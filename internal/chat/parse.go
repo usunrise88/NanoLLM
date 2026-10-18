@@ -442,3 +442,11 @@ func (r *dslReader) value() (string, error) {
 func (r *dslReader) errf(msg string) error {
 	return fmt.Errorf("%s at offset %d in %s", msg, r.i, strconv.Quote(truncate(r.s, 80)))
 }
+
+// InReasoning reports whether the parser is inside a thought, past the
+// channel header, so the caller can count reasoning tokens and enforce a
+// reasoning budget. Closing the channel any earlier would turn a half-read
+// header into content.
+func (p *Parser) InReasoning() bool {
+	return p.state == psThoughtLead || p.state == psReasoning
+}

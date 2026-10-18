@@ -93,3 +93,30 @@ func lastUser(prompt string) string {
 // tokens is the script as the model emits it: control tokens in the output
 // are tokenized as such, so a tool call arrives as the real model's would.
 func (s script) tokens() []backend.Token { return tokenize(string(s.out), false, true) }
+
+// resume is the scenario for a prompt that may already hold the start of the
+// answer after the last "<|turn>model\n": a continuation, as when the
+// reasoning budget closes the thought channel and generation goes on. The
+// script picks up after the part already written, or after its own channel
+// close when the prompt closed the channel early; otherwise it starts over.
+func resume(prompt string) script {
+	const open = "<|turn>model\n"
+	i := strings.LastIndex(prompt, open)
+	if i < 0 {
+		return scenario(prompt)
+	}
+	sc := scenario(prompt[:i+len(open)])
+	partial := prompt[i+len(open):]
+	if partial == "" || sc.endless || sc.fail {
+		return sc
+	}
+	text := string(sc.out)
+	switch {
+	case strings.HasPrefix(text, partial):
+		sc.out = []byte(text[len(partial):])
+	case strings.HasSuffix(partial, "<channel|>") && strings.Contains(text, "<channel|>"):
+		j := strings.Index(text, "<channel|>")
+		sc.out = []byte(text[j+len("<channel|>"):])
+	}
+	return sc
+}

@@ -108,7 +108,8 @@ func Auth(store *KeyStore, public ...string) Middleware {
 				WriteProblem(w, core.Errorf(core.CodeUnauthorized, "a valid API key is required"))
 				return
 			}
-			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), keyCtx{}, k)))
+			ctx := context.WithValue(r.Context(), keyCtx{}, k)
+			next.ServeHTTP(w, r.WithContext(core.WithInteractive(ctx, k.Interactive)))
 		})
 	}
 }
