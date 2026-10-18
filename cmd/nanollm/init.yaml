@@ -1,0 +1,40 @@
+# NanoLLM configuration, written by `nanollm init` on {{.Host}}.
+#
+# Only the settings a deployment usually changes are here; everything else has
+# a default. The annotated reference with every section is
+# configs/nanollm.example.yaml in the source tree.
+#
+# Precedence: flags > NANOLLM_* env > this file > defaults.
+
+server:
+  addr: "{{.Addr}}"
+  data_dir: "{{.DataDir}}"
+
+auth:
+  # "open" is permitted only when addr binds a loopback address.
+  mode: apikey
+  keys:
+    - {name: admin, secret: {{.AdminKey}}, admin: true, interactive: true}
+    - {name: user,  secret: {{.UserKey}}}
+
+api:
+  dialects: [openai, native]
+
+backends:
+  lib_dir: ./lib          # relative to the binary
+  enabled: [llamacpp]
+
+devices:
+  default: auto           # auto | cpu | gpu | npu | llamacpp:vulkan0 ...
+  fallback: true
+
+models:
+  default: {{.Model}}
+  preload: [{{.Model}}]
+  # overrides:
+  #   {{.Model}}:
+  #     preset: ram-6g    # a hard memory budget; `nanollm plan` shows what it buys
+  #     mode: auto
+
+ui:
+  enabled: true

@@ -1,0 +1,16 @@
+# Line endings are normalised to LF in the repository and on checkout, so an
+# editor on Windows that rewrites endings produces no diff.
+* text=auto eol=lf
+
+*.sh            text eol=lf
+*.service       text eol=lf
+Makefile        text eol=lf
+
+# Assets and weights: never touched.
+*.png           binary
+*.ico           binary
+*.woff2         binary
+*.gguf          binary
+*.onnx          binary
+*.zip           binary
+*.tar.gz        binary

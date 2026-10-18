@@ -1,0 +1,55 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - name: gofmt
+        run: test -z "$(gofmt -l cmd internal)" || { gofmt -l cmd internal; exit 1; }
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.5
+      # -race needs cgo; the shipped binary does not.
+      - run: CGO_ENABLED=1 go test -race ./...
+      - name: cross-compile every release target with CGO_ENABLED=0
+        run: make cross VERSION=${GITHUB_REF_NAME}
+      - name: smoke test
+        run: |
+          ./dist/linux_amd64/nanollm version
+          ./dist/linux_amd64/nanollm serve -addr 127.0.0.1:18080 &
+          for i in $(seq 30); do
+            curl -sf localhost:18080/healthz && exit 0
+            sleep 1
+          done
+          echo "server did not come up" >&2
+          exit 1
+
+  # Unit tests on the other two platforms: path handling, the data-dir
+  # defaults and library names differ per OS, and only a real runner shows it.
+  test:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
+        env:
+          CGO_ENABLED: "0"

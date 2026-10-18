@@ -1,0 +1,14 @@
+NanoLLM loads the following third-party components at runtime. They are not
+compiled into the binary; release archives carry them in lib/ together with
+their licence texts.
+
+  llama.cpp   MIT   https://github.com/ggml-org/llama.cpp
+  ggml        MIT   https://github.com/ggml-org/ggml
+
+Go dependencies compiled into the binary:
+
+  gopkg.in/yaml.v3   MIT and Apache-2.0   https://github.com/go-yaml/yaml
+
+Model weights are NOT part of this repository or of any release archive and
+carry their own licences. Each catalog entry records its licence, and from
+v1.0 registry.strict_license refuses weights not licensed for commercial use.

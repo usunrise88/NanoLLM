@@ -1,0 +1,77 @@
+# NanoLLM — annotated reference configuration (SPEC §8).
+#
+# `nanollm init` writes a shorter file with real keys; this one lists every
+# section with its default. Unknown keys are a startup error, not a warning.
+#
+# Precedence: flags > NANOLLM_* env > this file > defaults. Every scalar and
+# list key has an environment override named after its path:
+# server.addr -> NANOLLM_SERVER_ADDR, api.dialects -> NANOLLM_API_DIALECTS
+# (comma-separated). NANOLLM_AUTH_KEYS takes comma-separated secrets.
+
+server:
+  addr: 127.0.0.1:8080
+  data_dir: /var/lib/nanollm
+
+auth:
+  mode: apikey            # open allowed only on loopback
+  keys:
+    - {name: admin, secret: sk-nanollm-replace-me-admin, admin: true, interactive: true}
+    - {name: user,  secret: sk-nanollm-replace-me-user, rps: 10}
+
+api:
+  dialects: [openai, native]   # + ollama in v2
+
+backends:
+  lib_dir: ./lib          # ggml backends and optional onnxruntime-genai; relative to the binary
+  enabled: [llamacpp]     # + ortgenai, mlx
+
+devices:
+  default: auto           # auto | cpu | gpu | npu | llamacpp:vulkan0 ...
+  fallback: true
+  cpu_threads: 0          # 0 = physical cores
+
+models:
+  default: gemma-4-e4b-qat
+  preload: [gemma-4-e4b-qat]
+  overrides:
+    gemma-4-e4b-qat:
+      preset: vram-3g     # SPEC §4; or mode: + explicit placement
+      mode: auto          # auto = planner picks M1..M9 within the preset
+      kv_type: f16        # f16 | q8_0
+      n_ctx: auto         # auto = what the preset leaves, floor 4096
+      slots: auto
+      speculative:
+        type: mtp         # mtp | none
+        n_max: 2
+        p_min: 0.0
+    qwen3.5-9b-q4km:
+      preset: ram-8g
+      speculative: {type: none}
+
+pool:
+  max_resident_models: 1
+
+cache:
+  prompt: true
+  max_snapshots: 8        # Qwen3.5 fallback only
+
+generation:
+  enable_thinking: false
+  max_tokens_cap: 8192
+  context_overflow: error # error | truncate_middle
+
+queue:
+  enabled: true
+  max_pending: 1000
+
+registry:
+  strict_license: false
+  catalog_url: ""
+  mirrors: []
+
+ui:
+  enabled: true
+
+log:
+  level: info             # debug | info | warn | error
+  format: json            # json | text

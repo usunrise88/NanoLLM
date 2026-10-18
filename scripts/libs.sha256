@@ -1,0 +1,6 @@
+# sha256 of every llama.cpp release archive scripts/fetch-libs.sh may open,
+# one "<sha256>  <asset>" line each, for the tag in scripts/llama.cpp.tag.
+#
+# Filled in when the tag is pinned. Bumping llama.cpp means: change the tag,
+# replace these lines, regenerate the binding against its llama.h, and pass the
+# golden tests (SPEC §10).
