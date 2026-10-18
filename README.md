@@ -26,7 +26,8 @@ Bootstrap. What works today:
 | Build | `CGO_ENABLED=0` cross-compilation for all release targets; `scripts/fetch-libs.sh` with checksum verification |
 
 Next is milestone v0.1 — the engine spike: purego binding to `libllama`,
-`nanollm run` / `plan` / `bench` with Gemma 4 E4B + MTP (SPEC §14).
+`nanollm run` / `plan` / `bench` with Gemma 4 E4B + MTP (SPEC §14). The
+development plan by stage and machine is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Build
 
