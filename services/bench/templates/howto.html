@@ -1,0 +1,64 @@
+{{define "content"}}
+<h1>{{.Title}}</h1>
+{{if eq .Lang "ru"}}
+<ol class="steps">
+  <li><p>Установите NanoLLM и скачайте модель по умолчанию (её скачивает установщик или
+    <code>nanollm models pull</code>).</p></li>
+  <li><p>Запустите бенчмарк. По умолчанию — быстрый набор: <code>auto</code> и два
+    репрезентативных пресета; полный — с <code>--full</code>:</p>
+    <pre>nanollm bench
+nanollm bench --full</pre>
+    <p>Каждый пресет идёт в отдельном процессе: прогрев, три повтора, медиана и разброс.
+    Пресет, который не помещается в память машины, отмечается как «не помещается» — это результат,
+    а не ошибка. На время прогона закройте тяжёлые программы и подключите ноутбук к сети.</p></li>
+  <li><p>После прогона NanoLLM покажет сводку и точный JSON, который уйдёт на сайт, и спросит
+    согласие. Ничего не отправляется без вашего «y». Для скриптов — <code>--submit</code>.</p></li>
+  <li><p>Без сети результат сохраняется в файл; отправить его позже:</p>
+    <pre>nanollm bench submit bench/results/bench-ДАТА-standard.json</pre></li>
+  <li><p>Удалить свою отправку (нужен тот же ключ установки, который её подписал):</p>
+    <pre>nanollm bench withdraw ID</pre>
+    <p>Режим «анонимно» (<code>bench.anonymous: true</code>) подписывает отправку одноразовым ключом:
+    её нельзя будет удалить и связать с другими вашими отправками.</p></li>
+</ol>
+<h2>Что уходит на сайт</h2>
+<p>Метрики пресетов, версии NanoLLM и llama.cpp, хэши модели и профиль железа: процессор, память,
+видеокарта, производитель и модель компьютера, ОС, источник питания, тип диска. Не уходят имя
+компьютера и пользователя, серийные номера, UUID и MAC-адреса; тексты ответов модели — только их хэш.
+Подробности — в <a href="/benchmarks/privacy">политике приватности</a>.</p>
+<h2>Как считаются цифры</h2>
+<p>Для каждой группы (модель, набор, пресет, система, процессор, видеокарта, ОС) показана медиана и
+p25–p75. Каждая установка и каждая машина (грубый отпечаток железа) учитываются один раз, сколько бы
+раз они ни отправляли результат. Результаты разных версий набора не смешиваются. Скорость генерации
+проверяется на правдоподобие по пропускной способности памяти; выбросы уходят на модерацию.</p>
+{{else}}
+<ol class="steps">
+  <li><p>Install NanoLLM and get the default model (the installer fetches it, or
+    <code>nanollm models pull</code>).</p></li>
+  <li><p>Run the benchmark. The default is the quick set: <code>auto</code> and two
+    representative presets; <code>--full</code> runs them all:</p>
+    <pre>nanollm bench
+nanollm bench --full</pre>
+    <p>Each preset runs in a process of its own: a warm-up, three repetitions, the median and the
+    spread. A preset that does not fit the machine is marked "refused" — that is a result, not an
+    error. Close heavy programs and plug the laptop in while it runs.</p></li>
+  <li><p>Afterwards NanoLLM shows a summary and the exact JSON it would send, and asks. Nothing is
+    sent without your "y". For scripts: <code>--submit</code>.</p></li>
+  <li><p>Offline, the result stays in a file; send it later:</p>
+    <pre>nanollm bench submit bench/results/bench-DATE-standard.json</pre></li>
+  <li><p>Withdraw a submission (with the installation key that signed it):</p>
+    <pre>nanollm bench withdraw ID</pre>
+    <p>Anonymous mode (<code>bench.anonymous: true</code>) signs with a throwaway key: the
+    submission cannot be withdrawn or linked to your others.</p></li>
+</ol>
+<h2>What is sent</h2>
+<p>Preset metrics, the NanoLLM and llama.cpp versions, the model hashes and a hardware profile:
+CPU, memory, GPU, computer maker and model, OS, power source, disk type. Never host or user names,
+serial numbers, UUIDs or MAC addresses; of the model's answers, only a hash. See the
+<a href="/benchmarks/privacy">privacy policy</a>.</p>
+<h2>How the numbers are made</h2>
+<p>Each group (model, suite, preset, system, CPU, GPU, OS) shows the median and p25–p75. Each
+installation and each machine (a coarse hardware fingerprint) counts once however many times it
+submits. Results of different suite versions never mix. Generation speed is checked against memory
+bandwidth for plausibility; outliers go to moderation.</p>
+{{end}}
+{{end}}

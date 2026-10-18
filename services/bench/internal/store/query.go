@@ -111,7 +111,7 @@ type Facets struct {
 
 // ReadFacets lists the filter values within a suite.
 func ReadFacets(ctx context.Context, q Querier, suite string) (Facets, error) {
-	var fc Facets
+	fc := Facets{Suites: []Facet{}}
 	rows, err := q.QueryContext(ctx, `SELECT suite, SUM(n) FROM aggregates WHERE metric = 'tg_d0' GROUP BY suite ORDER BY suite`)
 	if err != nil {
 		return fc, err

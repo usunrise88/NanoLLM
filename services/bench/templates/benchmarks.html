@@ -1,0 +1,54 @@
+{{define "content"}}
+{{$lang := .Lang}}{{$f := .Filter}}
+<h1>{{.Title}}</h1>
+<p class="lead">{{t .Lang "lead"}}</p>
+
+<form class="filters" method="get" action="/benchmarks" data-autosubmit>
+  <label>{{t .Lang "f.model"}}
+    <select name="model"><option value="">{{t .Lang "f.any"}}</option>
+    {{range .Facets.Models}}<option value="{{.Value}}"{{if eq .Value $f.Model}} selected{{end}}>{{.Label}} ({{.Installs}})</option>{{end}}
+    </select></label>
+  <label>{{t .Lang "f.suite"}}
+    <select name="suite">
+    {{range .Facets.Suites}}<option value="{{.Value}}"{{if eq .Value $f.Suite}} selected{{end}}>{{.Label}}</option>{{else}}<option value="{{$f.Suite}}" selected>{{$f.Suite}}</option>{{end}}
+    </select></label>
+  <label>{{t .Lang "f.class"}}
+    <select name="form_factor"><option value="">{{t .Lang "f.any"}}</option>
+    {{range .Facets.FormFactors}}<option value="{{.Value}}"{{if eq .Value $f.FormFactor}} selected{{end}}>{{ff $lang .Value}} ({{.Installs}})</option>{{end}}
+    </select></label>
+  <label>{{t .Lang "f.cpu"}}
+    <select name="cpu"><option value="">{{t .Lang "f.any"}}</option>
+    {{range .Facets.CPUs}}<option value="{{.Value}}"{{if eq .Value $f.CPU}} selected{{end}}>{{.Label}} ({{.Installs}})</option>{{end}}
+    </select></label>
+  <label>{{t .Lang "f.gpu"}}
+    <select name="gpu"><option value="">{{t .Lang "f.any"}}</option>
+    {{range .Facets.GPUs}}<option value="{{.Value}}"{{if eq .Value $f.GPU}} selected{{end}}>{{if eq .Value "none"}}{{t $lang "gpu.none"}}{{else}}{{.Label}}{{end}} ({{.Installs}})</option>{{end}}
+    </select></label>
+  <label>{{t .Lang "f.system"}}
+    <select name="system"><option value="">{{t .Lang "f.any"}}</option>
+    {{range .Facets.Systems}}<option value="{{.Value}}"{{if eq .Value $f.System}} selected{{end}}>{{.Label}} ({{.Installs}})</option>{{end}}
+    </select></label>
+  <label>{{t .Lang "f.os"}}
+    <select name="os"><option value="">{{t .Lang "f.any"}}</option>
+    {{range .Facets.OS}}<option value="{{.Value}}"{{if eq .Value $f.OS}} selected{{end}}>{{.Label}} ({{.Installs}})</option>{{end}}
+    </select></label>
+  <label>{{t .Lang "f.preset"}}
+    <select name="preset"><option value="">{{t .Lang "f.any"}}</option>
+    {{range .Facets.Presets}}<option value="{{.Value}}"{{if eq .Value $f.Preset}} selected{{end}}>{{.Label}} ({{.Installs}})</option>{{end}}
+    </select></label>
+  <div class="actions">
+    <button type="submit">{{t .Lang "f.apply"}}</button>
+    <a href="/benchmarks">{{t .Lang "f.reset"}}</a>
+    <span class="exports"><a href="/api/v1/export?format=csv&amp;{{.ExportQuery}}">CSV</a> · <a href="/api/v1/export?format=json&amp;{{.ExportQuery}}">JSON</a></span>
+  </div>
+</form>
+
+{{template "groups" .}}
+
+{{if .Recent}}
+<h2>{{t .Lang "recent"}}</h2>
+<ul class="recent">
+{{range .Recent}}<li><a href="/benchmarks/s/{{.ID}}">{{.Date}}</a> — {{.System}} · {{.CPU}}{{if ne .GPU "none"}} · {{.GPU}}{{end}} · {{.Model}}{{if .Verified}} <span class="badge">✓</span>{{end}}</li>{{end}}
+</ul>
+{{end}}
+{{end}}

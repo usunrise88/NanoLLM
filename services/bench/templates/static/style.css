@@ -1,0 +1,85 @@
+:root {
+  --bg: #fbfbfa;
+  --fg: #1d1d1f;
+  --muted: #6b6b70;
+  --line: #e3e3e0;
+  --accent: #2756c8;
+  --badge: #1f7a4c;
+  --warn: #9a5b00;
+  --code: #f0f0ed;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141416;
+    --fg: #e8e8ea;
+    --muted: #9a9aa2;
+    --line: #2c2c31;
+    --accent: #8aa9ff;
+    --badge: #5fcf95;
+    --warn: #e0a64a;
+    --code: #222226;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+code { background: var(--code); padding: 0 0.3em; border-radius: 3px; }
+pre { background: var(--code); padding: 0.8em 1em; overflow-x: auto; border-radius: 6px; }
+header.top, main, footer { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+header.top { display: flex; flex-wrap: wrap; gap: 0.5em 1.5em; align-items: baseline; justify-content: space-between; padding-top: 1em; padding-bottom: 0.5em; border-bottom: 1px solid var(--line); }
+header.top .brand { font-weight: 600; color: var(--fg); }
+header.top nav { display: flex; flex-wrap: wrap; gap: 1em; }
+header.top .lang { color: var(--muted); }
+main { padding-top: 1em; padding-bottom: 2em; }
+footer { color: var(--muted); font-size: 0.85em; padding-bottom: 2em; border-top: 1px solid var(--line); padding-top: 1em; }
+h1 { font-size: 1.6em; margin: 0.4em 0; }
+h2 { font-size: 1.2em; margin-top: 1.6em; }
+.lead { color: var(--muted); max-width: 60em; }
+.crumbs { color: var(--muted); font-size: 0.9em; margin: 0; }
+.filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.6em 1em; margin: 1em 0 1.4em; }
+.filters label { display: flex; flex-direction: column; font-size: 0.8em; color: var(--muted); gap: 0.2em; }
+.filters select { font: inherit; font-size: 1.15em; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 0.3em; min-width: 0; }
+.filters .actions { grid-column: 1 / -1; display: flex; gap: 1em; align-items: center; flex-wrap: wrap; }
+.filters button { font: inherit; background: var(--accent); color: var(--bg); border: 0; border-radius: 5px; padding: 0.35em 1em; cursor: pointer; }
+.js .filters button { display: none; }
+.exports { margin-left: auto; font-size: 0.9em; }
+.scroll { overflow-x: auto; }
+table.results { border-collapse: collapse; width: 100%; font-size: 0.92em; }
+table.results th, table.results td { text-align: left; padding: 0.45em 0.6em; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.results th { font-weight: 600; font-size: 0.85em; color: var(--muted); white-space: nowrap; }
+table.results .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.med { font-weight: 600; }
+.iqr, .sub { color: var(--muted); font-size: 0.85em; }
+.sub a { color: var(--muted); }
+.badge { color: var(--badge); font-size: 0.8em; white-space: nowrap; }
+.note, .empty { color: var(--muted); font-size: 0.9em; }
+.notice { padding: 0.8em 1em; border: 1px solid var(--line); border-radius: 6px; }
+.draft { padding: 0.6em 1em; border-left: 3px solid var(--warn); color: var(--warn); }
+.st-failed { color: var(--warn); }
+.st-refused, .st-skipped { color: var(--muted); }
+dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.4em 1.2em; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; overflow-wrap: anywhere; }
+code.hash { font-size: 0.75em; color: var(--muted); overflow-wrap: anywhere; }
+details.raw { margin-top: 1.5em; }
+details.raw pre { max-height: 32em; }
+ul.recent { padding-left: 1.2em; }
+ol.steps li { margin-bottom: 0.8em; }
+@media (max-width: 640px) {
+  dl.facts { grid-template-columns: 1fr; }
+  dl.facts dt { margin-top: 0.6em; }
+  .exports { margin-left: 0; }
+}
+.admin section { margin-bottom: 2em; }
+.admin input, .admin select { font: inherit; padding: 0.25em 0.4em; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.admin button { font: inherit; padding: 0.2em 0.8em; cursor: pointer; }
+.admin form.row { display: flex; flex-wrap: wrap; gap: 0.5em; align-items: center; margin: 0.6em 0; }
+.admin .status { color: var(--muted); min-height: 1.5em; }

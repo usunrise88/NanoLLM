@@ -1,0 +1,67 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "standard",
+    "version": "v1",
+    "prompts_sha256": "059d9eb2857d7450cb6f694c672b0732dc977731254196615c809a2c51ef318f",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "v0.0.0-e2e",
+    "llama_cpp": {"tag": "b11600", "commit": "ace20f6"},
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4",
+    "sha256": "abababababababababababababababababababababababababababababababab",
+    "drafter_sha256": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+  },
+  "machine": {
+    "cpu": {"vendor": "GenuineIntel", "model": "12th Gen Intel(R) Core(TM) i7-12700H", "cores": 14, "threads": 20, "p_cores": 6, "e_cores": 8, "isa": ["avx2", "avx_vnni"]},
+    "memory": {"total_bytes": 34359738368, "speed_mts": 4800},
+    "gpus": [{"name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU", "vendor": "NVIDIA", "vram_bytes": 8589934592, "driver_major": "560"}],
+    "system": {"vendor": "ASUSTeK COMPUTER INC.", "family": "ROG Zephyrus M16", "product": "ROG Zephyrus M16 GU603ZW_GU603ZW", "form_factor": "laptop", "chassis": "notebook"},
+    "os": {"name": "windows", "version": "11"},
+    "power": {"source": "ac", "profile": "balanced"},
+    "disk": {"type": "nvme"}
+  },
+  "runs": [
+    {
+      "preset": "vram-8g",
+      "plan_hash": "1a2b3c4d5e6f7081",
+      "plan": {"mode": "vram-full", "device": "CUDA0", "gpu_layers": -1, "n_ctx": 8192, "slots": 1, "kv": "f16", "fa": true, "swa_full": false, "mtp": true, "threads": 6, "enforcement": "advisory"},
+      "metrics": {
+        "load_ms": 2100, "pp_tok_s": 1480, "tg_tok_s": {"d0": 58.2, "dN": 51.7, "depth_n": 4096},
+        "ttft_ms": 140, "chat_tok_s": 57.9, "mtp": {"acceptance": 0.71, "speedup": 1.42},
+        "peak_rss": 1610612736, "peak_vram": 5368709120, "stddev": {"tg_tok_s.d0": 0.4}
+      },
+      "reps": 3,
+      "output": {"sha256": "efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef", "tokens": 128},
+      "status": "ok"
+    },
+    {
+      "preset": "ram-6g",
+      "plan_hash": "8899aabbccddeeff",
+      "plan": {"mode": "ram-full", "device": "CPU", "gpu_layers": 0, "n_ctx": 4096, "slots": 1, "kv": "f16", "fa": true, "swa_full": false, "mtp": false, "threads": 6, "enforcement": "advisory"},
+      "metrics": {"load_ms": 1500, "pp_tok_s": 95, "tg_tok_s": {"d0": 11.8, "dN": 10.4, "depth_n": 3840}, "ttft_ms": 900, "chat_tok_s": 11.6},
+      "reps": 3,
+      "output": {"sha256": "efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef", "tokens": 128},
+      "status": "ok"
+    },
+    {
+      "preset": "ram-1g",
+      "plan": {"gpu_layers": 0, "fa": false, "swa_full": false, "mtp": false},
+      "metrics": {"tg_tok_s": {}},
+      "reps": 0,
+      "output": {},
+      "status": "refused",
+      "reason": "weights need 2.9 GiB"
+    }
+  ],
+  "date": "2026-10-18",
+  "duration_s": 540
+}

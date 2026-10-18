@@ -1,0 +1,93 @@
+{{define "content"}}
+<h1>{{.Title}}</h1>
+<p class="draft">{{t .Lang "draft"}}</p>
+{{if eq .Lang "ru"}}
+<h2>Кто обрабатывает данные</h2>
+<p>Сервис бенчмарка NanoLLM на nano.llmto.day. Оператор, юрисдикция и контакт для обращений
+будут указаны здесь до публичного запуска. <em>[заполняет владелец]</em></p>
+
+<h2>Что мы получаем</h2>
+<p>Только то, что вы видели и согласились отправить после прогона: метрики пресетов, версии
+NanoLLM и llama.cpp, идентификатор и хэши модели, дату прогона (без времени), профиль железа —
+процессор, объём и скорость памяти, видеокарты, производитель и модель компьютера, форм-фактор,
+ОС (версия ядра — только major.minor, драйвер — только major), источник питания и профиль питания,
+тип диска. Ещё — версия текста согласия и открытый ключ установки с подписью.</p>
+<p>Мы не получаем имя компьютера и пользователя, серийные номера, UUID, MAC-адреса, тексты
+промптов и ответов модели (только хэш ответа на встроенный эталонный промпт).</p>
+
+<h2>IP-адрес</h2>
+<p>IP-адрес не хранится и не пишется в журналы ни сервисом, ни обратным прокси. Для защиты от
+злоупотреблений сервис держит в памяти счётчик отправок по хэшу адреса с солью, которая
+выбирается случайно каждые сутки и нигде не сохраняется; после перезапуска или смены суток счётчики
+исчезают.</p>
+
+<h2>Ключ установки</h2>
+<p>NanoLLM подписывает отправку ключом установки. Подпись доказывает только владение: она позволяет
+вам удалить свои отправки и объединить повторы одной установки в статистике. Ключ не публикуется на
+страницах и в экспорте. В анонимном режиме ключ одноразовый, и такую отправку нельзя удалить.</p>
+
+<h2>Публикация</h2>
+<p>Результаты публикуются на этих страницах и в открытом экспорте под лицензией
+{{if .LicenseURL}}<a href="{{.LicenseURL}}">{{.License}}</a>{{else}}{{.License}}{{end}}.
+Отправка с моделью компьютера, введённой вручную, и подозрительные результаты публикуются после
+модерации.</p>
+
+<h2>Удаление и сроки хранения</h2>
+<p>Команда <code>nanollm bench withdraw ID</code> удаляет отправку сразу из базы и со страниц.
+Резервные копии хранятся не дольше {{if .RetentionDays}}{{.RetentionDays}} дней{{else}}ограниченного срока{{end}};
+по истечении этого срока удалённая отправка исчезает и из них. Восстановление из копии повторно
+применяет все удаления. Уже скачанные третьими лицами экспорты мы удалить не можем.</p>
+
+<h2>Cookie</h2>
+<p>Единственный cookie — <code>lang</code>, выбранный язык страниц. Аналитики и сторонних
+скриптов нет.</p>
+
+<h2>Правовое основание и ваши права</h2>
+<p><em>[Требует юридической проверки: основание обработки (согласие), применимость GDPR и 152-ФЗ,
+порядок обращений, передача за рубеж, контакт оператора.]</em></p>
+{{else}}
+<h2>Who processes the data</h2>
+<p>The NanoLLM benchmark service at nano.llmto.day. The operator, the jurisdiction and a contact
+will be named here before the public launch. <em>[to be filled in by the owner]</em></p>
+
+<h2>What we receive</h2>
+<p>Only what you saw and agreed to send after a run: preset metrics, the NanoLLM and llama.cpp
+versions, the model id and hashes, the day of the run (no time), and a hardware profile — CPU,
+memory size and speed, GPUs, computer maker and model, form factor, OS (kernel major.minor only,
+driver major only), power source and profile, disk type. Also the consent text's version and the
+installation's public key with a signature.</p>
+<p>We do not receive host or user names, serial numbers, UUIDs, MAC addresses, or prompts and model
+answers (only a hash of the answer to the built-in reference prompt).</p>
+
+<h2>IP address</h2>
+<p>The IP address is not stored and not logged, by the service or by the reverse proxy. Against
+abuse, the service keeps in memory a count of submissions per hash of the address with a salt drawn
+at random each day and never saved; a restart or a new day forgets the counts.</p>
+
+<h2>The installation key</h2>
+<p>NanoLLM signs a submission with the installation's key. The signature proves ownership only:
+it lets you withdraw your submissions and lets repeats of one installation count once. The key is
+not published on the pages or in the export. In anonymous mode the key is single-use and the
+submission cannot be withdrawn.</p>
+
+<h2>Publication</h2>
+<p>Results are published on these pages and in the open export under
+{{if .LicenseURL}}<a href="{{.LicenseURL}}">{{.License}}</a>{{else}}{{.License}}{{end}}.
+A submission with a hand-entered computer model, and suspicious results, are published after
+moderation.</p>
+
+<h2>Withdrawal and retention</h2>
+<p><code>nanollm bench withdraw ID</code> deletes a submission from the database and the pages at
+once. Backups are kept for no more than {{if .RetentionDays}}{{.RetentionDays}} days{{else}}a limited time{{end}};
+after that a withdrawn submission is gone from them too. A restore from a backup re-applies every
+withdrawal. We cannot delete exports third parties have already downloaded.</p>
+
+<h2>Cookies</h2>
+<p>The only cookie is <code>lang</code>, the page language you chose. No analytics, no third-party
+scripts.</p>
+
+<h2>Legal basis and your rights</h2>
+<p><em>[Pending legal review: the legal basis (consent), whether GDPR and Russian Federal Law
+152-FZ apply, how to make a request, transfers abroad, the operator's contact.]</em></p>
+{{end}}
+{{end}}

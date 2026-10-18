@@ -1,0 +1,49 @@
+{{define "content"}}
+{{$lang := .Lang}}
+<p class="crumbs"><a href="/benchmarks">{{t .Lang "nav.results"}}</a> › {{t .Lang "s.title"}}</p>
+<h1>{{t .Lang "s.title"}} <code>{{.ID}}</code></h1>
+{{if .Gone}}
+<p class="notice">{{t .Lang "s.gone"}}</p>
+{{else if .Queued}}
+<p class="notice">{{t .Lang "s.queued"}}</p>
+{{else}}
+{{with .View}}
+<dl class="facts">
+  <dt>{{t $lang "s.machine"}}</dt>
+  <dd><a href="/benchmarks/systems/{{.SystemSlug}}">{{.System}}</a>{{if .Verified}} <span class="badge">✓ {{t $lang "badge.verified"}}</span>{{end}}<br>
+      <a href="/benchmarks/cpu/{{.CPUSlug}}">{{.CPU}}</a>{{if ne .GPU "none"}} · <a href="/benchmarks/gpu/{{.GPUSlug}}">{{.GPU}}</a>{{end}} · {{.OS}} · {{ff $lang .FormFactor}}</dd>
+  <dt>{{t $lang "s.model"}}</dt><dd>{{.Model}} <code class="hash">{{.ModelSHA256}}</code></dd>
+  <dt>{{t $lang "s.client"}}</dt><dd>NanoLLM {{.NanoLLM}} · llama.cpp {{.LlamaTag}}{{if .CPUVariant}} · ggml {{.CPUVariant}}{{end}} · {{.Suite}}</dd>
+  <dt>{{t $lang "s.date"}}</dt><dd>{{.Date}}</dd>
+</dl>
+
+<h2>{{t $lang "s.runs"}}</h2>
+<div class="scroll">
+<table class="results">
+<thead><tr>
+  <th>{{t $lang "c.preset"}}</th><th>{{t $lang "c.status"}}</th><th>{{t $lang "c.mode"}}</th>
+  <th class="n">{{t $lang "c.load"}}</th><th class="n">{{t $lang "c.pp"}}</th><th class="n">{{t $lang "c.tg"}}</th>
+  <th class="n">{{t $lang "c.tgn"}}</th><th class="n">{{t $lang "c.ttft"}}</th><th class="n">{{t $lang "c.chat"}}</th>
+  <th class="n">{{t $lang "c.mtp"}}</th><th>{{t $lang "c.check"}}</th><th>{{t $lang "c.output"}}</th>
+</tr></thead>
+<tbody>
+{{range .Runs}}
+<tr>
+  <td><code>{{.Preset}}</code></td>
+  <td class="st-{{.Status}}">{{status $lang .Status}}{{if .Reason}}<div class="sub">{{.Reason}}</div>{{end}}</td>
+  <td>{{.Mode}}{{if .Backend}} <span class="sub">{{.Backend}}</span>{{end}}</td>
+  <td class="n">{{num .LoadMS}}</td><td class="n">{{num .PPTokS}}</td><td class="n">{{num .TGD0}}</td>
+  <td class="n">{{num .TGDN}}</td><td class="n">{{num .TTFTMS}}</td><td class="n">{{num .ChatTokS}}</td>
+  <td class="n">{{if .MTPSpeedup}}×{{printf "%.2f" .MTPSpeedup}} <span class="sub">{{printf "%.0f" (mul100 .MTPAcceptance)}}%</span>{{else}}—{{end}}</td>
+  <td>{{if eq .Status "ok"}}{{t $lang (printf "p.%s" .Plausibility)}}{{if .Ceiling}} <span class="sub">≤ {{num .Ceiling}}</span>{{end}}{{if .Outlier}} · {{t $lang "outlier"}}{{end}}{{end}}</td>
+  <td>{{if eq .Status "ok"}}{{if lt .OutputMatch 0}}{{t $lang "o.none"}}{{else if eq .OutputMatch .OutputTokens}}{{t $lang "o.agree"}}{{else}}{{t $lang "o.prefix"}} {{.OutputMatch}}/{{.OutputTokens}}{{end}}{{end}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+</div>
+{{end}}
+<details class="raw"><summary>{{t .Lang "s.raw"}}</summary><pre>{{.Raw}}</pre></details>
+<p class="note">{{t .Lang "s.withdraw"}} {{.ID}}</p>
+{{end}}
+{{end}}
