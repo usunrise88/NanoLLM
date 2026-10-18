@@ -1,0 +1,76 @@
+name: libs
+
+# The pinned llama.cpp release (SPEC §10): list its archives with their
+# sha256, so scripts/libs.sha256 is filled from GitHub's own digests rather
+# than from a download on a developer's machine, then run fetch-libs for every
+# target to prove the names, the hashes and the archive layout.
+
+on:
+  push:
+    paths:
+      - scripts/llama.cpp.tag
+      - scripts/libs.sha256
+      - scripts/fetch-libs.sh
+      - .github/workflows/libs.yml
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: llama.cpp release tag to inspect (default scripts/llama.cpp.tag)
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      pinned: ${{ steps.pinned.outputs.pinned }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: echo "tag=${INPUT_TAG:-$(tr -d '[:space:]' < scripts/llama.cpp.tag)}" >> "$GITHUB_OUTPUT"
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+      - name: list the release archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh api "repos/ggml-org/llama.cpp/releases/tags/$TAG" \
+            --jq '.assets[] | [(.digest // "-" | sub("^sha256:"; "")), .name, .size] | @tsv' \
+            | sort -k2 | tee assets.tsv
+          # Candidate lines for scripts/libs.sha256, in its format.
+          echo "--- libs.sha256 candidate ---"
+          awk -F'\t' '$1 != "-" { print $1 "  " $2 }' assets.tsv
+      - id: pinned
+        name: is scripts/libs.sha256 filled for this tag
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if grep -q "llama-$TAG-" scripts/libs.sha256; then
+            echo "pinned=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "scripts/libs.sha256 lists nothing for $TAG; fetch-libs is not run"
+            echo "pinned=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  fetch:
+    needs: release
+    if: needs.release.outputs.pinned == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: llvm-lipo for darwin_universal
+        run: |
+          lipo=$(command -v llvm-lipo || ls /usr/bin/llvm-lipo-* 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$lipo" ]; then sudo apt-get install -y llvm >/dev/null; lipo=$(command -v llvm-lipo); fi
+          mkdir -p "$RUNNER_TEMP/bin" && ln -sf "$lipo" "$RUNNER_TEMP/bin/llvm-lipo"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: fetch every target
+        run: |
+          ./scripts/fetch-libs.sh "${{ needs.release.outputs.tag }}" \
+            linux_amd64 linux_arm64 windows_amd64 windows_arm64 darwin_universal
+      - name: layout
+        run: for d in dist/*/lib; do echo "== $d"; ls -l "$d"; done
