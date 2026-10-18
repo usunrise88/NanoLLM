@@ -140,7 +140,9 @@ func TestOpenAIStreamAndTools(t *testing.T) {
 				}
 				FinishReason *string `json:"finish_reason"`
 			}
-			Usage *struct{ TotalTokens int `json:"total_tokens"` }
+			Usage *struct {
+				TotalTokens int `json:"total_tokens"`
+			}
 		}
 		json.Unmarshal([]byte(ev[1]), &c)
 		if c.Usage != nil {
