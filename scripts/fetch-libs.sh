@@ -5,11 +5,13 @@
 #
 # TAG defaults to the contents of scripts/llama.cpp.tag. TARGET is any of
 # linux_amd64 linux_arm64 windows_amd64 windows_arm64 darwin_arm64
-# darwin_amd64 darwin_universal; the default is the machine this runs on.
+# darwin_amd64 darwin_universal, or the CUDA add-ons linux_amd64_cuda and
+# windows_amd64_cuda; the default is the machine this runs on.
 #
 # Each archive is verified against scripts/libs.sha256 before it is opened: an
 # archive whose hash is not listed there is refused, not trusted on first use.
-# libllama and libggml* are unpacked into dist/<os>_<arch>/lib/.
+# libllama and libggml* are unpacked into dist/<target>/lib/. An add-on target
+# gets only ggml-cuda and the CUDA runtime, to unpack over an installation.
 #
 # NanoLLM compiles no C code. If an upstream archive layout changes, this
 # script fails on the layout check below rather than shipping a lib/ that is
@@ -31,18 +33,22 @@ if (( ${TAG#b} < ${MIN_TAG#b} )); then
   exit 1
 fi
 
-# The release asset that carries each target's CPU and GPU backends (SPEC §10,
-# release archives). Confirm these names against the release page whenever the
-# tag is bumped: upstream renames assets from time to time, and the sha256 list
-# is what catches it.
-asset_for() {
+# The release assets that carry each target's CPU and GPU backends (SPEC §10,
+# release archives), checked against the b11600 release. Upstream renames
+# assets from time to time; the sha256 list and the libs workflow catch it.
+#
+# CUDA 12.x rather than 13.x: the same Ampere-and-newer GPUs, an older minimum
+# driver. The Windows runtime archive carries no tag in its name upstream.
+assets_for() {
   case "$1" in
-    linux_amd64)   echo "llama-$TAG-bin-ubuntu-vulkan-x64.zip" ;;
-    linux_arm64)   echo "llama-$TAG-bin-ubuntu-arm64.zip" ;;
-    windows_amd64) echo "llama-$TAG-bin-win-vulkan-x64.zip" ;;
-    windows_arm64) echo "llama-$TAG-bin-win-cpu-arm64.zip" ;;
-    darwin_arm64)  echo "llama-$TAG-bin-macos-arm64.zip" ;;
-    darwin_amd64)  echo "llama-$TAG-bin-macos-x64.zip" ;;
+    linux_amd64)       echo "llama-$TAG-bin-ubuntu-vulkan-x64.tar.gz" ;;
+    linux_arm64)       echo "llama-$TAG-bin-ubuntu-vulkan-arm64.tar.gz" ;;
+    windows_amd64)     echo "llama-$TAG-bin-win-vulkan-x64.zip" ;;
+    windows_arm64)     echo "llama-$TAG-bin-win-vulkan-arm64.zip" ;;
+    darwin_arm64)      echo "llama-$TAG-bin-macos-arm64.tar.gz" ;;
+    darwin_amd64)      echo "llama-$TAG-bin-macos-x64.tar.gz" ;;
+    linux_amd64_cuda)  echo "llama-$TAG-bin-ubuntu-cuda-12.8-x64.tar.gz cudart-llama-$TAG-bin-ubuntu-cuda-12.8-x64.tar.gz" ;;
+    windows_amd64_cuda) echo "llama-$TAG-bin-win-cuda-12.4-x64.zip cudart-llama-bin-win-cuda-12.4-x64.zip" ;;
     *) return 1 ;;
   esac
 }
@@ -76,16 +82,14 @@ mkdir -p "$CACHE"
 STAGES=()
 trap 'for d in ${STAGES[@]+"${STAGES[@]}"}; do rm -rf "$d"; done' EXIT
 
-fetch() {
-  local target=$1 asset want got out stage
-  asset=$(asset_for "$target") || { echo "fetch-libs: unknown target $target" >&2; exit 1; }
-
+# download ASSET: the verified archive in the cache, or exit.
+download() {
+  local asset=$1 want got
   want=$(awk -v f="$asset" '$2 == f { print $1 }' scripts/libs.sha256)
   if [[ -z "$want" ]]; then
     echo "fetch-libs: $asset is not listed in scripts/libs.sha256; add its hash from the release before fetching" >&2
     exit 1
   fi
-
   if [[ ! -f "$CACHE/$asset" ]]; then
     echo "fetching $asset"
     curl -fL --retry 3 -o "$CACHE/$asset.part" \
@@ -98,27 +102,68 @@ fetch() {
     rm -f "$CACHE/$asset"
     exit 1
   fi
+}
+
+unpack() {
+  case "$1" in
+    *.zip)    unzip -q "$1" -d "$2" ;;
+    *.tar.gz) tar -xzf "$1" -C "$2" ;;
+    *) echo "fetch-libs: unknown archive type $1" >&2; exit 1 ;;
+  esac
+}
+
+# copy STAGE OUT PATTERN...: files and symlinks whose name matches, flattened
+# into OUT. Symlinks are kept as links: libllama.so resolves libggml.so.0 by
+# its soname, and the chain must survive the copy.
+copy_matching() {
+  local stage=$1 out=$2 expr=() p
+  shift 2
+  for p in "$@"; do expr+=(-o -name "$p"); done
+  find "$stage" \( -type f -o -type l \) \( "${expr[@]:1}" \) -exec cp -P {} "$out/" \;
+}
+
+fetch() {
+  local target=$1 assets asset out stage
+  assets=$(assets_for "$target") || { echo "fetch-libs: unknown target $target" >&2; exit 1; }
 
   stage=$(mktemp -d)
   STAGES+=("$stage")
-  unzip -q "$CACHE/$asset" -d "$stage"
+  for asset in $assets; do
+    download "$asset"
+    unpack "$CACHE/$asset" "$stage"
+  done
 
   out=dist/$target/lib
   rm -rf "$out"
   mkdir -p "$out"
+
+  if [[ "$target" == *_cuda ]]; then
+    # The add-on: the CUDA backend and the runtime it links, nothing that the
+    # base archive already installs.
+    copy_matching "$stage" "$out" 'libggml-cuda*' 'ggml-cuda*.dll' \
+      'libcudart*' 'libcublas*' 'cudart64*.dll' 'cublas64*.dll' 'cublasLt64*.dll'
+    if ! compgen -G "$out/*ggml-cuda*" >/dev/null; then
+      echo "fetch-libs: no ggml-cuda in $assets; the archive layout changed" >&2
+      exit 1
+    fi
+    echo "$target: $(ls "$out" | wc -l | tr -d ' ') files in $out"
+    return
+  fi
+
   # Only the libraries: the archives also carry llama-cli, llama-server and
   # friends, which the release does not ship.
-  find "$stage" -type f \( -name 'libllama.*' -o -name 'llama.dll' \
-    -o -name 'libggml*' -o -name 'ggml*.dll' -o -name '*.metal' \) -exec cp {} "$out/" \;
+  copy_matching "$stage" "$out" 'libllama.*' 'llama.dll' 'libggml*' 'ggml*.dll' '*.metal'
+  # The CUDA backend ships only in the add-on.
+  rm -f "$out"/*ggml-cuda*
 
   # Layout check: no libllama, or no CPU backend, means the archive changed
   # shape and the binary would start without an engine.
   if ! compgen -G "$out/*llama.*" >/dev/null; then
-    echo "fetch-libs: $asset contains no libllama; the archive layout changed" >&2
+    echo "fetch-libs: $assets contains no libllama; the archive layout changed" >&2
     exit 1
   fi
   if ! compgen -G "$out/*ggml-cpu*" >/dev/null && ! compgen -G "$out/*ggml.*" >/dev/null; then
-    echo "fetch-libs: $asset contains no ggml CPU backend; the archive layout changed" >&2
+    echo "fetch-libs: $assets contains no ggml CPU backend; the archive layout changed" >&2
     exit 1
   fi
   echo "$target: $(ls "$out" | wc -l | tr -d ' ') files in $out"
@@ -140,7 +185,9 @@ universal() {
   mkdir -p "$out"
   for f in dist/darwin_arm64/lib/*; do
     name=$(basename "$f")
-    if [[ "$name" == *.dylib && -f "dist/darwin_amd64/lib/$name" ]]; then
+    if [[ -L "$f" ]]; then
+      cp -P "$f" "$out/$name"
+    elif [[ "$name" == *.dylib && -f "dist/darwin_amd64/lib/$name" ]]; then
       "$lipo" -create "$f" "dist/darwin_amd64/lib/$name" -output "$out/$name"
     else
       cp "$f" "$out/$name"

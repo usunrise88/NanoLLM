@@ -4,3 +4,15 @@
 # Filled in when the tag is pinned. Bumping llama.cpp means: change the tag,
 # replace these lines, regenerate the binding against its llama.h, and pass the
 # golden tests (SPEC §10).
+
+# b11600, from the release's own sha256 digests (the libs workflow lists them)
+3f4e4f41980170b08d8c64f3fb88a6bacd641f8d628a7246e3519ebc012ff980  llama-b11600-bin-ubuntu-vulkan-x64.tar.gz
+37ddbcd02302c4d2a775698898d2a9429c3759d2cb6a47ebe9b3dd17644f093e  llama-b11600-bin-ubuntu-vulkan-arm64.tar.gz
+a66cf6f15e1839a6245a6f54ac130ff5f9475e2b6383f38b77823a9d268ab888  llama-b11600-bin-win-vulkan-x64.zip
+0011695a5a5d4fe28abb5f3891b93ad975934da1ace0d3259d8b681f77a22b01  llama-b11600-bin-win-vulkan-arm64.zip
+a9c10e58e42603d67a3ad3cbe991d420e31d350937e11775db55011e25536668  llama-b11600-bin-macos-arm64.tar.gz
+f98d8f17e2bb39027f783cb7750eb498f39da4243c6a29827634568db9f0aa2d  llama-b11600-bin-macos-x64.tar.gz
+3568b5969dd6266333a5bf3b67f72a7c2ce2d7bcfa7d84c9b9421a00a820c911  llama-b11600-bin-ubuntu-cuda-12.8-x64.tar.gz
+b579cfebd0832005c2a57ce246167cad55ccf88f0adfe69a48c9696fa8c71d90  cudart-llama-b11600-bin-ubuntu-cuda-12.8-x64.tar.gz
+e881051d0c28a2dfddbcee76a969aebaa61faee7ab80d2f5ef022cfacba56dfb  llama-b11600-bin-win-cuda-12.4-x64.zip
+8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6  cudart-llama-bin-win-cuda-12.4-x64.zip
