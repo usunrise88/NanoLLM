@@ -27,3 +27,4 @@
 *.test
 *.out
 .DS_Store
+.claude/worktrees/
