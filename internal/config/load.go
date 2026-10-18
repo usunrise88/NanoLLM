@@ -336,7 +336,7 @@ func ValidDevice(s string) error {
 
 func knownBackend(name string) bool {
 	switch name {
-	case BackendLlamaCpp, BackendORTGenAI, BackendMLX:
+	case BackendLlamaCpp, BackendORTGenAI, BackendMLX, BackendFake:
 		return true
 	}
 	return false

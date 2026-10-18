@@ -22,6 +22,7 @@ import (
 
 	_ "github.com/usunrise88/nanollm/internal/api/native"
 	_ "github.com/usunrise88/nanollm/internal/api/openai"
+	_ "github.com/usunrise88/nanollm/internal/backend/fake"
 	_ "github.com/usunrise88/nanollm/internal/backend/llamacpp"
 )
 

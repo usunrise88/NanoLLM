@@ -74,6 +74,9 @@ const (
 	BackendLlamaCpp = "llamacpp"
 	BackendORTGenAI = "ortgenai" // v2, NPU only
 	BackendMLX      = "mlx"      // v3, macOS only
+	// BackendFake is the scripted development backend. It is never enabled by
+	// default and serves no real model.
+	BackendFake = "fake"
 )
 
 type Backends struct {
