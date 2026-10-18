@@ -11,6 +11,8 @@ package registry
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/usunrise88/nanollm/internal/gguf"
 )
 
 // Formats.
@@ -61,9 +63,14 @@ type Manifest struct {
 	// Verified lists backend/device pairs that passed the golden tests
 	// (SPEC §12). NPU is offered only for a verified pair.
 	Verified []string `yaml:"verified,omitempty" json:"verified,omitempty"`
-	// Tensors is the measured inventory the planner and range-lock work from.
-	// It is filled at catalog build by `nanollm models inspect --tensors`.
+	// Tensors is the measured inventory the planner and range-lock work from,
+	// every file's tensors in file order. It is measured at catalog build by
+	// `nanollm models inspect --tensors`, stored in tensors/<id>.json and
+	// attached when the catalog loads, so the catalog itself stays short.
 	Tensors []Tensor `yaml:"tensors,omitempty" json:"tensors,omitempty"`
+	// Inventory is the per-file side of the same measurement: alignment, data
+	// area and the hyperparameters that size the KV cache.
+	Inventory []gguf.Inventory `yaml:"-" json:"-"`
 	// Presets the entry has been planned and benchmarked under.
 	Presets []PresetPlan `yaml:"presets,omitempty" json:"presets,omitempty"`
 }
@@ -124,14 +131,12 @@ type Drafter struct {
 	SpecDraftNMax map[string]int `yaml:"spec_draft_n_max,omitempty" json:"spec_draft_n_max,omitempty"`
 }
 
-// Tensor is one measured tensor: its placement group (G0–G7), type, size and
-// offset in the file.
+// Tensor is one measured tensor: the file it is in, its placement group
+// (G0–G7), layer, type, size and absolute offset in that file.
 type Tensor struct {
-	Name   string `yaml:"name" json:"name"`
-	Group  string `yaml:"group" json:"group"`
-	Type   string `yaml:"type" json:"type"`
-	Bytes  int64  `yaml:"bytes" json:"bytes"`
-	Offset int64  `yaml:"offset" json:"offset"`
+	// Role is the file (model, drafter); offsets are relative to it.
+	Role        string `yaml:"role" json:"role"`
+	gguf.Tensor `yaml:",inline"`
 }
 
 // PresetPlan records the mode a preset resolved to when it was measured.

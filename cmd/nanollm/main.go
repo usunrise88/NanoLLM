@@ -86,7 +86,7 @@ func usage() {
   nanollm plan     MODEL --preset P
   nanollm bench    MODEL
   nanollm eval     MODEL --suite NAME
-  nanollm models   catalog | list | pull ID... | rm ID | inspect FILE [--probe]
+  nanollm models   catalog | list | pull ID... | rm ID | inspect FILE|ID [--tensors] [--json] [--drafter FILE]
   nanollm key      list | issue NAME [-admin] [-interactive] [-rps N] [-hash] | remove NAME
   nanollm service  install | uninstall | start | stop | restart | status
   nanollm version
