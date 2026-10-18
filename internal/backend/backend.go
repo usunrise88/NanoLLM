@@ -3,7 +3,9 @@
 //
 // The core never calls llama.cpp or onnxruntime-genai directly. It talks to a
 // Backend, which probes devices and loads models, and to a Model, which
-// tokenizes, decodes batches, samples and saves or restores sequence state.
+// tokenizes and runs batched steps. Sampling, MTP drafting and verification
+// happen inside a Step, so the scheduler sees only accepted tokens and the
+// per-token round trips stay inside the engine.
 // Everything above this package — the pool, the scheduler, the prompt cache —
 // is engine-agnostic, so a backend is one package registering itself from
 // init(), the same way an API dialect is.
@@ -49,56 +51,87 @@ func (d Device) Selector() string { return d.Backend + ":" + d.ID }
 // Backend is one inference engine.
 type Backend interface {
 	Name() string
-	// Version is the engine's build identifier, e.g. the llama.cpp build
-	// number, for /healthz and `nanollm version`.
+	// Version is the engine's build identifier, e.g. the llama.cpp tag and
+	// commit, for /healthz and `nanollm version`.
 	Version() string
 	Devices(ctx context.Context) ([]Device, error)
 	Load(ctx context.Context, spec LoadSpec) (Model, error)
 	Close() error
 }
 
+// LoadMode is how weights are read from the file (llama_load_mode).
+type LoadMode string
+
+const (
+	LoadAuto      LoadMode = ""           // engine default
+	LoadNone      LoadMode = "none"       // plain reads into anonymous memory
+	LoadMMap      LoadMode = "mmap"       // file-backed mapping
+	LoadMLock     LoadMode = "mlock"      // reads, then locked
+	LoadMMapMLock LoadMode = "mmap+mlock" // mapping, locked
+	LoadDirectIO  LoadMode = "dio"        // O_DIRECT reads, bypassing page cache
+)
+
+// LazyMode is whether tensors are read on first use (llama_lazy_mode). Lazy
+// loading needs a mapping, so it never combines with LoadDirectIO.
+type LazyMode string
+
+const (
+	LazyOff  LazyMode = "off"
+	LazyAuto LazyMode = "auto" // only tensors larger than 4 GiB
+	LazyOn   LazyMode = "on"
+)
+
+// BufferOverride places tensors whose name matches Pattern (a regular
+// expression, first match wins) on Device instead of where their layer goes.
+// Device is a selector, or "cpu" for host memory.
+type BufferOverride struct {
+	Pattern string `json:"pattern"`
+	Device  string `json:"device"`
+}
+
 // LoadSpec is a resolved load: the planner has already turned a preset into
 // concrete placement, so a backend never sees a budget it has to interpret.
 type LoadSpec struct {
 	Path string
-	// DrafterPath is the MTP drafter, or empty. It is placed on the device
-	// holding the target's final layers, since it reads their activations.
+	// DrafterPath is the MTP drafter, or empty. It shares the target's KV
+	// cache and reads its activations, so it gets the same context shape.
 	DrafterPath string
 	Device      string // selector
 	// GPULayers is the number of layers offloaded; -1 means all.
 	GPULayers int
-	// HostTensors are tensor-name patterns kept in host memory even when
-	// their layer is offloaded (PLE placement, modes M2 and M3).
-	HostTensors []string
-	// MMap and DirectIO choose how weights are read; MLock locks them.
-	MMap     bool
-	DirectIO bool
-	MLock    bool
-	// Repack enables the CPU repacked kernels, which copy weights into
-	// anonymous memory and so defeat file-backed modes.
+	// Overrides keep tensors off the device their layer is on (PLE placement
+	// in modes M2 and M3 when the engine does not already do it).
+	Overrides []BufferOverride
+	LoadMode  LoadMode
+	LazyMode  LazyMode
+	// Repack enables the CPU repacked kernels (use_extra_bufts), which copy
+	// weights into anonymous memory and so defeat file-backed modes.
 	Repack  bool
 	NCtx    int
 	Slots   int
 	NBatch  int
 	NUBatch int
 	Threads int
-	KVType  string
+	// KVTypeK and KVTypeV are ggml type names (f16, q8_0). A quantized V
+	// needs flash attention.
+	KVTypeK string
+	KVTypeV string
 	// FlashAttention is on unless the device cannot do it.
 	FlashAttention bool
+	// SWAFull keeps the full context in the sliding-window layers too, so the
+	// cache can be trimmed to any position; without it a trim further back
+	// than the window forces a fresh prefill.
+	SWAFull bool
+	// KVUnified shares one KV buffer across slots.
+	KVUnified bool
+	// DraftMax and DraftPMin bound MTP drafting: at most DraftMax tokens per
+	// step, stopping when the drafter's top probability drops below DraftPMin.
+	DraftMax  int
+	DraftPMin float64
 }
 
 // Token is a vocabulary id.
 type Token int32
-
-// Batch is one decode step across slots: every token belongs to a sequence
-// (slot) at a position, and Logits marks the ones whose distribution is needed
-// for sampling. Continuous batching puts tokens of several slots in one Batch.
-type Batch struct {
-	Tokens []Token
-	Pos    []int32
-	Seq    []int32
-	Logits []bool
-}
 
 // SamplerSpec is the per-slot sampling chain, built once per request.
 type SamplerSpec struct {
@@ -111,37 +144,129 @@ type SamplerSpec struct {
 	FrequencyPenalty float64
 	LogitBias        map[Token]float64
 	Seed             int64
-	// Grammar is GBNF; empty means unconstrained.
-	Grammar string
+	// Grammar is GBNF; empty means unconstrained. GrammarRoot defaults to
+	// "root". With GrammarTriggers set the grammar is lazy: unconstrained
+	// until the output contains one of the trigger strings (tool_choice auto).
+	Grammar         string
+	GrammarRoot     string
+	GrammarTriggers []string
+}
+
+// SeqStep is one slot's share of a Step.
+//
+// Tokens are evaluated at positions Pos, Pos+1, … — a prefill chunk, or for a
+// decode step the single token the previous Step returned last. If Sample is
+// set, the backend samples from the logits after the last token, drafts up to
+// MaxDraft more with MTP, verifies them and returns what was accepted.
+type SeqStep struct {
+	Seq    int
+	Tokens []Token
+	Pos    int
+	Sample bool
+	// MaxDraft caps drafting for this slot in this step: 0 turns it off (the
+	// batch is full, or the slot is under a grammar that drafting would
+	// break). It is clamped to Capabilities().MaxDraft.
+	MaxDraft int
+	// Logprobs is the number of alternatives to return per output token: -1
+	// for none, 0 for the chosen token only, up to 20.
+	Logprobs int
+}
+
+// SeqOut is what one sampling slot produced.
+//
+// Tokens holds 1..MaxDraft+1 tokens in order. All but the last are already
+// in the KV cache (they were verified as part of the batch); the last is not,
+// and the caller feeds it in the next Step at the position after them. The
+// grammar and penalties have seen exactly these tokens. Generation stops at
+// an end-of-generation token: it is the last element when EOG is set, and
+// nothing after it is returned or kept in the cache.
+type SeqOut struct {
+	Seq      int
+	Tokens   []Token
+	Logprobs []TokenLogprobs // one per token, when requested
+	EOG      bool
+	// Drafted and Accepted count MTP draft tokens in this step.
+	Drafted  int
+	Accepted int
+}
+
+// TokenLogprobs is the log-softmax of the raw logits (before the sampler) at
+// one output position: the chosen token and the top alternatives.
+type TokenLogprobs struct {
+	Token   Token
+	Logprob float64
+	Top     []TokenLogprob
+}
+
+type TokenLogprob struct {
+	Token   Token
+	Logprob float64
+}
+
+// Capabilities is the shape of a loaded model's context.
+type Capabilities struct {
+	NCtx   int // tokens per slot
+	Slots  int
+	NBatch int // tokens per Step across all slots, drafts included
+	// MaxDraft is 0 when no drafter is loaded.
+	MaxDraft int
+	SWAFull  bool
+	// SWAWindow is how far back a trim may reach without a fresh prefill when
+	// SWAFull is off; 0 when the model has no sliding-window layers.
+	SWAWindow int
+	NVocab    int
+}
+
+// MemoryReport is what a loaded model holds, in bytes, as the engine reports
+// it. The planner's estimate is checked against it.
+type MemoryReport struct {
+	Devices []DeviceMemory `json:"devices"`
+}
+
+type DeviceMemory struct {
+	Device  string `json:"device"` // selector, or "cpu"
+	Weights int64  `json:"weights"`
+	KV      int64  `json:"kv"`
+	Compute int64  `json:"compute"`
 }
 
 // Model is one loaded model with its context and slots.
+//
+// Step and the methods that change a slot's state are called from one
+// goroutine, the model's scheduling loop; the tokenizer methods are safe from
+// any goroutine.
 type Model interface {
 	Tokenize(text string, addSpecial, parseSpecial bool) ([]Token, error)
 	Detokenize(tokens []Token) (string, error)
 	// TokenPiece is the text of one token, for streaming.
 	TokenPiece(t Token) (string, error)
+	IsEOG(t Token) bool
 
 	// Metadata exposes GGUF key/values: architecture, chat template, context
 	// length. Templates are read from here unless the manifest overrides them.
 	Metadata() map[string]string
+	Capabilities() Capabilities
+	MemoryReport() MemoryReport
 
-	// SetSampler installs the sampling chain for a slot.
-	SetSampler(seq int, spec SamplerSpec) error
-	// Decode runs one batch.
-	Decode(ctx context.Context, b Batch) error
-	// Sample draws the next token for a slot from the last decoded logits and
-	// accepts it into the sampler (penalties, grammar state).
-	Sample(seq int) (Token, error)
-	IsEOG(t Token) bool
+	// SetSampler installs the sampling chain for a slot. History is the
+	// slot's tokens already in the cache (prompt, and a reused prefix after a
+	// prompt-cache hit): penalties see them, the grammar does not.
+	SetSampler(seq int, spec SamplerSpec, history []Token) error
+	// Step evaluates one batch across slots: prefill chunks and decode steps
+	// together, at most Capabilities().NBatch tokens including drafts. It
+	// returns one SeqOut per SeqStep that asked to Sample. Cancellation is
+	// checked before the batch is submitted; a batch in flight finishes.
+	Step(ctx context.Context, steps []SeqStep) ([]SeqOut, error)
 
-	// TrimSeq drops a slot's cached state from position pos on: prefix reuse
-	// for models whose KV cache trims (Gemma 4). It reports false when the
-	// model's state cannot be trimmed (recurrent layers), and the caller
-	// restores a snapshot instead.
+	// TrimSeq drops a slot's cached state from position pos on. It reports
+	// false when the cache cannot be trimmed that far back (sliding-window
+	// layers without SWAFull, recurrent layers), and the caller clears the
+	// slot and prefills again. Any MTP carry-over is dropped.
 	TrimSeq(seq int, pos int) bool
-	// SaveSeq and RestoreSeq move a slot's full state in and out — snapshots
-	// for the Qwen3.5 fallback, and the golden state round-trip test.
+	// ClearSeq empties a slot.
+	ClearSeq(seq int)
+	// SaveSeq and RestoreSeq move a slot's full state in and out, for the
+	// state round-trip test and future snapshot-based prompt caching.
 	SaveSeq(seq int) ([]byte, error)
 	RestoreSeq(seq int, state []byte) error
 
