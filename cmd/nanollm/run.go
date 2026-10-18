@@ -48,6 +48,8 @@ func runCommand(args []string) error {
 	kvType := fs.String("kv", "f16", "KV cache type: f16 or q8_0")
 	noFA := fs.Bool("no-flash-attn", false, "disable flash attention")
 	noRepack := fs.Bool("no-repack", false, "disable the CPU repacked weight layouts")
+	loadMode := fs.String("load-mode", "", "how weights are read: none, mmap, mlock, mmap+mlock or dio (default: llama.cpp's)")
+	lazy := fs.String("lazy", "", "read tensors on first use: off, auto or on (default: llama.cpp's; on needs mmap)")
 	verbose := fs.Bool("verbose", false, "show llama.cpp's log")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
@@ -62,7 +64,7 @@ func runCommand(args []string) error {
 	if !isFile(*modelPath) {
 		set := map[string]bool{}
 		fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
-		for _, name := range []string{"drafter", "draft-max", "draft-p-min", "raw", "gpu-layers", "ctx", "batch", "ubatch", "threads", "kv", "no-flash-attn", "no-repack", "lib-dir"} {
+		for _, name := range []string{"drafter", "draft-max", "draft-p-min", "raw", "gpu-layers", "ctx", "batch", "ubatch", "threads", "kv", "no-flash-attn", "no-repack", "lib-dir", "load-mode", "lazy"} {
 			if set[name] {
 				return fmt.Errorf("run: --%s applies to a GGUF file; a catalog model takes its placement from the planner (--preset, --device)", name)
 			}
@@ -129,6 +131,8 @@ func runCommand(args []string) error {
 		KVTypeK:        *kvType,
 		KVTypeV:        *kvType,
 		FlashAttention: !*noFA,
+		LoadMode:       backend.LoadMode(*loadMode),
+		LazyMode:       backend.LazyMode(*lazy),
 		DrafterPath:    *drafterPath,
 		DraftMax:       *draftMax,
 		DraftPMin:      *draftPMin,

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"math/rand/v2"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -16,6 +17,9 @@ import (
 
 func TestBuiltinSuitesParse(t *testing.T) {
 	for _, name := range Suites() {
+		if name == EraSuite {
+			continue // the owner's file; TestEraSuiteComesFromTheOwnersFile
+		}
 		items, sha, err := LoadSuite(name)
 		if err != nil || len(items) == 0 || sha == "" {
 			t.Fatalf("%s: %v (%d items)", name, err, len(items))
@@ -120,5 +124,34 @@ func TestRunOnFake(t *testing.T) {
 	}
 	if !seen["a"] || !seen["b"] {
 		t.Fatalf("the order was not randomised: %+v", prefs)
+	}
+}
+
+func TestVoiceChecker(t *testing.T) {
+	c := Checker{Type: CheckVoice, MaxChars: 80, MaxSentences: 2, Any: []string{"суббот"}}
+	for answer, want := range map[string]bool{
+		"В субботу мы работаем с девяти до трёх.":                                                  true,
+		"**В субботу** с девяти до трёх.":                                                          false, // Markdown
+		"- в субботу с 9\n- в воскресенье выходной":                                                false, // a list
+		"Работаем в субботу. С девяти. До трёх.":                                                   false, // three sentences
+		"Да. В субботу работаем, но это очень длинный ответ, который никто не дослушает до конца.": false,
+		"Работаем с девяти до трёх.":                                                               false, // misses the fact
+	} {
+		got, detail := c.Check(answer, nil)
+		if got == nil || *got != want {
+			t.Errorf("%q: %v (%s), want %v", answer, got, detail, want)
+		}
+	}
+}
+
+func TestEraSuiteComesFromTheOwnersFile(t *testing.T) {
+	t.Setenv(EraEnv, "")
+	if _, _, err := LoadSuite(EraSuite); err == nil || !strings.Contains(err.Error(), EraEnv) {
+		t.Fatalf("no file: %v", err)
+	}
+	t.Setenv(EraEnv, filepath.Join("..", "..", "docs", "eval", "era.example.jsonl"))
+	items, sha, err := LoadSuite(EraSuite)
+	if err != nil || len(items) != 4 || sha == "" {
+		t.Fatalf("%d items, %v", len(items), err)
 	}
 }

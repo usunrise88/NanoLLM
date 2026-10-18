@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/usunrise88/nanollm/internal/core"
 )
@@ -56,6 +57,10 @@ const (
 	CheckToolCall = "tool_call"
 	CheckNeedle   = "needle" // Want appears in the answer
 	CheckHuman    = "human"  // a person rates it
+	// CheckVoice judges an answer that will be spoken (the Era call
+	// scenario): no Markdown, at most MaxChars characters and MaxSentences
+	// sentences, and Any/None as for contains.
+	CheckVoice = "voice"
 )
 
 // Checker says how an answer is judged.
@@ -70,6 +75,9 @@ type Checker struct {
 	// must be present (a subset match).
 	Name string         `json:"name,omitempty"`
 	Args map[string]any `json:"args,omitempty"`
+	// MaxChars and MaxSentences bound a voice answer; zero is no bound.
+	MaxChars     int `json:"max_chars,omitempty"`
+	MaxSentences int `json:"max_sentences,omitempty"`
 }
 
 // ReadSuite parses a JSONL suite. Blank lines and lines starting with // are
@@ -129,6 +137,10 @@ func (c Checker) validate() error {
 		if c.Name == "" {
 			return fmt.Errorf("tool_call needs name")
 		}
+	case CheckVoice:
+		if c.MaxChars < 0 || c.MaxSentences < 0 {
+			return fmt.Errorf("voice: max_chars and max_sentences are not negative")
+		}
 	case CheckJSON, CheckHuman:
 	default:
 		return fmt.Errorf("unknown checker %q", c.Type)
@@ -151,7 +163,10 @@ type Outcome struct {
 	Finish    string          `json:"finish"`
 	Usage     core.Usage      `json:"usage"`
 	MS        float64         `json:"ms"`
-	Error     string          `json:"error,omitempty"`
+	// TTFTMS is the time to the first token, what a caller waits through on
+	// a voice line.
+	TTFTMS float64 `json:"ttft_ms,omitempty"`
+	Error  string  `json:"error,omitempty"`
 }
 
 // Report is eval.v1.
@@ -251,7 +266,7 @@ func Run(ctx context.Context, svc core.Service, suiteName, suiteSHA string, item
 				o.Detail = "generation failed"
 			} else {
 				o.Answer, o.Reasoning, o.ToolCalls = res.Message.Content, res.Message.ReasoningContent, res.Message.ToolCalls
-				o.Finish, o.Usage = res.FinishReason, res.Usage
+				o.Finish, o.Usage, o.TTFTMS = res.FinishReason, res.Usage, res.Stats.TTFTMS
 				o.Pass, o.Detail = it.Checker.Check(o.Answer, o.ToolCalls)
 			}
 			rep.Results = append(rep.Results, o)
@@ -281,13 +296,25 @@ func (r *Report) Summarize() {
 		}
 		m[k] = t
 	}
+	var ttft []float64
 	for _, o := range r.Results {
+		if o.TTFTMS > 0 {
+			ttft = append(ttft, o.TTFTMS)
+		}
 		key := o.Capability
 		if o.Thinking {
 			key += "+thinking"
 		}
 		add(r.Summary, key, o)
 		add(r.ByLang, o.Lang, o)
+	}
+	if len(ttft) > 0 {
+		sort.Float64s(ttft)
+		if r.Extra == nil {
+			r.Extra = map[string]float64{}
+		}
+		r.Extra["ttft_ms_p50"] = ttft[len(ttft)/2]
+		r.Extra["ttft_ms_p95"] = ttft[min(len(ttft)-1, len(ttft)*95/100)]
 	}
 }
 
@@ -328,6 +355,20 @@ func (c Checker) Check(answer string, calls []core.ToolCall) (*bool, string) {
 		return pass(a == c.Want, "")
 	case CheckNeedle:
 		return pass(strings.Contains(strings.ToLower(a), strings.ToLower(c.Want)), "")
+	case CheckVoice:
+		if m := markdown.FindString(a); m != "" {
+			return pass(false, "Markdown is not spoken: "+quote(strings.TrimSpace(m)))
+		}
+		if n := utf8.RuneCountInString(a); c.MaxChars > 0 && n > c.MaxChars {
+			return pass(false, fmt.Sprintf("%d characters, at most %d", n, c.MaxChars))
+		}
+		if n := len(sentenceEnd.FindAllStringIndex(a+" ", -1)); c.MaxSentences > 0 && n > c.MaxSentences {
+			return pass(false, fmt.Sprintf("%d sentences, at most %d", n, c.MaxSentences))
+		}
+		if len(c.Any) == 0 && len(c.None) == 0 {
+			return pass(true, "")
+		}
+		return Checker{Type: CheckContains, Any: c.Any, None: c.None}.Check(a, nil)
 	case CheckJSON:
 		var v any
 		if err := json.Unmarshal([]byte(a), &v); err != nil {
@@ -367,6 +408,14 @@ func (c Checker) Check(answer string, calls []core.ToolCall) (*bool, string) {
 	}
 	return pass(false, "unknown checker")
 }
+
+var (
+	// markdown is what a speech synthesizer would read out literally:
+	// emphasis, headings, list markers at a line start, code.
+	markdown = regexp.MustCompile("(?m)(\\*\\*|__|`|^\\s*#{1,6}\\s|^\\s*[-*•]\\s|^\\s*\\d+[.)]\\s)")
+	// sentenceEnd ends a sentence: terminal punctuation, then a space.
+	sentenceEnd = regexp.MustCompile(`[.!?…]+["»”)]*\s`)
+)
 
 func quote(s string) string { b, _ := json.Marshal(s); return string(b) }
 

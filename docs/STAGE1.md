@@ -25,7 +25,7 @@ VM — CPU sapphirerapids (AMX), 4 vCPU, 15 GB RAM, E4B Q4_0 QAT + int4-драф
 | 1.7 Сервер | готово | conformance (14 тестов) на фейке и на E4B; очередь, ключи, лимиты, `run` (REPL); `ollama` и `/v1/embeddings` отложены |
 | 1.8 Web UI | готово | 23 e2e Playwright против `serve` на фейке, включая настоящую очередь |
 | 1.9 Поставка | готово; подпись и нотаризация macOS ждут секретов Apple | CI job `install`: `install.sh`/`install.ps1` из локального архива на настоящих systemd (ubuntu), launchd (macos) и службе Windows — служба стартует, `/healthz` отвечает, обновление сохраняет конфиг, `--purge` убирает всё; `release.yml` в пробном режиме (`v0.0.0-dryrun`): сборка всех архивов, smoke на linux amd64/arm64, windows amd64/arm64, darwin universal; без секретов шаг подписи пропускает архивы с предупреждением; образ CUDA собран, на GPU не запускался |
-| 1.10 Оценка | готово | eval json-tools на E4B: tools 4/5, json 5/5; KLD q8_0 KV против f16 — 8,7·10⁻⁵ |
+| 1.10 Оценка | готово | eval json-tools на E4B: tools 4/5, json 5/5; KLD q8_0 KV против f16 — 8,7·10⁻⁵; набор `era` читает файл владельца из `NANOLLM_ERA_SUITE` (форма — `docs/eval/era.example.jsonl`), проверка `voice` и TTFT в отчёте: на шаблоне 3/3, TTFT p50 1,2 с, второй звонок с тем же скриптом — 0,4 с из prompt cache |
 | 1.11a/b Бенчмарк: формат, профиль, раннер, клиент | готово | ram-8g, ram-3g, ram-0.5g на E4B (цифры VM не публикуются); пик locked ram-3g 2,6 GB |
 | 1.11c Сервис | готово, без хостинга | `services/bench`: unit, `-race`, lint, e2e на временной БД; настоящий `nanollm bench submit` → страница → `withdraw` → 410 по TLS; `bench --suite standard --submit` на фейке → сервис в тестовом режиме → страница; образ и Caddyfile проверены локально, workflow `bench-service.yml` |
 
@@ -370,8 +370,11 @@ v0.11.2 и NanoASR.
       used with Vulkan0», выход считается на хосте (с repack — в буфере AMX
       360 MiB, без — в CPU). Планировщик по-прежнему кладёт копию G0 в VRAM —
       консервативно; на настоящем GPU проверяется на этапе 3;
-    - строка prefetch при lazy не проверена: prefill на llvmpipe идёт
-      ~0,1 tok/s, проверка перенесена на этап 3;
+    - lazy (M3: mmap, lazy on, без repack; `nanollm run --load-mode mmap
+      --lazy on`): «tensor per_layer_token_embd.weight (size = 1512 MiB) lazy
+      read enabled» и «enabling prefetch for 'per_layer_token_embd.weight'»,
+      PLE в `CPU_Mapped`, слои на Vulkan0 (2133,31 MiB); `serve` с пресетом
+      vram-4g+ram-1g на `llamacpp:vulkan0` загрузил M3, 42 слоя на GPU;
     - ответ «Столица Франции — **Париж» совпадает с CPU.
 - **`nanollm run --prompt`** — минимальный one-shot для спайка v0.1.
 
@@ -580,7 +583,9 @@ v0.11.2 и NanoASR.
   - русские инструкции;
   - JSON/tools;
   - длинный контекст до 16k;
-  - Эра (данные владельца);
+  - Эра (данные владельца): `--suite era` читает файл из
+    `NANOLLM_ERA_SUITE`, в репозиторий данные не попадают; проверка `voice`
+    (без Markdown, лимит символов и фраз) и TTFT p50/p95 в отчёте;
   - 50 промптов для оценки человеком.
 - **Корпус:** манифест sha256; хранится в HF dataset или ассете релиза.
 - **`nanollm eval rate <dir>`:** оценка 1–5 / «годится для звонка» и A/B с
