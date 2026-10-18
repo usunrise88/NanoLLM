@@ -37,8 +37,8 @@ func Default() Config {
 		Pool:  Pool{MaxResidentModels: 1},
 		Cache: Cache{Prompt: true, MaxSnapshots: 8},
 		Generation: Generation{
-			// Off by default: the first workload is voice, where the user
-			// waits for every token of thinking before hearing an answer.
+			// Off by default: the user waits for every token of thinking
+			// before the answer starts.
 			EnableThinking:  false,
 			MaxTokensCap:    8192,
 			ContextOverflow: OverflowError,

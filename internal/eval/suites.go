@@ -24,29 +24,13 @@ func Suites() []string {
 	for _, e := range entries {
 		out = append(out, strings.TrimSuffix(e.Name(), ".jsonl"))
 	}
-	out = append(out, "long-context", EraSuite)
+	out = append(out, "long-context")
 	sort.Strings(out)
 	return out
 }
 
-// EraSuite is the call-scenario suite (ROADMAP 3.6). Its items are the
-// owner's call scripts and are never built in or committed: the name reads
-// the file EraEnv points at. docs/eval/era.example.jsonl shows the shape.
-const (
-	EraSuite = "era"
-	EraEnv   = "NANOLLM_ERA_SUITE"
-)
-
-// LoadSuite reads a built-in suite by name or a JSONL file by path; "era"
-// reads the owner's file from NANOLLM_ERA_SUITE.
+// LoadSuite reads a built-in suite by name or a JSONL file by path.
 func LoadSuite(nameOrPath string) ([]Item, string, error) {
-	if nameOrPath == EraSuite {
-		p := os.Getenv(EraEnv)
-		if p == "" {
-			return nil, "", fmt.Errorf("the era suite is the owner's call scripts, not part of NanoLLM: set %s to its JSONL file (shape: docs/eval/era.example.jsonl)", EraEnv)
-		}
-		nameOrPath = p
-	}
 	if nameOrPath == "long-context" {
 		items := LongContext([]int{1024, 4096, 8192, 16384})
 		return items, "generated:long-context/v1", nil

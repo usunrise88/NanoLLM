@@ -17,7 +17,7 @@ import (
 // Rating is a person's judgement of one answer.
 type Rating struct {
 	Score int `json:"score"` // 1–5
-	// Usable is «годится для звонка»: could this answer go to a caller.
+	// Usable is «годится»: could this answer be given as it is.
 	Usable bool   `json:"usable"`
 	Note   string `json:"note,omitempty"`
 }
@@ -77,7 +77,7 @@ func RateReport(in io.Reader, out io.Writer, rep *Report, items map[string]Item,
 		if score == 0 {
 			return rated, nil
 		}
-		usable, err := askYesNo(r, out, "Годится для звонка? y/n: ")
+		usable, err := askYesNo(r, out, "Ответ годится? y/n: ")
 		if err != nil {
 			return rated, err
 		}

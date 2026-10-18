@@ -44,7 +44,7 @@ const (
 	ppText = "Утром над рекой поднимался туман, и рыбаки не спешили выходить на лодках. " +
 		"The old library smelled of paper and dust, and the clock on the wall was five minutes slow. "
 	chatPrompt = "Объясни простыми словами, как работает солнечная батарея, и приведи два примера, где её используют."
-	chatSystem = "Ты — вежливый голосовой ассистент. Отвечай по-русски, понятно и по делу."
+	chatSystem = "Ты — вежливый ассистент. Отвечай по-русски, понятно и по делу."
 )
 
 // PromptsSHA256 fingerprints what the suite version fixes, so a client that

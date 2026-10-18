@@ -72,7 +72,7 @@ func TestValidateRefuses(t *testing.T) {
 			c.Auth.Mode = "apikey"
 			c.Auth.Keys = []APIKey{{Name: "a", Secret: "x"}, {Name: "a", Secret: "y"}}
 		},
-		"unknown dialect":   func(c *Config) { c.API.Dialects = []string{"era"} },
+		"unknown dialect":   func(c *Config) { c.API.Dialects = []string{"nonesuch"} },
 		"unknown backend":   func(c *Config) { c.Backends.Enabled = []string{"vllm"} },
 		"bad device":        func(c *Config) { c.Devices.Default = "cuda0" },
 		"bad device prefix": func(c *Config) { c.Devices.Default = "tensorrt:0" },
