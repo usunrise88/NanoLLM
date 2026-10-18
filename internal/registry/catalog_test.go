@@ -20,8 +20,12 @@ func TestBuiltinCatalog(t *testing.T) {
 	if _, ok := def.File(RoleDrafter); !ok || def.Drafter == nil {
 		t.Errorf("%s ships without its drafter", def.ID)
 	}
-	if fb, ok := Find(cat, "qwen3.5-9b-q4km"); !ok || fb.Drafter != nil {
-		t.Errorf("fallback missing or carries a drafter: %+v", fb)
+	// Every built-in file must be downloadable: pinned to a commit, a size and
+	// a sha256.
+	for _, m := range cat {
+		if !m.Pinned() {
+			t.Errorf("%s is not pinned", m.ID)
+		}
 	}
 }
 

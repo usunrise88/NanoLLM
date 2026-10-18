@@ -32,9 +32,6 @@ func TestExampleConfigLoads(t *testing.T) {
 	if !o.NCtx.IsAuto() {
 		t.Errorf("n_ctx: got %v, want auto", o.NCtx)
 	}
-	if cfg.Models.Override("qwen3.5-9b-q4km").Speculative.Type != SpecNone {
-		t.Error("flow-style speculative block not decoded")
-	}
 	if len(cfg.Auth.Keys) != 2 || !cfg.Auth.Keys[0].Admin || cfg.Auth.Keys[1].RPS != 10 {
 		t.Errorf("keys not decoded: %+v", cfg.Auth.Keys)
 	}

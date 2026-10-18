@@ -1,11 +1,15 @@
-# Built-in catalog (SPEC §7). All three repositories are Apache-2.0.
+# Built-in catalog (SPEC §7). The repository is Apache-2.0.
 #
-# revision, size and sha256 are pinned when the catalog is generated: every
-# entry is fixed to a repository commit, and the registry refuses to download a
-# file that is not. Until then approx_size carries the model-card figure.
+# One model for now: Gemma 4 E4B QAT int4 with its MTP drafter, both from
+# Unsloth. Gemma 4 12B and Qwen3.5-9B return when work on them does
+# (docs/ROADMAP.md, deferred).
 #
-# Multimodal projectors (mmproj) are not downloaded in v1. Quality references
-# for the optimization track live in tools/optimize/, not here.
+# Every file is pinned to a repository commit, its size and its sha256 (the
+# LFS object id); the registry refuses to download a file that is not. The
+# drafter is the repository-root file, Unsloth's recommended "smart Q4_0"
+# (also published as MTP/mtp-gemma-4-E4B-it-Q4_0.gguf).
+#
+# Multimodal projectors (mmproj) are not downloaded in v1.
 
 - id: gemma-4-e4b-qat
   family: gemma4
@@ -18,68 +22,19 @@
     - role: model
       repo: unsloth/gemma-4-E4B-it-qat-GGUF
       path: gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf
-      revision: ""
-      size: 0
-      sha256: ""
+      revision: 8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265
+      size: 4215695776
+      sha256: df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3
       approx_size: 4.22 GB
     - role: drafter
       repo: unsloth/gemma-4-E4B-it-qat-GGUF
       path: mtp-gemma-4-E4B-it.gguf
-      revision: ""
-      size: 0
-      sha256: ""
+      revision: 8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265
+      size: 59678016
+      sha256: 423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605
       approx_size: 59.7 MB
   drafter:
     arch: gemma4-assistant
-  reasoning:
-    thinking_default: false
-  license: Apache-2.0
-  commercial: permitted
-
-- id: gemma-4-12b-qat
-  family: gemma4
-  arch: gemma4
-  params: 12B
-  quant: UD-Q4_K_XL
-  format: gguf
-  role: second
-  files:
-    - role: model
-      repo: unsloth/gemma-4-12B-it-qat-GGUF
-      path: gemma-4-12B-it-qat-UD-Q4_K_XL.gguf
-      revision: ""
-      size: 0
-      sha256: ""
-      approx_size: 6.72 GB
-    - role: drafter
-      repo: unsloth/gemma-4-12B-it-qat-GGUF
-      path: mtp-gemma-4-12B-it.gguf
-      revision: ""
-      size: 0
-      sha256: ""
-      approx_size: 254 MB
-  drafter:
-    arch: gemma4-assistant
-  reasoning:
-    thinking_default: false
-  license: Apache-2.0
-  commercial: permitted
-
-- id: qwen3.5-9b-q4km
-  family: qwen3.5
-  arch: qwen35
-  params: 9B
-  quant: Q4_K_M
-  format: gguf
-  role: fallback
-  files:
-    - role: model
-      repo: unsloth/Qwen3.5-9B-GGUF
-      path: Qwen3.5-9B-Q4_K_M.gguf
-      revision: ""
-      size: 0
-      sha256: ""
-      approx_size: 5.68 GB
   reasoning:
     thinking_default: false
   license: Apache-2.0

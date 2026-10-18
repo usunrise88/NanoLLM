@@ -44,9 +44,6 @@ models:
         type: mtp         # mtp | none
         n_max: 2
         p_min: 0.0
-    qwen3.5-9b-q4km:
-      preset: ram-8g
-      speculative: {type: none}
 
 pool:
   max_resident_models: 1
