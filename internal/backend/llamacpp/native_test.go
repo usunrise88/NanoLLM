@@ -253,7 +253,10 @@ func TestNativeCPUDevice(t *testing.T) {
 	for _, w := range b.Warnings() {
 		t.Logf("warning: %s", w)
 	}
-	if runtime.GOOS != "darwin" && b.CPUVariant() == "" {
+	// Archives with one generic CPU library (Windows arm64) have no variant
+	// to report; where there are variants, ggml must have named one.
+	variants, _ := filepath.Glob(filepath.Join(testLibDir(t), "*ggml-cpu-*"))
+	if len(variants) > 0 && b.CPUVariant() == "" {
 		t.Error("the CPU variant ggml picked was not found in its log")
 	}
 	if _, _, err := b.device("llamacpp:nosuchgpu7"); err == nil {

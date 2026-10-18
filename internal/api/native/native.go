@@ -46,16 +46,14 @@ func (*Adapter) Mount(mux *http.ServeMux, deps adapter.Deps) error {
 	if m, ok := deps.Extra.(Mounter); ok {
 		m.MountNative(mux)
 	} else {
-		pending := func(what string) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				httpx.WriteProblem(w, httpx.NotYet(what, "v1.0"))
-			})
+		// queue.enabled is false, or the queue could not open its database.
+		off := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			httpx.WriteProblem(w, core.Errorf(core.CodeCapabilityUnavailable,
+				"the job queue is off on this server: queue.enabled is false or its database could not be opened (see the server log)"))
+		})
+		for _, route := range []string{"POST /api/v1/jobs", "GET /api/v1/jobs", "GET /api/v1/jobs/{id}", "GET /api/v1/jobs/{id}/events", "DELETE /api/v1/jobs/{id}"} {
+			mux.Handle(route, off)
 		}
-		mux.Handle("POST /api/v1/jobs", pending("the job queue"))
-		mux.Handle("GET /api/v1/jobs", pending("the job queue"))
-		mux.Handle("GET /api/v1/jobs/{id}", pending("the job queue"))
-		mux.Handle("GET /api/v1/jobs/{id}/events", pending("the job queue"))
-		mux.Handle("DELETE /api/v1/jobs/{id}", pending("the job queue"))
 	}
 
 	mux.HandleFunc("GET /api/v1/devices", h.devices)

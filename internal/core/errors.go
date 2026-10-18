@@ -89,9 +89,12 @@ func (c Code) HTTPStatus() int {
 		return http.StatusNotFound
 	case CodeDeviceUnavailable, CodeCapabilityUnavailable:
 		return http.StatusConflict
-	case CodeQueueFull, CodeRateLimited:
+	case CodeRateLimited:
 		return http.StatusTooManyRequests
-	case CodeModelUnavailable:
+	case CodeModelUnavailable, CodeQueueFull:
+		// A full queue is the server's state, not the caller's rate: 503,
+		// as SPEC's queue.max_pending says, rather than a 429 that would
+		// tell a well-behaved client to slow down.
 		return http.StatusServiceUnavailable
 	case CodeNotImplemented:
 		return http.StatusNotImplemented

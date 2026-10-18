@@ -107,23 +107,18 @@ func serve(args []string) error {
 		}
 		return out
 	}
+	// A queue that cannot open its database (no data_dir yet, a read-only
+	// disk) leaves the jobs routes unavailable; chat and completions still
+	// serve, as with a backend that fails to open.
 	var jobs any
 	if cfg.Queue.Enabled {
-		if err := os.MkdirAll(cfg.Server.DataDir, 0o750); err != nil {
-			return err
-		}
-		q, err := queue.Open(rt.Engine, queue.Options{
-			Path:          filepath.Join(cfg.Server.DataDir, "nanollm.db"),
-			MaxPending:    cfg.Queue.MaxPending,
-			Concurrency:   cfg.Queue.Concurrency,
-			WebhookSecret: cfg.Queue.WebhookSecret,
-			Log:           log,
-		})
+		q, err := openQueue(cfg, rt.Engine, log)
 		if err != nil {
-			return err
+			log.Error("job queue unavailable", "err", err)
+		} else {
+			defer func() { _ = q.Close() }()
+			jobs = q
 		}
-		defer func() { _ = q.Close() }()
-		jobs = q
 	}
 	if err := adapter.MountAll(mux, cfg.API.Dialects, adapter.Deps{
 		Service:        rt.Engine,
@@ -203,6 +198,19 @@ func serve(args []string) error {
 }
 
 // newStore is the on-disk model store the configuration describes.
+func openQueue(cfg config.Config, svc core.Service, log *slog.Logger) (*queue.Queue, error) {
+	if err := os.MkdirAll(cfg.Server.DataDir, 0o750); err != nil {
+		return nil, err
+	}
+	return queue.Open(svc, queue.Options{
+		Path:          filepath.Join(cfg.Server.DataDir, "nanollm.db"),
+		MaxPending:    cfg.Queue.MaxPending,
+		Concurrency:   cfg.Queue.Concurrency,
+		WebhookSecret: cfg.Queue.WebhookSecret,
+		Log:           log,
+	})
+}
+
 func newStore(cfg config.Config) *registry.Store {
 	return &registry.Store{
 		Root:          cfg.ModelsPath(),
