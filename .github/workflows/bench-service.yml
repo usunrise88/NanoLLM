@@ -1,0 +1,108 @@
+name: bench-service
+
+# The public benchmark service (services/bench) and its format (benchfmt),
+# each its own module, tested on its own (docs/BENCHMARKS.md). The service
+# is not part of the NanoLLM release.
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "benchfmt/**"
+      - "services/bench/**"
+      - "internal/bench/**"
+      - "cmd/nanollm/bench.go"
+      - ".github/workflows/bench-service.yml"
+  pull_request:
+    paths:
+      - "benchfmt/**"
+      - "services/bench/**"
+      - "internal/bench/**"
+      - "cmd/nanollm/bench.go"
+      - ".github/workflows/bench-service.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  benchfmt:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchfmt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: benchfmt/go.mod
+          cache: false
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      # Includes the check that schema.json matches the Go types.
+      - run: go test ./...
+
+  service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/bench
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/bench/go.mod
+          cache-dependency-path: services/bench/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.5
+          working-directory: services/bench
+      # -short skips the e2e, which has a job of its own.
+      - run: CGO_ENABLED=1 go test -race -short ./...
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/bench/go.mod
+          cache-dependency-path: |
+            go.sum
+            services/bench/go.sum
+      - name: build nanollm and benchd
+        run: |
+          go build -o "$RUNNER_TEMP/nanollm" ./cmd/nanollm
+          (cd services/bench && go build -o "$RUNNER_TEMP/benchd" ./cmd/benchd)
+      # benchd on a temporary database, driven the way the client does.
+      - name: e2e (Go)
+        working-directory: services/bench
+        run: BENCHD_BIN="$RUNNER_TEMP/benchd" go test -count=1 -v -run TestEndToEnd ./e2e
+      # The real client: `nanollm bench submit` → benchd → the page shows
+      # the result → `nanollm bench withdraw` → 410.
+      - name: e2e (nanollm client)
+        run: services/bench/e2e/client-e2e.sh "$RUNNER_TEMP/nanollm" "$RUNNER_TEMP/benchd"
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: docker build -f services/bench/Dockerfile --build-arg VERSION="${GITHUB_SHA::12}" -t nanollm-benchd:ci .
+      - name: smoke
+        run: |
+          docker run -d --name benchd -p 127.0.0.1:18080:8080 nanollm-benchd:ci
+          for i in $(seq 30); do
+            if curl -sf localhost:18080/healthz && curl -sf -o /dev/null localhost:18080/benchmarks; then
+              docker exec benchd /benchd backup
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs benchd
+          exit 1
+      - name: Caddyfile
+        run: docker run --rm -v "$PWD/services/bench/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.8 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
