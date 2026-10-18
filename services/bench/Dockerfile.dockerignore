@@ -1,0 +1,8 @@
+# The build context is the repository root; only these two directories are
+# needed (BuildKit reads <Dockerfile>.dockerignore next to the Dockerfile).
+*
+!benchfmt/
+!services/bench/
+services/bench/deploy/
+**/*.db
+**/*.db-*
