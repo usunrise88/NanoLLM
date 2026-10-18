@@ -2,8 +2,10 @@ package bench
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/usunrise88/nanollm/benchfmt"
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/backend/fake"
 	"github.com/usunrise88/nanollm/internal/sched"
@@ -57,5 +59,13 @@ func TestMedianStd(t *testing.T) {
 	m, s := medianStd([]float64{3, 1, 2})
 	if m != 2 || s != 1 {
 		t.Fatalf("%v %v", m, s)
+	}
+}
+
+func TestFakeResultsStayOffThePublicService(t *testing.T) {
+	res := &benchfmt.Result{Suite: benchfmt.Suite{ID: SuiteStandard}, Client: benchfmt.Client{GGMLCPUVariant: benchfmt.FakeCPUVariant}}
+	_, err := (&Client{BaseURL: DefaultSubmitURL}).Submit(context.Background(), res, Anonymous())
+	if err == nil || !strings.Contains(err.Error(), "fake backend") {
+		t.Fatalf("a fake result went to %s: %v", DefaultSubmitURL, err)
 	}
 }

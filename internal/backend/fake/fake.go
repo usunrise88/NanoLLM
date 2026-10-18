@@ -67,7 +67,10 @@ func New(opts Options) *Backend {
 
 func (b *Backend) Name() string    { return Name }
 func (b *Backend) Version() string { return "fake" }
-func (b *Backend) Close() error    { return nil }
+
+// CPUVariant marks benchmark results as the fake's (benchfmt.FakeCPUVariant).
+func (b *Backend) CPUVariant() string { return "fake" }
+func (b *Backend) Close() error       { return nil }
 
 func (b *Backend) Devices(context.Context) ([]backend.Device, error) {
 	devs := []backend.Device{{

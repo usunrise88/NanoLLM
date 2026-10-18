@@ -16,6 +16,7 @@ import (
 
 	"github.com/usunrise88/nanollm/benchfmt"
 	"github.com/usunrise88/nanollm/internal/backend"
+	"github.com/usunrise88/nanollm/internal/backend/fake"
 	"github.com/usunrise88/nanollm/internal/chat"
 	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/memlock"
@@ -67,6 +68,13 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 	b, err := backend.Open(spec.Backend, spec.LibDir)
 	if err != nil {
 		return res, err
+	}
+	if spec.Backend == fake.Name {
+		// An instant fake measures millions of tokens a second, which no
+		// result format or service accepts; a laptop-like pace keeps the
+		// whole chain (format, signing, service, pages) testable on it.
+		_ = b.Close()
+		b = fake.New(fake.Options{PrefillRate: 4000, DecodeRate: 200, MaxDraft: 2, Acceptance: 0.6})
 	}
 	defer func() { _ = b.Close() }()
 	if cv, ok := b.(cpuVarianter); ok {

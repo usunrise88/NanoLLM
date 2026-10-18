@@ -26,7 +26,7 @@ openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 
 	-subj /CN=localhost -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
 	-keyout "$work/key.pem" -out "$work/cert.pem" 2>/dev/null
 
-BENCHD_ADDR="127.0.0.1:$port" BENCHD_DB="$work/bench.db" BENCHD_PUBLIC_URL="$base" \
+BENCHD_ADDR="127.0.0.1:$port" BENCHD_DB="$work/bench.db" BENCHD_ACCEPT_FAKE=1 BENCHD_PUBLIC_URL="$base" \
 	BENCHD_TLS_CERT="$work/cert.pem" BENCHD_TLS_KEY="$work/key.pem" \
 	"$benchd" serve >"$work/benchd.log" 2>&1 &
 pid=$!
@@ -64,3 +64,20 @@ fetch "$base/api/v1/results?system=asus-rog-zephyrus-m16" | grep -q '"installs":
 code=$(fetch -o /dev/null -w '%{http_code}' "$base/benchmarks/s/$id")
 [ "$code" = 410 ] || fail "a withdrawn submission answers $code, want 410"
 echo "client-e2e: ok ($id submitted, shown and withdrawn)"
+
+# The whole chain from a run: `nanollm bench --suite standard --submit` on
+# the fake backend (benchd in test mode accepts its marked results).
+cat >"$work/fake.yaml" <<EOF
+server:
+  data_dir: $work/fake-data
+backends:
+  enabled: [fake]
+bench:
+  submit_url: $base
+EOF
+(cd "$work" && "$nanollm" bench -config "$work/fake.yaml" --suite standard --reps 1 --submit) >"$work/run.log" 2>&1 ||
+	fail "bench run failed: $(cat "$work/run.log")"
+run_id=$(awk '/^sent:/ {print $2}' "$work/run.log")
+[ -n "$run_id" ] || fail "no submission id from the run: $(cat "$work/run.log")"
+fetch "$base/benchmarks/s/$run_id" | grep -q "vram-" || fail "the run's page does not show its presets"
+echo "client-e2e: ok ($run_id measured on the fake, submitted and shown)"

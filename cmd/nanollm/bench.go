@@ -70,9 +70,14 @@ func benchCommand(args []string) error {
 	if !ok {
 		return fmt.Errorf("bench: no %q in the catalog", id)
 	}
-	modelPath, drafterPath, err := newStore(cfg).Ready(m)
-	if err != nil {
-		return err
+	// On the fake backend alone (development, the service's e2e) there are
+	// no weights to read and the result is marked as the fake's.
+	fakeOnly := len(cfg.Backends.Enabled) == 1 && cfg.Backends.Enabled[0] == config.BackendFake
+	modelPath, drafterPath := "fake.gguf", "fake-drafter.gguf"
+	if !fakeOnly {
+		if modelPath, drafterPath, err = newStore(cfg).Ready(m); err != nil {
+			return err
+		}
 	}
 	if ov := cfg.Models.Overrides[m.ID]; ov.Speculative.Type == config.SpecNone {
 		drafterPath = ""
@@ -81,7 +86,11 @@ func benchCommand(args []string) error {
 	if err != nil {
 		return err
 	}
-	b, err := backend.Open(config.BackendLlamaCpp, libDir)
+	name := config.BackendLlamaCpp
+	if fakeOnly {
+		name = config.BackendFake
+	}
+	b, err := backend.Open(name, libDir)
 	if err != nil {
 		return err
 	}

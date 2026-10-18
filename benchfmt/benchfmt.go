@@ -62,6 +62,11 @@ type Client struct {
 	Arch           string `json:"arch"`
 }
 
+// FakeCPUVariant marks a result measured on NanoLLM's scripted fake
+// backend: its numbers are not a machine's, so the public service refuses
+// it outside test mode.
+const FakeCPUVariant = "fake"
+
 type LlamaCpp struct {
 	Tag    string `json:"tag"`
 	Commit string `json:"commit"`

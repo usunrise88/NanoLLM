@@ -102,6 +102,9 @@ func (c *Client) http() *http.Client {
 // Submit signs and sends a result. With a persistent identity the receipt is
 // remembered, for withdraw.
 func (c *Client) Submit(ctx context.Context, res *benchfmt.Result, id *Identity) (*Receipt, error) {
+	if res.Client.GGMLCPUVariant == benchfmt.FakeCPUVariant && strings.TrimSuffix(c.BaseURL, "/") == DefaultSubmitURL {
+		return nil, errors.New("this result was measured on the fake backend; it is for testing and is not sent to the public benchmark")
+	}
 	if res.Suite.ID != SuiteStandard {
 		return nil, fmt.Errorf("only the %s suite is submitted; %s results stay local", SuiteStandard, res.Suite.ID)
 	}

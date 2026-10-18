@@ -378,3 +378,23 @@ func TestOutputMatch(t *testing.T) {
 		t.Fatal("a differing output must not block publication")
 	}
 }
+
+func TestFakeBackendOnlyInTestMode(t *testing.T) {
+	fake := func() *benchfmt.Result {
+		r := sample(5e4) // above any CPU ceiling, within the format
+		r.Client.GGMLCPUVariant = benchfmt.FakeCPUVariant
+		return r
+	}
+	svc, _ := newService(t, Config{})
+	if _, err := svc.Submit(context.Background(), signed(t, fake(), newKey()), ""); status(err) != http.StatusUnprocessableEntity {
+		t.Fatalf("fake result outside test mode: %v", err)
+	}
+	svc, _ = newService(t, Config{AcceptFake: true})
+	if _, err := svc.Submit(context.Background(), signed(t, fake(), newKey()), ""); err != nil {
+		t.Fatalf("fake result in test mode: %v", err)
+	}
+	// Test mode does not lift the ceiling for real results.
+	if _, err := svc.Submit(context.Background(), signed(t, sample(5e4), newKey()), ""); status(err) != http.StatusUnprocessableEntity {
+		t.Fatalf("implausible real result in test mode: %v", err)
+	}
+}

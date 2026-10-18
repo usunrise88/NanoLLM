@@ -62,6 +62,10 @@ type Config struct {
 	// CeilingSlack multiplies the plausibility ceiling.
 	CeilingSlack float64
 	Moderation   string
+	// AcceptFake is test mode: results measured on NanoLLM's fake backend
+	// (benchfmt.FakeCPUVariant) are accepted and skip the plausibility
+	// ceiling, which their numbers would never pass. Off, they are refused.
+	AcceptFake bool
 	// PerIP and PerKey limit submissions; nil means no limit.
 	PerIP, PerKey *Limiter
 }
@@ -177,6 +181,10 @@ func (s *Service) Submit(ctx context.Context, body []byte, ipKey string) (*Recei
 	if err := res.Verify(); err != nil {
 		return nil, refuse(http.StatusUnprocessableEntity, "%v", err)
 	}
+	fake := res.Client.GGMLCPUVariant == benchfmt.FakeCPUVariant
+	if fake && !s.cfg.AcceptFake {
+		return nil, refuse(http.StatusUnprocessableEntity, "measured on NanoLLM's fake backend: such results are for testing and are not published")
+	}
 	res.InstallID = strings.ToLower(res.InstallID)
 	sum := sha256.Sum256(body)
 	rawSHA := hex.EncodeToString(sum[:])
@@ -210,7 +218,7 @@ func (s *Service) Submit(ctx context.Context, body []byte, ipKey string) (*Recei
 		mod := store.Moderation{State: store.StatePublished}
 		for i, r := range runs {
 			switch {
-			case r.Plausibility == store.PlausibleNo:
+			case r.Plausibility == store.PlausibleNo && !fake:
 				return refuse(http.StatusUnprocessableEntity, "runs[%d] (%s): token generation above the plausible ceiling of %.1f tok/s for this hardware and placement",
 					i, r.Preset, r.Ceiling)
 			case r.Status == benchfmt.StatusOK && r.Plausibility == store.PlausibleUnknown:

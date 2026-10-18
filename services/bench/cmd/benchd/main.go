@@ -64,7 +64,7 @@ func main() {
 type config struct {
 	addr, db, publicURL, adminToken string
 	license, licenseURL             string
-	trustProxy                      bool
+	trustProxy, acceptFake          bool
 	ratePerIP, ratePerKey           int
 	retired, moderation             string
 	slack                           float64
@@ -119,6 +119,7 @@ func flags(name string, args []string) (*config, error) {
 	fs.IntVar(&c.ratePerKey, "rate-key", envInt("BENCHD_RATE_KEY", 20), "submissions per install key per day, 0 = no limit (BENCHD_RATE_KEY)")
 	fs.StringVar(&c.retired, "retired-suites", env("BENCHD_RETIRED_SUITES", ""), "comma-separated retired suites answered with 410, e.g. standard/v0 (BENCHD_RETIRED_SUITES)")
 	fs.StringVar(&c.moderation, "moderation", env("BENCHD_MODERATION", ingest.ModerationAuto), "auto (publish unless a check queues it) or manual (BENCHD_MODERATION)")
+	fs.BoolVar(&c.acceptFake, "accept-fake", envBool("BENCHD_ACCEPT_FAKE"), "test mode: accept results from NanoLLM's fake backend, without the plausibility ceiling (BENCHD_ACCEPT_FAKE)")
 	fs.Float64Var(&c.slack, "ceiling-slack", envFloat("BENCHD_CEILING_SLACK", 1.3), "multiplier on the tg plausibility ceiling (BENCHD_CEILING_SLACK)")
 	fs.StringVar(&c.backupDir, "backup-dir", env("BENCHD_BACKUP_DIR", ""), "backup directory (BENCHD_BACKUP_DIR)")
 	fs.DurationVar(&c.backupKeep, "backup-keep", envDur("BENCHD_BACKUP_KEEP", 30*24*time.Hour), "backup retention (BENCHD_BACKUP_KEEP)")
@@ -161,7 +162,7 @@ func open(ctx context.Context, c *config) (*store.Store, *ingest.Service, *inges
 	}
 	perIP := ingest.NewLimiter(c.ratePerIP, time.Hour)
 	ing := ingest.New(st, ingest.Config{
-		PublicURL: c.publicURL, Retired: c.retiredSet(), CeilingSlack: c.slack, Moderation: c.moderation,
+		PublicURL: c.publicURL, Retired: c.retiredSet(), CeilingSlack: c.slack, Moderation: c.moderation, AcceptFake: c.acceptFake,
 		PerIP: perIP, PerKey: ingest.NewLimiter(c.ratePerKey, 24*time.Hour),
 	})
 	return st, ing, perIP, nil
