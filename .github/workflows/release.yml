@@ -5,9 +5,21 @@ name: release
 # the darwin ones signed and notarized on a Mac when the secrets are there,
 # each one smoke-tested on its own platform against the tiny fixture model,
 # and published with sha256sums.txt and the installers.
+#
+# A push to a branch that touches the delivery files is a dry run: the same
+# build, signing (when the secrets are there) and smoke tests under a
+# throwaway version, and no release.
 on:
   push:
     tags: ["v*"]
+    branches: ["**"]
+    paths:
+      - ".github/workflows/release.yml"
+      - "scripts/dist.sh"
+      - "scripts/install.sh"
+      - "scripts/install.ps1"
+      - "scripts/fetch-libs.sh"
+      - "deploy/**"
   workflow_dispatch:
     inputs:
       tag:
@@ -18,7 +30,7 @@ permissions:
   contents: write
 
 env:
-  TAG: ${{ inputs.tag || github.ref_name }}
+  TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || 'v0.0.0-dryrun' }}
 
 jobs:
   # Built once and shared, so every UI archive serves byte-identical assets.
@@ -268,6 +280,7 @@ jobs:
 
   release:
     needs: smoke
+    if: startsWith(github.ref, 'refs/tags/') || inputs.tag != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
