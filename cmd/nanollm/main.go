@@ -53,7 +53,7 @@ func main() {
 	case "models":
 		err = modelsCommand(args)
 	case "key", "keys":
-		err = notYet("key", "v1.0")
+		err = keyCommand(args)
 	case "service":
 		err = notYet("service", "v1.0")
 	case "version":
