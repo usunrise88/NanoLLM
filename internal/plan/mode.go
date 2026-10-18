@@ -1,13 +1,17 @@
-// Package plan holds the vocabulary of memory placement: the memory modes a
-// model can be loaded in and the fixed-budget presets that bound them (SPEC §4,
-// §15).
+// Package plan decides memory placement: the memory modes a model can be
+// loaded in, the fixed-budget presets that bound them (SPEC §4, §15), and the
+// planner that turns a measured tensor inventory and a preset into a mode, a
+// layer split, a context and a backend.LoadSpec (docs/STAGE1.md 1.4).
 //
-// The planner itself — measured tensor inventory in, mode, layer split and
-// context out — lands with v0.1. What is here is the part everything else
-// already has to agree on: the configuration validates against these names,
-// `nanollm plan` and `bench` print them, and the benchmark matrix is keyed by
-// them. Defining them once keeps a typo in a preset from becoming a separate
-// row in a report.
+// The names are the part everything else agrees on: the configuration
+// validates against them, `nanollm plan` and `bench` print them, and the
+// benchmark matrix is keyed by them. Defining them once keeps a typo in a
+// preset from becoming a separate row in a report.
+//
+// The planner's accounting is authoritative (SPEC §4, enforcement): it works
+// from the bytes measured in the file header, and from formulas checked
+// against the pinned llama.cpp's own logs, never from llama.cpp's device
+// fitting.
 package plan
 
 import (

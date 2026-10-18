@@ -1,0 +1,128 @@
+{
+  "model": "gemma-4-e4b-qat",
+  "preset": "ram-6g",
+  "mode": "ram-full",
+  "mode_id": "M6",
+  "gpu_layers": 0,
+  "layers_on_gpu": 0,
+  "n_ctx": 16384,
+  "slots": 1,
+  "n_batch": 2048,
+  "n_ubatch": 512,
+  "n_outputs_max": 4,
+  "flash_attention": true,
+  "kv": {
+    "type_k": "f16",
+    "type_v": "f16",
+    "swa_full": true,
+    "swa_full_reason": "the full sliding-window cache fits the budget: the prompt cache can reuse a prefix of any length",
+    "unified": false,
+    "cells_full": 16384,
+    "cells_swa": 16384,
+    "streams": 1,
+    "bytes": 939524096
+  },
+  "load_mode": "dio",
+  "lazy_mode": "off",
+  "repack": true,
+  "mtp": {
+    "enabled": true,
+    "reason": "the drafter (41.9 MiB) runs on the CPU with the target's output layer and reads its KV cache",
+    "draft_max": 3
+  },
+  "groups": {
+    "G0": {
+      "vram": 0,
+      "ram_locked": 754974720,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G1": {
+      "vram": 0,
+      "ram_locked": 1585446912,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G2": {
+      "vram": 0,
+      "ram_locked": 376750080,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G3": {
+      "vram": 0,
+      "ram_locked": 1857945600,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G4": {
+      "vram": 0,
+      "ram_locked": 2241704,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G5": {
+      "vram": 0,
+      "ram_locked": 939524096,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G6": {
+      "vram": 0,
+      "ram_locked": 81640464,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G7": {
+      "vram": 0,
+      "ram_locked": 174692761,
+      "file_backed": 0,
+      "disk": 0
+    }
+  },
+  "memory": {
+    "ram": {
+      "budget": 6442450944,
+      "used": 5974542929,
+      "budgeted": true
+    },
+    "file_backed": 0,
+    "overhead_ram": 201326592
+  },
+  "compute_calibrated": true,
+  "target": {
+    "n_ctx": 16384,
+    "slots": 1
+  },
+  "tried": [
+    {
+      "mode": "vram-full",
+      "id": "M1",
+      "fits": false,
+      "skipped": "the preset grants no device memory"
+    },
+    {
+      "mode": "vram-ple-host",
+      "id": "M2",
+      "fits": false,
+      "skipped": "the preset grants no device memory"
+    },
+    {
+      "mode": "vram-ple-disk",
+      "id": "M3",
+      "fits": false,
+      "skipped": "the preset grants no device memory"
+    },
+    {
+      "mode": "vram-partial",
+      "id": "M4",
+      "fits": false,
+      "skipped": "the preset grants no device memory"
+    },
+    {
+      "mode": "ram-full",
+      "id": "M6",
+      "fits": true
+    }
+  ]
+}

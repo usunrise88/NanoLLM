@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/usunrise88/nanollm/internal/api/adapter"
 	"github.com/usunrise88/nanollm/internal/backend"
@@ -75,7 +76,9 @@ func modelsCommand(args []string) error {
 	switch sub {
 	case "catalog":
 		return showCatalog()
-	case "list", "pull", "rm", "inspect":
+	case "inspect":
+		return inspectCommand(args[1:], os.Stdout)
+	case "list", "pull", "rm":
 		return notYet("models "+sub, "v1.0")
 	default:
 		return fmt.Errorf("models %s: unknown subcommand; use catalog, list, pull, rm or inspect", sub)

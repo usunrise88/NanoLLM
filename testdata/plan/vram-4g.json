@@ -1,0 +1,127 @@
+{
+  "model": "gemma-4-e4b-qat",
+  "preset": "vram-4g",
+  "device": {
+    "selector": "llamacpp:cuda0",
+    "backend": "cuda",
+    "memory": 4294967296
+  },
+  "mode": "vram-ple-host",
+  "mode_id": "M2",
+  "gpu_layers": -1,
+  "layers_on_gpu": 42,
+  "n_ctx": 8192,
+  "slots": 1,
+  "n_batch": 2048,
+  "n_ubatch": 512,
+  "n_outputs_max": 4,
+  "flash_attention": true,
+  "kv": {
+    "type_k": "f16",
+    "type_v": "f16",
+    "swa_full": true,
+    "swa_full_reason": "the full sliding-window cache fits the budget: the prompt cache can reuse a prefix of any length",
+    "unified": false,
+    "cells_full": 8192,
+    "cells_swa": 8192,
+    "streams": 1,
+    "bytes": 469762048
+  },
+  "load_mode": "dio",
+  "lazy_mode": "off",
+  "repack": false,
+  "mtp": {
+    "enabled": true,
+    "reason": "the drafter (41.9 MiB) runs on llamacpp:cuda0 with the target's output layer and reads its KV cache",
+    "draft_max": 3
+  },
+  "groups": {
+    "G0": {
+      "vram": 377487360,
+      "ram_locked": 377487360,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G1": {
+      "vram": 0,
+      "ram_locked": 1585446912,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G2": {
+      "vram": 376750080,
+      "ram_locked": 0,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G3": {
+      "vram": 1857945600,
+      "ram_locked": 0,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G4": {
+      "vram": 2241704,
+      "ram_locked": 0,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G5": {
+      "vram": 469762048,
+      "ram_locked": 0,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G6": {
+      "vram": 43891728,
+      "ram_locked": 37748736,
+      "file_backed": 0,
+      "disk": 0
+    },
+    "G7": {
+      "vram": 152672665,
+      "ram_locked": 32505856,
+      "file_backed": 0,
+      "disk": 0
+    }
+  },
+  "memory": {
+    "vram": {
+      "budget": 4294967296,
+      "used": 3616295505,
+      "budgeted": true
+    },
+    "ram": {
+      "budget": 0,
+      "used": 2234515456,
+      "budgeted": false
+    },
+    "file_backed": 0,
+    "overhead_vram": 335544320,
+    "overhead_ram": 201326592
+  },
+  "compute_calibrated": false,
+  "target": {
+    "n_ctx": 8192,
+    "slots": 1
+  },
+  "warnings": [
+    "a VRAM-only preset does not budget host RAM: this plan takes 2131.0 MiB of it, measured, not bounded",
+    "compute buffers (G7) for cuda are not calibrated yet: the CPU fit stands in"
+  ],
+  "tried": [
+    {
+      "mode": "vram-full",
+      "id": "M1",
+      "fits": false,
+      "shortfall": {
+        "vram": 915163729
+      }
+    },
+    {
+      "mode": "vram-ple-host",
+      "id": "M2",
+      "fits": true
+    }
+  ]
+}

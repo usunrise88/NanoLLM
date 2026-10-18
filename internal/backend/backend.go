@@ -111,7 +111,12 @@ type LoadSpec struct {
 	Slots   int
 	NBatch  int
 	NUBatch int
-	Threads int
+	// NOutputsMax bounds the logits rows one Step can return (n_outputs_max):
+	// slots × (1 + DraftMax). Left at the engine default (n_batch), the
+	// compute buffer reserves n_vocab × n_ubatch logits — 512 MiB for E4B —
+	// that the planner did not budget.
+	NOutputsMax int
+	Threads     int
 	// KVTypeK and KVTypeV are ggml type names (f16, q8_0). A quantized V
 	// needs flash attention.
 	KVTypeK string

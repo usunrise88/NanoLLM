@@ -11,9 +11,17 @@ import (
 //go:embed catalog.yaml
 var builtinCatalog []byte
 
-// Builtin returns the catalog compiled into the binary.
+// Builtin returns the catalog compiled into the binary, with the measured
+// tensor inventories attached.
 func Builtin() ([]Manifest, error) {
-	return parseCatalog(builtinCatalog)
+	cat, err := parseCatalog(builtinCatalog)
+	if err != nil {
+		return nil, err
+	}
+	if err := attachInventories(cat, builtinInventories); err != nil {
+		return nil, err
+	}
+	return cat, nil
 }
 
 func parseCatalog(b []byte) ([]Manifest, error) {
