@@ -179,7 +179,7 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 	if need, err := ing.NeedsReindex(ctx); err != nil {
 		return err
 	} else if need {
@@ -260,7 +260,7 @@ func reindex(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 	n, err := ing.Reindex(ctx)
 	if err != nil {
 		return err
@@ -282,7 +282,7 @@ func backup(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 	path, removed, err := st.Backup(ctx, c.backupDir, c.backupKeep, time.Now())
 	if err != nil {
 		return err
@@ -304,7 +304,7 @@ func migrate(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 	v, err := st.SchemaVersion(ctx)
 	if err != nil {
 		return err
@@ -326,8 +326,13 @@ func healthcheck(args []string) error {
 	if c.tlsCert != "" {
 		scheme = "https"
 	}
-	cl := &http.Client{Timeout: 5 * time.Second}
-	resp, err := cl.Get(scheme + "://" + addr + "/healthz")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, scheme+"://"+addr+"/healthz", nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}

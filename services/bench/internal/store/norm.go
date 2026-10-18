@@ -93,7 +93,7 @@ func CohortOutputs(ctx context.Context, q Querier, cohort, exclude string) ([]Co
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []CohortOutput
 	for rows.Next() {
 		var c CohortOutput
@@ -143,7 +143,7 @@ func CohortValues(ctx context.Context, q Querier, c HWCohort, metric, exclude st
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []UnitValue
 	for rows.Next() {
 		var u UnitValue
@@ -192,7 +192,7 @@ func AggInputs(ctx context.Context, q Querier) ([]AggRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []AggRow
 	for rows.Next() {
 		var a AggRow

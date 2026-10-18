@@ -71,7 +71,7 @@ func (e *env) post(t *testing.T, r *benchfmt.Result) (*http.Response, map[string
 		t.Fatal(err)
 	}
 	b, _ := json.Marshal(r)
-	resp, err := http.Post(e.srv.URL+"/api/v1/submissions", "application/json", bytes.NewReader(b))
+	resp, err := postJSON(e.srv.URL+"/api/v1/submissions", b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func (e *env) post(t *testing.T, r *benchfmt.Result) (*http.Response, map[string
 
 func get(t *testing.T, url string, header ...string) (*http.Response, string) {
 	t.Helper()
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	for i := 0; i+1 < len(header); i += 2 {
 		req.Header.Set(header[i], header[i+1])
 	}
@@ -204,7 +204,7 @@ func TestSubmitErrorsAndWithdraw(t *testing.T) {
 		t.Fatal(resp.StatusCode)
 	}
 	big := bytes.Repeat([]byte("x"), ingest.MaxBody+10)
-	resp, err := http.Post(e.srv.URL+"/api/v1/submissions", "application/json", bytes.NewReader(big))
+	resp, err := postJSON(e.srv.URL+"/api/v1/submissions", big)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestSubmitErrorsAndWithdraw(t *testing.T) {
 		"install_id": hex.EncodeToString(e.key.Public().(ed25519.PublicKey)),
 		"signature":  hex.EncodeToString(ed25519.Sign(e.key, benchfmt.WithdrawalMessage(id))),
 	})
-	req, _ := http.NewRequest(http.MethodDelete, e.srv.URL+"/api/v1/submissions/"+id, bytes.NewReader(body))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodDelete, e.srv.URL+"/api/v1/submissions/"+id, bytes.NewReader(body))
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -251,4 +251,13 @@ func TestClientIP(t *testing.T) {
 	if got := s.clientIP(r); got != "10.0.0.2" {
 		t.Fatal(got)
 	}
+}
+
+func postJSON(url string, body []byte) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	return http.DefaultClient.Do(req)
 }

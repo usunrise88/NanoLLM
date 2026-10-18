@@ -59,7 +59,7 @@ func Results(ctx context.Context, q Querier, f Filter) ([]Group, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []Group
 	idx := map[string]int{}
 	for rows.Next() {
@@ -119,13 +119,16 @@ func ReadFacets(ctx context.Context, q Querier, suite string) (Facets, error) {
 	for rows.Next() {
 		var f Facet
 		if err := rows.Scan(&f.Value, &f.Installs); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return fc, err
 		}
 		f.Label = f.Value
 		fc.Suites = append(fc.Suites, f)
 	}
-	rows.Close()
+	_ = rows.Close()
+	if err := rows.Err(); err != nil {
+		return fc, err
+	}
 	groups, err := Results(ctx, q, Filter{Suite: suite})
 	if err != nil {
 		return fc, err
@@ -245,7 +248,7 @@ func runViews(ctx context.Context, q Querier, where string, args ...any) (map[st
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := map[string][]RunView{}
 	for rows.Next() {
 		var id string
@@ -272,12 +275,12 @@ func PublishedViews(ctx context.Context, q Querier, suite string, limit int) ([]
 	for rows.Next() {
 		v, err := scanView(rows)
 		if err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, err
 		}
 		out = append(out, v)
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}

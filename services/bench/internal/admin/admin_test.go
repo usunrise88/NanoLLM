@@ -68,7 +68,7 @@ func call(t *testing.T, srv *httptest.Server, token, method, path string, body a
 		b, _ := json.Marshal(body)
 		rd = bytes.NewReader(b)
 	}
-	req, _ := http.NewRequest(method, srv.URL+path, rd)
+	req, _ := http.NewRequestWithContext(context.Background(), method, srv.URL+path, rd)
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -93,14 +93,14 @@ func TestAuth(t *testing.T) {
 	if code, _ := call(t, srv, "s3cret", "GET", "/admin/api/queue", nil); code != http.StatusOK {
 		t.Fatal(code)
 	}
-	resp, err := http.Get(srv.URL + "/admin")
+	resp, err := httpGet(srv.URL + "/admin")
 	if err != nil || resp.StatusCode != http.StatusOK {
 		t.Fatal(err, resp.StatusCode)
 	}
 	resp.Body.Close()
 
 	off, _, _ := setup(t, "")
-	resp, _ = http.Get(off.URL + "/admin")
+	resp, _ = httpGet(off.URL + "/admin")
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatal("admin without a token must not exist")
 	}
@@ -162,4 +162,12 @@ func TestModerationAliasesVerified(t *testing.T) {
 	if gs, _ := store.Results(ctx, st.DB, store.Filter{}); len(gs) != 0 {
 		t.Fatal("a hidden submission is in the aggregates")
 	}
+}
+
+func httpGet(url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return http.DefaultClient.Do(req)
 }

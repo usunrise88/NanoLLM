@@ -40,7 +40,7 @@ func submit(base string, res *benchfmt.Result, key ed25519.PrivateKey) (*receipt
 		return nil, 0, "", err
 	}
 	body, _ := json.Marshal(res)
-	req, _ := http.NewRequest(http.MethodPost, strings.TrimSuffix(base, "/")+"/api/v1/submissions", bytes.NewReader(body))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, strings.TrimSuffix(base, "/")+"/api/v1/submissions", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -64,7 +64,7 @@ func withdraw(base, id string, key ed25519.PrivateKey) (int, error) {
 		"install_id": hex.EncodeToString(key.Public().(ed25519.PublicKey)),
 		"signature":  hex.EncodeToString(ed25519.Sign(key, benchfmt.WithdrawalMessage(id))),
 	})
-	req, _ := http.NewRequest(http.MethodDelete, strings.TrimSuffix(base, "/")+"/api/v1/submissions/"+id, bytes.NewReader(body))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodDelete, strings.TrimSuffix(base, "/")+"/api/v1/submissions/"+id, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -75,7 +75,7 @@ func withdraw(base, id string, key ed25519.PrivateKey) (int, error) {
 }
 
 func freeAddr(t *testing.T) string {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func build(t *testing.T) string {
 		return p
 	}
 	bin := filepath.Join(t.TempDir(), "benchd")
-	cmd := exec.Command("go", "build", "-o", bin, "../cmd/benchd")
+	cmd := exec.CommandContext(context.Background(), "go", "build", "-o", bin, "../cmd/benchd")
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		t.Fatal(err)
@@ -99,7 +99,7 @@ func build(t *testing.T) string {
 
 func run(t *testing.T, bin string, envs []string, args ...string) string {
 	t.Helper()
-	cmd := exec.Command(bin, args...)
+	cmd := exec.CommandContext(context.Background(), bin, args...)
 	cmd.Env = append(os.Environ(), envs...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -110,7 +110,7 @@ func run(t *testing.T, bin string, envs []string, args ...string) string {
 
 func get(t *testing.T, url string) (int, string, http.Header) {
 	t.Helper()
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	req.Header.Set("Accept-Language", "en")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -223,7 +223,7 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	// Admin.
-	req, _ := http.NewRequest(http.MethodGet, base+"/admin/api/queue?state=published", nil)
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, base+"/admin/api/queue?state=published", nil)
 	req.Header.Set("Authorization", "Bearer e2e-token")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -244,7 +244,11 @@ func TestEndToEnd(t *testing.T) {
 }
 
 func tryGet(url string) (int, string, error) {
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		return 0, "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return 0, "", err
 	}

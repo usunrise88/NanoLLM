@@ -47,7 +47,7 @@ func TestMigrateIsIdempotent(t *testing.T) {
 func TestRawIsImmutable(t *testing.T) {
 	s := open(t, filepath.Join(t.TempDir(), "b.db"))
 	insert(t, s, "a")
-	_, err := s.DB.Exec(`UPDATE submissions SET raw = ? WHERE id = 'a'`, []byte("{}"))
+	_, err := s.DB.ExecContext(context.Background(), `UPDATE submissions SET raw = ? WHERE id = 'a'`, []byte("{}"))
 	if err == nil || !strings.Contains(err.Error(), "immutable") {
 		t.Fatalf("an update of a raw submission must fail, got %v", err)
 	}

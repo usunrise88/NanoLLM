@@ -105,7 +105,7 @@ func EachSubmission(ctx context.Context, q Querier, f func(Submission, Moderatio
 		var s Submission
 		var m Moderation
 		if err := rows.Scan(&s.ID, &s.ReceivedOn, &s.InstallID, &s.RawSHA256, &s.Raw, &m.State, &m.Reason, &m.DecidedBy, &m.UpdatedOn); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return err
 		}
 		all = append(all, struct {
@@ -113,7 +113,7 @@ func EachSubmission(ctx context.Context, q Querier, f func(Submission, Moderatio
 			m Moderation
 		}{s, m})
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return err
 	}
@@ -164,11 +164,14 @@ func (s *Store) appendTombstone(id string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	if _, err := fmt.Fprintf(f, "%s %s\n", id, Today()); err != nil {
-		return err
+	_, err = fmt.Fprintf(f, "%s %s\n", id, Today())
+	if err == nil {
+		err = f.Sync()
 	}
-	return f.Sync()
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	return err
 }
 
 // applyTombstones deletes any submission the tombstone file names: after a
@@ -181,7 +184,7 @@ func (s *Store) applyTombstones(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return s.Tx(ctx, func(tx *sql.Tx) error {
 		sc := bufio.NewScanner(f)
 		for sc.Scan() {
@@ -225,7 +228,7 @@ func ListModeration(ctx context.Context, q Querier, state string, limit int) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []QueueItem{}
 	for rows.Next() {
 		var it QueueItem
@@ -250,7 +253,7 @@ func ListAliases(ctx context.Context, q Querier) ([]Alias, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []Alias{}
 	for rows.Next() {
 		var a Alias
@@ -287,7 +290,7 @@ func ListVerified(ctx context.Context, q Querier) ([]Verified, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []Verified{}
 	for rows.Next() {
 		var v Verified

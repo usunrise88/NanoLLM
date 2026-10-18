@@ -412,9 +412,10 @@ func (s *Service) Reindex(ctx context.Context) (int, error) {
 		err = store.EachSubmission(ctx, tx, func(sub store.Submission, _ store.Moderation) error {
 			res, err := benchfmt.Parse(sub.Raw)
 			if err != nil {
-				// The format only grows, so this would be a bug in a
-				// reader, not in the data: keep the raw row, skip it.
-				return nil
+				// It parsed when it was accepted and the format only
+				// grows: this is a reader bug, which must not silently
+				// drop a result from the pages.
+				return fmt.Errorf("submission %s no longer parses: %w", sub.ID, err)
 			}
 			res.InstallID = strings.ToLower(res.InstallID)
 			rec, runs, err := s.index(ctx, tx, sub.ID, res, al)

@@ -89,7 +89,7 @@ func (s *Server) export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	fmt.Fprintf(w, "# %s. License: %s %s. Generated %s. Suite %s.\n", attribution, s.cfg.DataLicense, s.cfg.DataLicenseURL, day, f.Suite)
+	_, _ = fmt.Fprintf(w, "# %s. License: %s %s. Generated %s. Suite %s.\n", attribution, s.cfg.DataLicense, s.cfg.DataLicenseURL, day, f.Suite)
 	cw := csv.NewWriter(w)
 	_ = cw.Write(header)
 	_ = cw.WriteAll(rows)
