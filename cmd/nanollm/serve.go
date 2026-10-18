@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/config"
 	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/httpx"
+	"github.com/usunrise88/nanollm/internal/queue"
 	"github.com/usunrise88/nanollm/internal/registry"
 	"github.com/usunrise88/nanollm/internal/server"
 	"github.com/usunrise88/nanollm/internal/ui"
@@ -105,12 +107,31 @@ func serve(args []string) error {
 		}
 		return out
 	}
+	var jobs any
+	if cfg.Queue.Enabled {
+		if err := os.MkdirAll(cfg.Server.DataDir, 0o750); err != nil {
+			return err
+		}
+		q, err := queue.Open(rt.Engine, queue.Options{
+			Path:          filepath.Join(cfg.Server.DataDir, "nanollm.db"),
+			MaxPending:    cfg.Queue.MaxPending,
+			Concurrency:   cfg.Queue.Concurrency,
+			WebhookSecret: cfg.Queue.WebhookSecret,
+			Log:           log,
+		})
+		if err != nil {
+			return err
+		}
+		defer q.Close()
+		jobs = q
+	}
 	if err := adapter.MountAll(mux, cfg.API.Dialects, adapter.Deps{
 		Service:        rt.Engine,
 		Admin:          rt,
 		DefaultModel:   cfg.Models.Default,
 		Catalog:        catalog,
 		ConfigSnapshot: snapshot,
+		Extra:          jobs,
 	}); err != nil {
 		return err
 	}
@@ -233,6 +254,9 @@ func redactedConfig(cfg config.Config) (any, error) {
 		keys[i].Secret = "redacted"
 	}
 	cfg.Auth.Keys = keys
+	if cfg.Queue.WebhookSecret != "" {
+		cfg.Queue.WebhookSecret = "redacted"
+	}
 
 	b, err := yaml.Marshal(cfg)
 	if err != nil {

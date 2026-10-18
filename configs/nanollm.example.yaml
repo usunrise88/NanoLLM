@@ -60,7 +60,9 @@ generation:
 
 queue:
   enabled: true
-  max_pending: 1000
+  max_pending: 1000       # queued + running jobs; beyond it POST /api/v1/jobs answers 503
+  concurrency: 4          # lines of the running job in flight at once
+  webhook_secret: ""      # HMAC-SHA256 key for webhook signatures; empty = unsigned
 
 registry:
   models_dir: ""          # default <data_dir>/models

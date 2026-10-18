@@ -26,18 +26,21 @@ test('settings shows the effective configuration and switches language', async (
   await expect(page.getByRole('heading', { name: 'Настройки' })).toBeVisible()
 })
 
-test('jobs says the queue is not in this build yet', async ({ page }) => {
+test('jobs runs a batch on the real queue', async ({ page }) => {
   await page.goto('/ui/jobs')
-  await expect(page.getByText('The job queue is not in this build yet')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Enqueue' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Example' }).click()
+  await page.getByRole('button', { name: 'Enqueue' }).click()
+  const toast = page.getByText(/Job job_[0-9a-f]+ queued/)
+  await expect(toast).toBeVisible()
+  const id = (await toast.textContent())?.match(/job_[0-9a-f]+/)?.[0] ?? ''
+  await expect(page.locator(`[data-item="${id}"]`)).toContainText('succeeded')
 })
 
 /**
- * The jobs screen against the planned API, played back: the routes answer
- * 501 today, and this is the test that the screen will work the day they
- * do not.
+ * The jobs screen against recorded answers, for the states a live fake
+ * finishes too fast to show: running, progress, cancel.
  */
-test('jobs against the planned API: submit, follow, cancel, results', async ({ page }) => {
+test('jobs against recorded answers: submit, follow, cancel, results', async ({ page }) => {
   const created = '2026-10-18T10:00:00Z'
   const jobs = [
     { id: 'job_run', status: 'running', model: MODEL, created_at: created, progress: { done: 1, total: 4 } },
@@ -92,14 +95,15 @@ test('a bad JSONL line is pointed out before anything is sent', async ({ page })
   await expect(page.getByText(/^Line 2:/)).toBeVisible()
 })
 
-test('bench says it is not available yet on this server', async ({ page }) => {
+test('bench on the fake server says it needs llama.cpp', async ({ page }) => {
   await page.goto('/ui/bench')
   await page.getByRole('button', { name: 'Run benchmark' }).click()
-  await expect(page.getByText('Benchmarks are not available in this build yet')).toBeVisible()
+  await expect(page.getByText('The benchmark failed')).toBeVisible()
+  await expect(page.getByText('the benchmark needs the llama.cpp backend')).toBeVisible()
 })
 
-/** The bench screen against the contract of docs/BENCHMARKS.md, played back. */
-test('bench against the planned API: progress, results, consent, submit', async ({ page }) => {
+/** The bench screen against recorded answers in the contract of docs/BENCHMARKS.md. */
+test('bench against recorded answers: progress, results, consent, submit', async ({ page }) => {
   const result = {
     schema: 'nanollm.bench/v1',
     suite: { id: 'standard', version: 'v1', prompts_sha256: 'a'.repeat(64), quick: true },

@@ -248,7 +248,7 @@ export interface DeviceInfo {
   verified?: string[]
 }
 
-// --- jobs (planned API; the routes answer 501 until the queue lands) ---------
+// --- jobs ---------------------------------------------------------------------
 
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'canceled' | 'expired'
 

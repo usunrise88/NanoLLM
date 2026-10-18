@@ -181,6 +181,13 @@ type Generation struct {
 type Queue struct {
 	Enabled    bool `yaml:"enabled"`
 	MaxPending int  `yaml:"max_pending"`
+	// Concurrency is how many lines of the running job are in flight; the
+	// scheduler batches them on the model's slots.
+	Concurrency int `yaml:"concurrency"`
+	// WebhookSecret signs webhook bodies: X-NanoLLM-Signature is
+	// sha256=HMAC(secret, "<X-NanoLLM-Timestamp>.<body>"). Empty sends them
+	// unsigned.
+	WebhookSecret string `yaml:"webhook_secret"`
 }
 
 type Registry struct {

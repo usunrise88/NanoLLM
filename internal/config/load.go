@@ -251,6 +251,9 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("generation.context_overflow must be %s or %s, got %q",
 			OverflowError, OverflowTruncateMiddle, c.Generation.ContextOverflow)
 	}
+	if c.Queue.Enabled && c.Queue.Concurrency <= 0 {
+		return fmt.Errorf("queue.concurrency must be positive when the queue is enabled, got %d", c.Queue.Concurrency)
+	}
 	if c.Queue.Enabled && c.Queue.MaxPending <= 0 {
 		return fmt.Errorf("queue.max_pending must be positive when the queue is enabled, got %d",
 			c.Queue.MaxPending)
