@@ -57,7 +57,7 @@ and depend on a tagged `benchfmt/v1.x.y`.
 | `GET /api/v1/submissions/{id}` | the normalized view and the document without `install_id`/`signature`; 410 when withdrawn |
 | `GET /api/v1/results` | `model, suite, preset, cpu, gpu, system, os, form_factor` (slugs for cpu/gpu/system); groups with median, p25, p75 and the number of installs |
 | `GET /api/v1/facets` | the values each filter can take |
-| `GET /api/v1/export` | `format=csv|json`, `what=results|runs`, the same filters; licence in `X-Data-License`, `Link: rel=license` and the file itself |
+| `GET /api/v1/export` | `format=csv|json`, `what=results` (the same filters) or `what=runs` (every published run of the suite); licence in `X-Data-License`, `Link: rel=license` and the file itself |
 | `/admin`, `/admin/api/*` | `Authorization: Bearer $BENCHD_ADMIN_TOKEN` |
 
 Pages: `/benchmarks`, `/benchmarks/systems/<slug>`, `/benchmarks/cpu/<slug>`,
