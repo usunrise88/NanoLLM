@@ -186,6 +186,7 @@ func (l *library) doInit() error {
 	// into libggml and this does nothing.
 	ggmlBackendLoadAllFromPath(l.dir)
 	llamaBackendInit()
+	initNUMA()
 	untap()
 
 	l.typesByName = map[string]GgmlType{}

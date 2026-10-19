@@ -20,7 +20,7 @@ NEXT=${NEXT:-./dist/nanollm-next}
 CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
 NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
-STEPS=${STEPS-"stream ngram repack thp tune standard"}
+STEPS=${STEPS-"numa stream ngram repack thp tune standard"}
 
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
@@ -33,6 +33,31 @@ full() { local name=$1; shift; bench "$NANOLLM" "$CONFIG" "$name" --reps "${REPS
 
 for step in $STEPS; do
 	case $step in
+	numa)
+		# OPT-6, NUMA-local weights: the interleave policy (the default of the
+		# server) against ggml's distribute strategy, whose threads are pinned
+		# one per node and whose repack threads first-touch each slab on the
+		# node that will read it (patches/next/0003). Same libraries, same
+		# model, llama-bench, three rounds.
+		MODEL=$(ls "$HOME"/nanollm-data/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
+		OUTF=bench/results/$(hostname -s)/$(date +%F)-numa-distribute$([[ ${SSD:-0} == 1 ]] && echo -ssd).txt
+		T=dist/linux_amd64-next/tools
+		{
+			echo "# $(date -Is) $MODEL"
+			for round in 1 2 3; do
+				for th in 8 16 24 32; do
+					echo "## round $round threads $th: interleave, repack 1 thread (the current default)"
+					GGML_REPACK_THREADS=1 nice -n 5 numactl --interleave=all $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 -o md 2>/dev/null
+					echo "## round $round threads $th: interleave, parallel repack"
+					GGML_REPACK_THREADS=$th nice -n 5 numactl --interleave=all $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 -o md 2>/dev/null
+					echo "## round $round threads $th: distribute, repack threads = decode threads (node-local weights)"
+					GGML_REPACK_THREADS=$th nice -n 5 $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 --numa distribute -o md 2>/dev/null
+					echo "## round $round threads $th: distribute, serial repack (all weights on one node)"
+					GGML_REPACK_THREADS=1 nice -n 5 $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 --numa distribute -o md 2>/dev/null
+				done
+			done
+		} | tee "$OUTF"
+		;;
 	stream)
 		# OPT-8. The three presets that read weights from the disk on every
 		# token: M8 at ram-2g and ram-1.5g, M9 at ram-1g. Variants: read ahead

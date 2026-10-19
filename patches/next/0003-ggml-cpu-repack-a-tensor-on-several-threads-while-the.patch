@@ -1,4 +1,4 @@
-From 9661b205a235f7a6fbd498dcef7a0351a8d682e6 Mon Sep 17 00:00:00 2001
+From 6327e1995a3fc46f4cd6038777a75389dde6bf92 Mon Sep 17 00:00:00 2001
 From: NanoLLM <nanollm@localhost>
 Date: Mon, 19 Oct 2026 13:00:00 +0000
 Subject: [PATCH] ggml-cpu: repack a tensor on several threads while the model
@@ -18,12 +18,53 @@ to 16; 1 is the old behaviour); tensors under 1 MiB, with more than two
 dimensions, or whose rows are not a multiple of 16 are repacked as before.
 
 The result is bit-identical: nothing about the layout changes.
----
- ggml/src/ggml-cpu/repack.cpp | 67 +++++++++++++++++++++++++++++++++++-
- 1 file changed, 66 insertions(+), 1 deletion(-)
 
+Under a NUMA strategy (ggml_numa_init) the matmul splits rows statically, thread
+k reading the k-th slab, and pages are placed where they are first touched. The
+repack thread k therefore pins itself the way compute thread k is pinned
+(ggml_cpu_numa_pin_thread) before it writes its slab, so with
+GGML_REPACK_THREADS equal to the decode thread count every thread reads
+weights that sit on its own node.
+---
+ ggml/src/ggml-cpu/ggml-cpu-impl.h |  7 +++
+ ggml/src/ggml-cpu/ggml-cpu.c      |  3 ++
+ ggml/src/ggml-cpu/repack.cpp      | 78 ++++++++++++++++++++++++++++++-
+ 3 files changed, 87 insertions(+), 1 deletion(-)
+
+diff --git a/ggml/src/ggml-cpu/ggml-cpu-impl.h b/ggml/src/ggml-cpu/ggml-cpu-impl.h
+index 82345b2..294433c 100644
+--- a/ggml/src/ggml-cpu/ggml-cpu-impl.h
++++ b/ggml/src/ggml-cpu/ggml-cpu-impl.h
+@@ -530,6 +530,13 @@ static __m256 __lasx_xvreplfr2vr_s(const float val) {
+ // TODO: move to ggml-threading
+ void ggml_barrier(struct ggml_threadpool * tp);
+ 
++// Pin the calling thread the way compute thread thread_n is pinned under the
++// NUMA strategy ggml_numa_init chose, and release it. Without a NUMA strategy
++// both do nothing. Used to first-touch weights on the node whose threads will
++// read them.
++void ggml_cpu_numa_pin_thread(int thread_n);
++void ggml_cpu_numa_unpin_thread(void);
++
+ void ggml_threadpool_chunk_set(struct ggml_threadpool * tp, int value);
+ int  ggml_threadpool_chunk_add(struct ggml_threadpool * tp, int value);
+ 
+diff --git a/ggml/src/ggml-cpu/ggml-cpu.c b/ggml/src/ggml-cpu/ggml-cpu.c
+index 5428d51..d4f10e7 100644
+--- a/ggml/src/ggml-cpu/ggml-cpu.c
++++ b/ggml/src/ggml-cpu/ggml-cpu.c
+@@ -2246,6 +2246,9 @@ static void set_numa_thread_affinity(int thread_n) { UNUSED(thread_n);  }
+ static void clear_numa_thread_affinity(void) {}
+ #endif
+ 
++void ggml_cpu_numa_pin_thread(int thread_n) { set_numa_thread_affinity(thread_n); }
++void ggml_cpu_numa_unpin_thread(void)       { clear_numa_thread_affinity(); }
++
+ static int ggml_get_n_tasks(struct ggml_tensor * node, int n_threads) {
+     int n_tasks = 0;
+ 
 diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
-index 2632ae3..c8074ad 100644
+index 2632ae3..8190823 100644
 --- a/ggml/src/ggml-cpu/repack.cpp
 +++ b/ggml/src/ggml-cpu/repack.cpp
 @@ -11,10 +11,15 @@
@@ -42,7 +83,7 @@ index 2632ae3..c8074ad 100644
  
  #include "repack.h"
  
-@@ -5147,13 +5152,73 @@ static enum ggml_status ggml_backend_cpu_repack_buffer_init_tensor(ggml_backend_
+@@ -5147,13 +5152,84 @@ static enum ggml_status ggml_backend_cpu_repack_buffer_init_tensor(ggml_backend_
      return GGML_STATUS_SUCCESS;
  }
  
@@ -80,6 +121,7 @@ index 2632ae3..c8074ad 100644
 +        return traits->repack(tensor, data, size);
 +    }
 +
++    const bool    numa   = ggml_is_numa();
 +    const int64_t groups = rows / group;
 +    const int     n      = (int) std::min<int64_t>(nthreads, groups);
 +    std::atomic<int> failed{0};
@@ -89,6 +131,13 @@ index 2632ae3..c8074ad 100644
 +        const int64_t g0 = groups * k / n;
 +        const int64_t g1 = groups * (k + 1) / n;
 +        pool.emplace_back([=, &failed]() {
++            // Under a NUMA strategy the compute thread k reads the k-th
++            // slab of rows (the matmul splits rows statically then), so the
++            // thread that first touches the slab runs where thread k will:
++            // the repacked weights land on the node that reads them.
++            if (numa) {
++                ggml_cpu_numa_pin_thread(k);
++            }
 +            struct ggml_tensor slab = *tensor;
 +            slab.ne[1] = (g1 - g0) * group;
 +            slab.nb[2] = slab.ne[1] * slab.nb[1];
@@ -97,6 +146,9 @@ index 2632ae3..c8074ad 100644
 +            slab.data = (char *) tensor->data + off;
 +            if (traits->repack(&slab, (const char *) data + off, (size_t) slab.ne[1] * tensor->nb[1]) != 0) {
 +                failed.store(1);
++            }
++            if (numa) {
++                ggml_cpu_numa_unpin_thread();
 +            }
 +        });
 +    }
