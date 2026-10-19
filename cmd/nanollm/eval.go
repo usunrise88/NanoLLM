@@ -29,6 +29,7 @@ import (
 //	nanollm eval rate REPORT [--all]
 //	nanollm eval compare A.json B.json [--out FILE]
 //	nanollm eval gate REFERENCE.json CANDIDATE.json [--tolerance 0.1]
+//	nanollm eval import-ratings REPORT.json RATINGS.json
 func evalCommand(args []string) error {
 	if len(args) > 0 {
 		switch args[0] {
@@ -38,6 +39,8 @@ func evalCommand(args []string) error {
 			return evalCompare(args[1:])
 		case "gate":
 			return evalGate(args[1:])
+		case "import-ratings":
+			return evalImportRatings(args[1:])
 		case "suites":
 			for _, s := range eval.Suites() {
 				fmt.Println(s)
@@ -306,5 +309,62 @@ func evalGate(args []string) error {
 	if !ok {
 		return errors.New("the candidate regressed on at least one capability")
 	}
+	return nil
+}
+
+// evalImportRatings is `nanollm eval import-ratings REPORT RATINGS`: a person's
+// ratings made elsewhere (the browser page of docs/STAGE2.md 2.4) put into the
+// report. RATINGS is a JSON object keyed by the report's rating keys
+// (eval.RatingKey: the item id, with "+thinking" for a thinking run) whose
+// values are {"score": 1-5, "usable": bool, "note": "…"}.
+func evalImportRatings(args []string) error {
+	if len(args) != 2 {
+		return errors.New("usage: nanollm eval import-ratings REPORT.json RATINGS.json")
+	}
+	rep, _, err := loadReport(args[0])
+	if err != nil {
+		return err
+	}
+	b, err := os.ReadFile(args[1])
+	if err != nil {
+		return err
+	}
+	var in map[string]eval.Rating
+	if err := json.Unmarshal(b, &in); err != nil {
+		return fmt.Errorf("%s: %w", args[1], err)
+	}
+	known := map[string]bool{}
+	for _, o := range rep.Results {
+		known[eval.RatingKey(o)] = true
+	}
+	if rep.Ratings == nil {
+		rep.Ratings = map[string]eval.Rating{}
+	}
+	var unknown []string
+	for k, r := range in {
+		switch {
+		case !known[k]:
+			unknown = append(unknown, k)
+		case r.Score < 1 || r.Score > 5:
+			return fmt.Errorf("%s: score %d is not 1-5", k, r.Score)
+		default:
+			rep.Ratings[k] = r
+		}
+	}
+	if len(unknown) > 0 {
+		sort.Strings(unknown)
+		return fmt.Errorf("ratings for answers the report does not have: %v", unknown)
+	}
+	if err := writeJSON(args[0], rep); err != nil {
+		return err
+	}
+	sum, usable := 0, 0
+	for _, r := range rep.Ratings {
+		sum += r.Score
+		if r.Usable {
+			usable++
+		}
+	}
+	fmt.Printf("%d ratings in %s: mean score %.2f, %d usable\n", len(rep.Ratings), args[0], float64(sum)/float64(max(len(rep.Ratings), 1)), usable)
 	return nil
 }

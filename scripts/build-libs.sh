@@ -95,8 +95,8 @@ CMAKE_VULKAN=()
 DOCKER_CPUS=()
 [[ -n $CPUS ]] && DOCKER_CPUS=(--cpus "$CPUS")
 
-# The flags of upstream's ubuntu-vulkan job, with the tests and examples left
-# out (the libraries are the same; they are only never run here).
+# The flags of upstream's ubuntu-vulkan job, with its CMAKE_ARGS (tests and
+# examples off, tools and server and the RPC backend on).
 docker run --rm "${DOCKER_CPUS[@]}" -u "$(id -u):$(id -g)" \
   -v "$SRC:/src" -v "$BUILD:/build" -v "$ROOT/.cache/ccache:/ccache" \
   -e CCACHE_DIR=/ccache -e HOME=/tmp \
@@ -106,7 +106,7 @@ docker run --rm "${DOCKER_CPUS[@]}" -u "$(id -u):$(id -g)" \
       -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
       -DCMAKE_INSTALL_RPATH='\$ORIGIN' -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
       -DGGML_BACKEND_DL=ON -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=ON ${CMAKE_VULKAN[*]} \
-      -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF
+      -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_TOOLS=ON -DLLAMA_BUILD_SERVER=ON -DGGML_RPC=ON
     cmake --build /build --config Release -j $JOBS
   "
 
