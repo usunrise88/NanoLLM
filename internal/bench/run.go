@@ -261,6 +261,7 @@ func planRun(o Options, model plan.Model, name string, cpu, gpu *backend.Device)
 	if p.Device == nil {
 		spec.Device = cpu.Selector()
 	}
+	spec = spec.WithDefaultThreads()
 	ws := WorkerSpec{Load: spec}
 	for _, lr := range p.LockRanges {
 		r := memlock.Range{Off: lr.Offset, Len: lr.Length}

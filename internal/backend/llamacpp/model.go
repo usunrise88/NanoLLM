@@ -305,9 +305,9 @@ func (b *llamaBackend) contextParams(spec backend.LoadSpec) (LlamaContextParams,
 	if p.NUbatch > p.NBatch {
 		return p, fmt.Errorf("llamacpp: n_ubatch %d is larger than n_batch %d", p.NUbatch, p.NBatch)
 	}
-	if spec.Threads > 0 {
-		p.NThreads = int32(spec.Threads)
-		p.NThreadsBatch = int32(spec.Threads)
+	if threads := spec.WithDefaultThreads().Threads; threads > 0 {
+		p.NThreads = int32(threads)
+		p.NThreadsBatch = int32(threads)
 	}
 	// The planner sizes n_outputs_max to slots × (1 + DraftMax): the default
 	// (n_batch) reserves n_vocab logits per batch token in the compute

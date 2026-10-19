@@ -66,6 +66,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		spec.Device = req.Device.Selector()
 	}
 	spec.Threads = req.Threads
+	spec = spec.WithDefaultThreads()
 	f, _ := req.Manifest.File(registry.RoleModel)
 	key := planKey(req, f.Revision, string(p.Mode), preset.Name, p.NCtx)
 	return Placement{Key: key, Spec: spec, Plan: p}, nil

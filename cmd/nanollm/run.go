@@ -44,7 +44,7 @@ func runCommand(args []string) error {
 	nCtx := fs.Int("ctx", 4096, "context size in tokens")
 	nBatch := fs.Int("batch", 512, "logical batch size")
 	nUBatch := fs.Int("ubatch", 512, "physical batch size")
-	threads := fs.Int("threads", 0, "CPU threads; 0 is llama.cpp's default")
+	threads := fs.Int("threads", 0, "CPU threads; 0 is one per physical core")
 	kvType := fs.String("kv", "f16", "KV cache type: f16 or q8_0")
 	noFA := fs.Bool("no-flash-attn", false, "disable flash attention")
 	noRepack := fs.Bool("no-repack", false, "disable the CPU repacked weight layouts")
@@ -118,7 +118,7 @@ func runCommand(args []string) error {
 	defer func() { _ = b.Close() }()
 
 	start := time.Now()
-	m, err := b.Load(context.Background(), backend.LoadSpec{
+	spec := backend.LoadSpec{
 		Path:           *modelPath,
 		Device:         *device,
 		GPULayers:      *gpuLayers,
@@ -136,7 +136,9 @@ func runCommand(args []string) error {
 		DrafterPath:    *drafterPath,
 		DraftMax:       *draftMax,
 		DraftPMin:      *draftPMin,
-	})
+	}
+	spec = spec.WithDefaultThreads()
+	m, err := b.Load(context.Background(), spec)
 	if err != nil {
 		return err
 	}

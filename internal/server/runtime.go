@@ -317,6 +317,7 @@ func DefaultPlacer(_ context.Context, req PlaceRequest) (Placement, error) {
 	if req.Device.Type == backend.GPU {
 		spec.GPULayers = -1
 	}
+	spec = spec.WithDefaultThreads()
 	if req.DrafterPath != "" || (req.Backend == config.BackendFake && req.Manifest.Drafter != nil) {
 		if ov.Speculative.Type != config.SpecNone {
 			spec.DrafterPath = req.DrafterPath

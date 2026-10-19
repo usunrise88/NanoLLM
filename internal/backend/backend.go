@@ -16,7 +16,10 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
+
+	"github.com/usunrise88/nanollm/internal/hwinfo"
 )
 
 // DeviceType is the class of a device, as device selectors name it.
@@ -135,6 +138,26 @@ type LoadSpec struct {
 	// step, stopping when the drafter's top probability drops below DraftPMin.
 	DraftMax  int
 	DraftPMin float64
+}
+
+// WithDefaultThreads fills a zero thread count with the physical cores this
+// process may use (hwinfo.DefaultThreads), so a plan records the number it
+// ran with. A model fully offloaded to a GPU keeps zero: it does no CPU
+// matrix work, and polling threads would only take cores from the host.
+func (s LoadSpec) WithDefaultThreads() LoadSpec {
+	if s.Threads == 0 && !s.fullyOnGPU() {
+		s.Threads = hwinfo.DefaultThreads()
+	}
+	return s
+}
+
+// fullyOnGPU is a spec that names a GPU device and offloads every layer.
+func (s LoadSpec) fullyOnGPU() bool {
+	id := s.Device
+	if i := strings.LastIndex(id, ":"); i >= 0 {
+		id = id[i+1:]
+	}
+	return s.GPULayers == -1 && id != "" && id != "cpu"
 }
 
 // Token is a vocabulary id.

@@ -166,3 +166,41 @@ func num(n int) string {
 	b, _ := json.Marshal(n)
 	return string(b)
 }
+
+func TestPhysicalCores(t *testing.T) {
+	// Two SMT siblings per core on one package: eight logical CPUs, four cores.
+	fsys := fstest.MapFS{}
+	for cpu := 0; cpu < 8; cpu++ {
+		base := "sys/devices/system/cpu/cpu" + num(cpu) + "/topology/"
+		fsys[base+"core_id"] = file(num(cpu%4) + "\n")
+		fsys[base+"physical_package_id"] = file("0\n")
+	}
+	all := []int{0, 1, 2, 3, 4, 5, 6, 7}
+	if n := physicalCores(fsys, all); n != 4 {
+		t.Errorf("all CPUs: %d cores, want 4", n)
+	}
+	// Pinned to one thread of each of two cores, and to both threads of one.
+	if n := physicalCores(fsys, []int{0, 1}); n != 2 {
+		t.Errorf("cpus 0,1: %d cores, want 2", n)
+	}
+	if n := physicalCores(fsys, []int{0, 4}); n != 1 {
+		t.Errorf("cpus 0,4: %d cores, want 1", n)
+	}
+	// The same core_id on a second package is a different core.
+	fsys["sys/devices/system/cpu/cpu7/topology/physical_package_id"] = file("1\n")
+	if n := physicalCores(fsys, all); n != 5 {
+		t.Errorf("two packages: %d cores, want 5", n)
+	}
+	// No topology files (a container without sysfs): the caller falls back.
+	if n := physicalCores(fstest.MapFS{}, all); n != 0 {
+		t.Errorf("no sysfs: %d, want 0", n)
+	}
+}
+
+func TestDefaultThreads(t *testing.T) {
+	if n := DefaultThreads(); n < 1 {
+		t.Fatalf("DefaultThreads = %d", n)
+	} else {
+		t.Logf("DefaultThreads = %d", n)
+	}
+}
