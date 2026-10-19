@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -209,6 +210,11 @@ func (r genResult) decodeRate() float64 {
 // an end-of-generation token or n tokens, writing pieces to w as they come.
 func generate(ctx context.Context, m backend.Model, prompt string, n int, sp backend.SamplerSpec, w io.Writer) (genResult, error) {
 	var r genResult
+	// ggml's OpenMP team belongs to the thread that runs the graph; a
+	// goroutine that moves between steps rebuilds it every time (the same
+	// reason sched.Loop pins its thread).
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	toks, err := m.Tokenize(prompt, true, true)
 	if err != nil {
 		return r, err

@@ -2,7 +2,7 @@
 # Build NanoLLM's llama.cpp libraries and tools: the pinned upstream tag plus
 # the patch series in patches/llama.cpp (docs/STAGE2.md 2.1).
 #
-#   scripts/build-libs.sh [--no-vulkan] [--jobs N] [--cpus N] [--src DIR] [--prepare-only]
+#   scripts/build-libs.sh [--no-vulkan] [--jobs N] [--cpus N] [--src DIR] [--prepare-only] [--no-patches]
 #
 # Writes dist/linux_amd64/{lib,tools} in the layout scripts/fetch-libs.sh
 # --tools produces, so everything downstream (the golden tests, tools/optimize,
@@ -31,6 +31,7 @@ JOBS=$(nproc)
 CPUS=""
 SRC=$ROOT/.cache/llama.cpp/src
 PREPARE_ONLY=0
+PATCHES=1
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-vulkan) VULKAN=0 ;;
@@ -38,6 +39,7 @@ while [[ $# -gt 0 ]]; do
     --cpus) CPUS=$2; shift ;;
     --src) SRC=$2; shift ;;
     --prepare-only) PREPARE_ONLY=1 ;;
+    --no-patches) PATCHES=0 ;; # upstream's own build, to compare a patched one with
     *) echo "build-libs: unknown argument $1" >&2; exit 2 ;;
   esac
   shift
@@ -63,7 +65,8 @@ fi
 
 export GIT_COMMITTER_NAME=NanoLLM GIT_COMMITTER_EMAIL=nanollm@localhost
 shopt -s nullglob
-for p in "$ROOT"/patches/llama.cpp/*.patch; do
+[[ $PATCHES -eq 0 ]] && WANT=$BASE
+for p in $([[ $PATCHES -eq 1 ]] && echo "$ROOT"/patches/llama.cpp/*.patch); do
   # The committer date follows the patch's author date: no clock in the hash.
   git -C "$SRC" am --quiet --committer-date-is-author-date "$p" \
     || { echo "build-libs: $p does not apply to $BASE" >&2; git -C "$SRC" am --abort || true; exit 1; }
@@ -74,7 +77,7 @@ if [[ "$GOT" != "$WANT" ]]; then
   echo "build-libs: if the series changed on purpose, write the new hash there." >&2
   exit 1
 fi
-echo "source: $TAG + $(ls "$ROOT"/patches/llama.cpp/*.patch 2>/dev/null | wc -l | tr -d ' ') patches = ${GOT:0:12}"
+echo "source: $TAG + $([[ $PATCHES -eq 1 ]] && ls "$ROOT"/patches/llama.cpp/*.patch 2>/dev/null | wc -l | tr -d ' ' || echo 0) patches = ${GOT:0:12}"
 [[ $PREPARE_ONLY -eq 1 ]] && exit 0
 
 # --- the build ---------------------------------------------------------------
@@ -85,7 +88,7 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   docker build -q -t "$IMAGE" --build-arg VULKAN=$VULKAN -f scripts/build-libs.Dockerfile scripts >/dev/null
 fi
 
-BUILD=$ROOT/.cache/llama.cpp/build-linux_amd64
+BUILD=$ROOT/.cache/llama.cpp/build-linux_amd64$([[ $PATCHES -eq 0 ]] && echo -upstream)
 mkdir -p "$BUILD" "$ROOT/.cache/ccache"
 CMAKE_VULKAN=()
 [[ $VULKAN -eq 1 ]] && CMAKE_VULKAN=(-DGGML_VULKAN=ON)
@@ -109,10 +112,10 @@ docker run --rm "${DOCKER_CPUS[@]}" -u "$(id -u):$(id -g)" \
 
 # --- the layout fetch-libs.sh --tools makes -----------------------------------
 
-OUT=$ROOT/dist/linux_amd64
+OUT=$ROOT/dist/linux_amd64$([[ $PATCHES -eq 0 ]] && echo -upstream)
 rm -rf "$OUT/lib" "$OUT/tools"
 mkdir -p "$OUT/lib" "$OUT/tools"
 find "$BUILD/bin" -maxdepth 1 \( -type f -o -type l \) -exec cp -P {} "$OUT/tools/" \;
 find "$BUILD/bin" -maxdepth 1 \( -type f -o -type l \) \( -name 'libllama.*' -o -name 'libggml*' \) -exec cp -P {} "$OUT/lib/" \;
 cp "$SRC/LICENSE" "$OUT/tools/" 2>/dev/null || true
-echo "dist/linux_amd64: $(ls "$OUT/lib" | wc -l | tr -d ' ') libraries, $(ls "$OUT/tools" | wc -l | tr -d ' ') files in tools"
+echo "${OUT#$ROOT/}: $(ls "$OUT/lib" | wc -l | tr -d ' ') libraries, $(ls "$OUT/tools" | wc -l | tr -d ' ') files in tools"
