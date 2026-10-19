@@ -99,6 +99,10 @@ type Loop struct {
 	busy       atomic.Int32
 	steps      atomic.Int64
 	stepTokens atomic.Int64
+
+	// disk is the prompt cache on disk (SetPromptStore); nil is off.
+	disk      atomic.Pointer[promptDisk]
+	diskStats promptDiskCounters
 }
 
 // LoopStats is the loop's state at an instant, for the operator.
@@ -110,6 +114,9 @@ type LoopStats struct {
 	// batches; their ratio is how full the batches run.
 	Steps      int64 `json:"steps"`
 	StepTokens int64 `json:"step_tokens"`
+	// PromptDisk is the prompt cache on disk (OPT-13); absent when the loop
+	// has none.
+	PromptDisk *PromptDiskStats `json:"prompt_disk,omitempty"`
 }
 
 // Snapshot reads the loop's counters; it is safe from any goroutine.
@@ -117,10 +124,18 @@ func (l *Loop) Snapshot() LoopStats {
 	l.mu.Lock()
 	pending := len(l.pending)
 	l.mu.Unlock()
-	return LoopStats{
+	st := LoopStats{
 		Slots: len(l.slots), Busy: int(l.busy.Load()), Pending: pending,
 		Steps: l.steps.Load(), StepTokens: l.stepTokens.Load(),
 	}
+	if l.disk.Load() != nil {
+		c := &l.diskStats
+		st.PromptDisk = &PromptDiskStats{
+			Saves: c.saves.Load(), Restores: c.restores.Load(), RestoredTokens: c.restoredTokens.Load(),
+			SaveErrors: c.saveErrors.Load(), RestoreErrors: c.restoreErrors.Load(),
+		}
+	}
+	return st
 }
 
 type slot struct {
@@ -298,6 +313,7 @@ func (l *Loop) Busy() int {
 
 func (l *Loop) run() {
 	defer close(l.done)
+	defer l.closePromptStore()
 	// The loop is the only goroutine that calls Step, and ggml's CPU backend
 	// runs its graphs on an OpenMP team owned by the thread that calls it:
 	// libgomp keeps one pool of workers per calling thread. A goroutine the
@@ -413,6 +429,15 @@ func (l *Loop) assign(seq int, h *Handle) {
 	// At least one prompt token is evaluated, so there are logits to sample.
 	if reuse >= len(h.req.Prompt) {
 		reuse = len(h.req.Prompt) - 1
+	}
+	if !h.req.NoCache {
+		// A state on disk may hold more of the prompt than this slot does.
+		// A restore that failed has emptied the slot, which takes the
+		// prefix the slot shared with the prompt along.
+		if n := l.restorePrompt(seq, h.req.Prompt, reuse); n > 0 {
+			reuse = n
+		}
+		reuse = min(reuse, len(s.cached))
 	}
 	if reuse < len(s.cached) {
 		if !l.model.TrimSeq(seq, reuse) {
@@ -566,7 +591,15 @@ func (l *Loop) step(active []int) {
 			l.finish(st.Seq, Event{Err: errors.New("sched: backend returned no tokens for a sampling slot")})
 			continue
 		}
+		// The step that completes the prompt is the one that has not yet
+		// produced a token to feed back.
+		prefilled := !h.hasNext
 		l.deliver(st.Seq, out)
+		if prefilled {
+			// The first token is out; now the slot holds the prompt and
+			// nothing else, which is the state worth keeping.
+			l.savePrompt(st.Seq, h)
+		}
 	}
 }
 

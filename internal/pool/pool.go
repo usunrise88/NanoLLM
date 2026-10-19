@@ -84,6 +84,11 @@ type Pool struct {
 	// across an unload. It runs under the pool's lock, so it must not call
 	// back into the pool; set before the first Acquire. Nil pins nothing.
 	Pinned func(Key) bool
+	// SetupLoop configures the scheduling loop of a model that has just
+	// loaded, before any request reaches it: the prompt cache on disk. It
+	// runs outside the pool's lock and may be slow; set before the first
+	// Acquire. Nil configures nothing.
+	SetupLoop func(Key, *sched.Loop)
 
 	mu        sync.Mutex
 	instances map[Key]*Instance
@@ -159,12 +164,18 @@ func (p *Pool) Acquire(ctx context.Context, k Key) (*Instance, func(), error) {
 		// The load outlives the request that started it: others may be
 		// waiting on it, and an abandoned half-load wastes the work.
 		m, info, err := p.load(context.WithoutCancel(ctx), k)
+		var loop *sched.Loop
+		if err == nil {
+			loop = sched.New(m)
+			loop.SetMaxPending(p.MaxPending)
+			if p.SetupLoop != nil {
+				p.SetupLoop(k, loop)
+			}
+		}
 		p.mu.Lock()
 		delete(p.loading, k)
 		if err == nil {
 			now := time.Now()
-			loop := sched.New(m)
-			loop.SetMaxPending(p.MaxPending)
 			inst := &Instance{Key: k, Model: m, Loop: loop, Info: info, loadedAt: now, lastUse: now}
 			// Asked under the lock that inserts the instance, so a Pin that
 			// races the load either sees the instance or is seen here.

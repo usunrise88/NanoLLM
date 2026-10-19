@@ -104,6 +104,7 @@ func New(ctx context.Context, o Options) *Runtime {
 		defer r.mu.Unlock()
 		return r.pinned[k.Model]
 	}
+	r.Pool.SetupLoop = r.setupLoop
 	r.Engine = engine.New(engine.Config{
 		DefaultModel:    o.Config.Models.Default,
 		EnableThinking:  o.Config.Generation.EnableThinking,

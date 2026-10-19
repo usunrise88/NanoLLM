@@ -55,6 +55,13 @@ func gauges(rep StatsReport) []stats.Gauge {
 		add("nanollm_steps_total", "Model steps taken.", float64(in.Loop.Steps), l)
 		add("nanollm_step_tokens_total", "Tokens in those steps' batches.", float64(in.Loop.StepTokens), l)
 		add("nanollm_model_references", "Requests holding the model.", float64(in.Refs), l)
+		if d := in.Loop.PromptDisk; d != nil {
+			add("nanollm_prompt_disk_saves_total", "Slot states handed to the prompt cache on disk.", float64(d.Saves), l)
+			add("nanollm_prompt_disk_restores_total", "Requests that started from a state read from disk.", float64(d.Restores), l)
+			add("nanollm_prompt_disk_restored_tokens_total", "Prompt tokens restored from disk instead of evaluated.", float64(d.RestoredTokens), l)
+			add("nanollm_prompt_disk_save_errors_total", "States the prompt cache on disk could not save.", float64(d.SaveErrors), l)
+			add("nanollm_prompt_disk_restore_errors_total", "States the prompt cache on disk could not restore.", float64(d.RestoreErrors), l)
+		}
 	}
 	return out
 }

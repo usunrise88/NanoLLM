@@ -10,6 +10,7 @@ import (
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/backend/fake"
+	"github.com/usunrise88/nanollm/internal/sched"
 )
 
 type counter struct {
@@ -174,4 +175,39 @@ func TestPinnedHookPinsNewInstances(t *testing.T) {
 		t.Fatalf("b after unpinning a: %v", err)
 	}
 	release()
+}
+
+// SetupLoop sees each freshly loaded instance's loop once, before any request
+// can reach it, and what it attaches belongs to that instance.
+func TestSetupLoopRunsOncePerLoad(t *testing.T) {
+	c := &counter{}
+	p := New(c.load, 1)
+	defer p.Close()
+	var seen []Key
+	var mu sync.Mutex
+	p.SetupLoop = func(k Key, l *sched.Loop) {
+		if l == nil || l.Busy() != 0 {
+			t.Errorf("setup got loop %v", l)
+		}
+		mu.Lock()
+		seen = append(seen, k)
+		mu.Unlock()
+	}
+	for range 3 {
+		_, release, err := p.Acquire(context.Background(), key("a"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		release()
+	}
+	_, release, err := p.Acquire(context.Background(), key("b"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	release()
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) != 2 || seen[0].Model != "a" || seen[1].Model != "b" {
+		t.Fatalf("setup ran for %v", seen)
+	}
 }
