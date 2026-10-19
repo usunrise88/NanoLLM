@@ -1,0 +1,72 @@
+# nano.llmto.day on hyper: the staging of benchd (services/bench) behind the
+# host's own Caddy. Installed to /etc/caddy/sites.d/ by
+#
+#   sudo scripts/staging-bench-service.sh caddy
+#
+# which fills in the password hash below and validates the whole config
+# before it reloads Caddy. Do not copy this file by hand: it still holds the
+# placeholder.
+#
+# The whole site is behind basic_auth until the legal review of the privacy
+# text and the consent text is done (docs/BENCHMARKS.md). The one exception
+# is /admin: benchd's own bearer token travels in the same Authorization
+# header that basic_auth uses, so both cannot guard it; it is served only to
+# a client on the host itself (curl --resolve nano.llmto.day:443:127.0.0.1,
+# or the loopback port directly) and is a 404 from anywhere else.
+#
+# benchd listens on 127.0.0.1:27418 only (docker-compose.staging.yml). Access
+# logs carry no client address, as in the Caddyfile next to this directory;
+# benchd sees the address only in X-Forwarded-For, which Caddy sets.
+#
+# After the review: delete the basic_auth block here and run the script's
+# `caddy` again; without the placeholder it needs no hash.
+
+nano.llmto.day {
+	import common
+
+	log {
+		output file /var/log/caddy/nano.llmto.day.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>remote_port delete
+				request>client_ip delete
+				request>headers delete
+				request>tls delete
+				resp_headers delete
+				user_id delete
+			}
+		}
+	}
+
+	@admin path /admin /admin/*
+	handle @admin {
+		@elsewhere not remote_ip 127.0.0.1 ::1
+		respond @elsewhere "not found" 404
+		reverse_proxy 127.0.0.1:27418
+	}
+
+	handle {
+		basic_auth {
+			# Replace the hash only with `caddy hash-password`, and only through
+			# the script (BENCH_BASIC_AUTH_HASH); never write the password here.
+			owner @BASIC_AUTH_HASH@
+		}
+
+		@bench path /benchmarks /benchmarks/* /api/v1/*
+		handle @bench {
+			request_body {
+				max_size 300KB
+			}
+			reverse_proxy 127.0.0.1:27418
+		}
+
+		handle {
+			respond "nano.llmto.day" 200
+		}
+	}
+}

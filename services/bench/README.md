@@ -163,3 +163,80 @@ e2e/client-e2e.sh path/to/nanollm path/to/benchd   # the real client
 CI: `.github/workflows/bench-service.yml` (benchfmt, lint and tests, the
 e2e with both the Go driver and the real `nanollm bench submit`/`withdraw`,
 the image with a smoke run, and the Caddyfile).
+
+## Staging на hyper
+
+benchd в контейнере слушает только `127.0.0.1:27418`; перед ним системный
+Caddy hyper'а на `nano.llmto.day`. Весь сайт закрыт `basic_auth` (пользователь
+`owner`), пока владелец не закончил юридическую проверку политики приватности
+и текста согласия. Порт фиксирован: 27418 ниже эфемерного диапазона
+(32768–60999), поэтому исходящее соединение его не займёт. Число стоит в
+`deploy/staging/docker-compose.staging.yml`, `deploy/staging/nano.llmto.day.caddy`
+и `scripts/staging-bench-service.sh`; менять нужно во всех трёх.
+
+Файлы: `deploy/staging/nano.llmto.day.caddy` (сайт для `/etc/caddy/sites.d/`,
+хэш пароля — заглушка `@BASIC_AUTH_HASH@`), `deploy/staging/docker-compose.staging.yml`
+(поверх `deploy/docker-compose.yml`: публикация на петле, встроенный Caddy
+выключен профилем, проект `nanollm-bench-staging`) и
+`scripts/staging-bench-service.sh`. sudo нужен только подкоманде `caddy`;
+`up`, `down` и `status` от root отказываются. Все подкоманды можно повторять.
+
+1. Хэш пароля: `caddy hash-password` (спрашивает пароль без эха).
+2. `! sudo scripts/staging-bench-service.sh caddy --hash '$2a$14$…'` кладёт
+   файл в `/etc/caddy/sites.d/`, проверяет весь конфиг `caddy validate` от
+   пользователя `caddy` (от root проверка создала бы лог-файл сайта с
+   владельцем root), при ошибке возвращает прежний файл, затем делает
+   `systemctl reload caddy`. Без `--hash` остаётся уже установленный хэш.
+   Снять сайт: `! sudo scripts/staging-bench-service.sh caddy remove`.
+3. `! scripts/staging-bench-service.sh up`: при первом запуске создаёт
+   `~/.config/nanollm-bench-staging/env` с `BENCHD_ADMIN_TOKEN` (режим 600),
+   собирает образ и поднимает только `benchd`, ждёт `/healthz`. Сборка идёт в
+   демоне docker, и `nice` её не смягчает: запускать, когда замеры не идут.
+4. `! scripts/staging-bench-service.sh status`: файл Caddy на месте, контейнер
+   жив, `/healthz` на петле 200, `/benchmarks` без пароля через Caddy 401
+   (000, пока Let's Encrypt не выдал сертификат), `/admin/` с самого хоста 200.
+
+`down` останавливает контейнер; база остаётся в томе
+`nanollm-bench-staging_bench-data`.
+
+**Админка.** Токен benchd идёт в том же заголовке `Authorization`, что и
+пароль `basic_auth`, поэтому закрыть `/admin` обоими способами нельзя. Через
+Caddy он отдаётся только клиенту с самого хоста (`remote_ip` петля), отовсюду
+ещё 404. Проще всего прямо на петле: с ноутбука
+`ssh -L 27418:127.0.0.1:27418 hyper`, затем `http://127.0.0.1:27418/admin`;
+токен лежит в `env` выше.
+
+**Отправка результата с hyper.** Клиент принимает только `https`-адрес
+(`bench.submit_url must be an https URL`), поэтому петлевой
+`http://127.0.0.1:27418` ему не подходит. Отправка идёт через Caddy, логин
+передаётся в адресе (Go-клиент превращает его в `Authorization: Basic`;
+символы пароля вне букв и цифр кодируются в процентной форме):
+
+```sh
+NANOLLM_BENCH_SUBMIT_URL='https://owner:ПАРОЛЬ@nano.llmto.day' \
+  nanollm bench --suite standard --submit
+```
+
+Клиент печатает `sent: ID URL`. Его ключ постоянный
+(`<data_dir>/bench/identity.key`, пока не включён `bench.anonymous`), и
+vendor-verified вешается именно на ключ, поэтому следующие отправки с hyper
+получают метку сами.
+
+**Метка vendor-verified.** По `ID` из ответа (или по `install_id` из
+`GET /admin/api/submissions/ID`), на петле:
+
+```sh
+TOKEN=$(sed -n 's/^BENCHD_ADMIN_TOKEN=//p' ~/.config/nanollm-bench-staging/env)
+curl -sS -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"submission_id":"ID","label":"hyper EPYC 7351P"}' \
+  http://127.0.0.1:27418/admin/api/verified          # {"reindexed": N}
+curl -sS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:27418/admin/api/verified
+```
+
+Метку снимает `DELETE /admin/api/verified?install_id=…`. После любой правки
+меток сервис пересобирает производные таблицы.
+
+Потолок правдоподобия для EPYC 7001 (Zen 1) стоит в
+`internal/ingest/plausible.go`: 8 × DDR4-2666, 170,7 ГБ/с на сокет (модели
+с суффиксом P считаются как один сокет, остальные как два). Прогон hyper
+получает `ok`, а не `unknown`.
