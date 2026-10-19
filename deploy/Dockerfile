@@ -41,7 +41,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /src
-COPY scripts/fetch-libs.sh scripts/libs.sha256 scripts/llama.cpp.tag scripts/
+COPY scripts/fetch-libs.sh scripts/libs.sha256 scripts/libs.release scripts/llama.cpp.tag scripts/llama.cpp.commit scripts/llama.cpp.base scripts/
 ARG TARGETARCH
 ARG FLAVOUR
 RUN set -eu; \
