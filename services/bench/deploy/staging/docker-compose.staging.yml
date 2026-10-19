@@ -1,0 +1,21 @@
+# Staging on hyper: ../docker-compose.yml plus this file, started by
+# scripts/staging-bench-service.sh up. The host's own Caddy owns ports 80
+# and 443 (nano.llmto.day.caddy next to this file), so only benchd runs, and
+# it is published on the loopback.
+#
+#   BENCHD_ADMIN_TOKEN=x docker compose -f ../docker-compose.yml -f docker-compose.staging.yml config
+#
+# The port is fixed: 27418, below the ephemeral range (32768-60999) so that
+# an outgoing connection never takes it; the same number is in
+# nano.llmto.day.caddy and in the script. Change all three or none.
+name: nanollm-bench-staging
+
+services:
+  benchd:
+    ports:
+      - "127.0.0.1:27418:8080"
+
+  # The bundled Caddy is for a host without one; here it stays off (it would
+  # take ports 80 and 443 from the system Caddy).
+  caddy:
+    profiles: ["bundled-caddy"]
