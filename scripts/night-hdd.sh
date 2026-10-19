@@ -20,7 +20,7 @@ NEXT=${NEXT:-./dist/nanollm-next}
 CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
 NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
-STEPS=${STEPS-"numa stream ngram repack thp tune standard"}
+STEPS=${STEPS-"numa batch stream ngram repack thp tune standard"}
 
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
@@ -56,6 +56,22 @@ for step in $STEPS; do
 					GGML_REPACK_THREADS=1 nice -n 5 $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 --numa distribute -o md 2>/dev/null
 				done
 			done
+		} | tee "$OUTF"
+		;;
+	batch)
+		# Aggregate decode throughput with N sequences in one batch: the weights
+		# are read once for all of them, so on a memory-bound CPU the total
+		# should grow almost with N until arithmetic takes over (the planner's
+		# slot count, docs/STAGE2.md 2.8).
+		MODEL=$(ls "$HOME"/nanollm-data/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
+		OUTF=bench/results/$(hostname -s)/$(date +%F)-batched$([[ ${SSD:-0} == 1 ]] && echo -ssd).txt
+		T=dist/linux_amd64-next/tools
+		{
+			echo "# $(date -Is) $MODEL"
+			echo "## strong: 16 threads, interleave"
+			nice -n 5 numactl --interleave=all $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 16 -fa 1 2>/dev/null | tail -8
+			echo "## weak: 4 cores of node 0"
+			nice -n 5 numactl --preferred=0 taskset -c 0,1,2,3 $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 4 -fa 1 2>/dev/null | tail -8
 		} | tee "$OUTF"
 		;;
 	stream)
