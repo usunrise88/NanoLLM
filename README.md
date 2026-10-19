@@ -7,7 +7,8 @@ inference of small models on CPU, GPU and NPU, an OpenAI-compatible HTTP API
 and an embedded web interface. No prompt leaves the machine; network access is
 needed only to fetch weights.
 
-Model: **Gemma 4 E4B** (Unsloth QAT `UD-Q4_K_XL` with its int4 MTP drafter).
+Model: **Gemma 4 E4B** (Unsloth QAT `UD-Q4_K_XL`, Q4_0 throughout, with its int4
+MTP drafter).
 Gemma 4 12B and Qwen3.5-9B from the specification are deferred. The design
 document is the NanoLLM Development Specification; section numbers in code
 comments (`SPEC §4`) refer to it. Structure and conventions follow
@@ -15,22 +16,20 @@ comments (`SPEC §4`) refer to it. Structure and conventions follow
 
 ## Status
 
-Bootstrap. What works today:
+Stage 1 is done: everything that does not need fast hardware works and is
+verified in CI. Speed and quality are measured from stage 2 on, on real
+machines ([docs/ROADMAP.md](docs/ROADMAP.md), [docs/STAGE1.md](docs/STAGE1.md)).
 
 | Area | State |
 | --- | --- |
-| `nanollm init` | Writes a validated config with fresh admin and user keys (no download yet) |
-| `nanollm serve` | `/healthz`, `/readyz` (503 until a model loads), API-key auth, `openai` and `native` routes mounted; generation routes answer 501 |
-| `nanollm models catalog` | Built-in catalog, pinned to a repository commit, size and SHA-256 |
-| `nanollm devices` | Reports whether `libllama` is where the binary looks for it |
-| Config | Full schema from SPEC §8, strict keys, `NANOLLM_*` env overrides, validation |
-| Memory modes and presets | M1–M10 and all 19 presets defined and validated (`internal/plan`) |
-| Build | `CGO_ENABLED=0` cross-compilation for all release targets; llama.cpp pinned to `b11600`, `scripts/fetch-libs.sh` verified in CI for every target and the CUDA add-ons |
-| Delivery | `scripts/dist.sh` release archives, `install.sh` / `install.ps1`, `nanollm service` (systemd, launchd, Windows service), Docker images, `release.yml` |
-
-Next is milestone v0.1 — the engine spike: purego binding to `libllama`,
-`nanollm run` / `plan` / `bench` with Gemma 4 E4B + MTP (SPEC §14). The
-development plan by stage and machine is in [docs/ROADMAP.md](docs/ROADMAP.md).
+| Engine | purego binding to `libllama` from the pinned llama.cpp `b11600` release archives (no cgo), Gemma 4 E4B QAT (Q4_0) with its MTP drafter, greedy output identical to `llama-server`; CPU verified on a VM, Vulkan placement on lavapipe; CUDA and Metal are untested on real GPUs |
+| Placement | `nanollm plan` places the model from its measured tensor inventory for every preset (`vram-*`, `uma-*`, `ram-*`): VRAM, locked RAM, file-backed; range-lock keeps the locked part resident |
+| Server | OpenAI-compatible `/v1/chat/completions` (streaming, tools, `response_format`, logprobs) and the native API; continuous batching, prompt cache, model pool, API keys and rate limits; SQLite job queue with SSE progress and signed webhooks |
+| CLI | `init` (config, keys, model download with resume), `serve`, `run` (REPL or `--prompt`), `models` (catalog, pull, inspect), `plan`, `devices`, `key`, `service`, `bench`, `eval` |
+| Web UI | Chat, Jobs, Models, Devices, Settings, Bench; English and Russian |
+| Benchmark | `nanollm bench` runs presets one process each and submits results only on explicit consent; the service in `services/bench` is written and tested, not hosted yet |
+| Evaluation | `nanollm eval` suites (Russian instructions, JSON and tools, long context, 50 prompts for blind rating), KLD tooling against the reference configuration |
+| Delivery | release archives for Linux, Windows and macOS, `install.sh` / `install.ps1` as a service, Docker images (CPU/Vulkan, CUDA); macOS signing waits for Apple credentials |
 
 ## Install
 
@@ -124,18 +123,30 @@ authentication off; open mode is refused on any non-loopback address.
 ```
 cmd/nanollm/            entry point, CLI verbs
 internal/core/          core.Service, request/response model, pipeline stages, errors
-internal/backend/       Backend/Model interfaces; llamacpp/, ortgenai/ (v2), mlx/ (v3)
-internal/plan/          memory modes M1–M10 and presets
-internal/pool/          model pool, slots, prompt cache (v1.0)
-internal/sched/         device governor, continuous batching (v1.0)
-internal/chat/          chat templates, tool-call and reasoning parsers (v1.0)
+internal/engine/        core.Service on top of the pool and the scheduler
+internal/backend/       Backend/Model interfaces; llamacpp/ (purego), fake/, ortgenai/ (v2), mlx/ (v3)
+internal/gguf/          GGUF header and tensor inventory
+internal/plan/          memory modes M1–M10, presets, the planner
+internal/memlock/       range-lock of the mapped model
+internal/pool/          model pool, slots, prompt cache
+internal/sched/         device governor, continuous batching
+internal/chat/          Gemma 4 template, tool-call and reasoning parsers
+internal/grammar/       JSON Schema to GBNF
 internal/api/           adapter registry; native/, openai/ dialects
-internal/httpx/         auth, problem+json, middleware
-internal/registry/      catalog, manifests
-internal/queue/         SQLite jobs, SSE, webhooks (v1.0)
+internal/server/        runtime wiring for serve and run
+internal/httpx/         auth, problem+json, SSE, middleware
+internal/registry/      catalog, manifests, downloads, tensor inventories
+internal/queue/         SQLite jobs, SSE, webhooks
+internal/bench/         benchmark runner and submission client
+internal/hwinfo/        hardware profile for benchmark results
+internal/eval/          eval suites, checkers, blind rating
 internal/config/        YAML load/validate, env overrides
 internal/ui/            embedded SPA (built from web/)
+benchfmt/               benchmark result format (its own module)
+services/bench/         benchmark service (its own module)
 web/                    SPA sources: React, Vite, TanStack, Tailwind
+tests/conformance/      OpenAI client conformance suite
+tools/                  bindgen, fixtures, golden, optimize (KLD), chat fixtures
 scripts/                fetch-libs, dist, install.sh, install.ps1
 deploy/                 systemd unit, launchd plist, Dockerfile, compose
 ```
