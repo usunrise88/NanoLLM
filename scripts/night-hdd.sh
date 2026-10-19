@@ -20,7 +20,7 @@ NEXT=${NEXT:-./dist/nanollm-next}
 CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
 NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
-STEPS=${STEPS-"stream ngram repack thp"}
+STEPS=${STEPS-"stream ngram repack thp tune"}
 
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
@@ -72,6 +72,14 @@ for step in $STEPS; do
 		# madvise. Fewer TLB misses on a 2.5 GB scan per token.
 		full "thp-strong" --profile strong --preset ram-8g --set env.GLIBC_TUNABLES=glibc.malloc.hugetlb=0,glibc.malloc.hugetlb=1
 		full "thp-weak" --profile weak --preset ram-4g --set env.GLIBC_TUNABLES=glibc.malloc.hugetlb=0,glibc.malloc.hugetlb=1
+		;;
+	tune)
+		# OPT-10: compiler tuning of the CPU kernels. The same series built
+		# with -mtune=znver1, with LTO, with both; llama-bench interleaved.
+		if [[ -d dist/tune-both/tools ]]; then
+			echo "=== $(date +%T) tune A/B"
+			scripts/tools-ab.sh tune dist/linux_amd64-next/tools dist/tune-znver1/tools dist/tune-lto/tools dist/tune-both/tools -- 2 || echo "!!! tune failed"
+		fi
 		;;
 	esac
 done
