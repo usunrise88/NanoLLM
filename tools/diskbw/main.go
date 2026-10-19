@@ -117,7 +117,7 @@ func direct(path string, off, size int64, t int) time.Duration {
 			defer wg.Done()
 			fd, err := unix.Open(path, unix.O_RDONLY|unix.O_DIRECT, 0)
 			check(err)
-			defer unix.Close(fd)
+			defer func() { _ = unix.Close(fd) }()
 			// O_DIRECT wants an aligned buffer, offset and length.
 			raw := make([]byte, *chunk<<10+4096)
 			buf := raw[(4096-int(uintptr(unsafe.Pointer(&raw[0])))%4096)%4096:][:*chunk<<10]
@@ -143,7 +143,7 @@ func direct(path string, off, size int64, t int) time.Duration {
 func faults(f *os.File, off, size int64, t int) time.Duration {
 	m, err := unix.Mmap(int(f.Fd()), 0, int(off+size), unix.PROT_READ, unix.MAP_PRIVATE)
 	check(err)
-	defer unix.Munmap(m)
+	defer func() { _ = unix.Munmap(m) }()
 	page := int64(os.Getpagesize())
 	var wg sync.WaitGroup
 	sums := make([]byte, t)
@@ -174,7 +174,7 @@ func faults(f *os.File, off, size int64, t int) time.Duration {
 func willneed(f *os.File, off, size, chunk int64) (time.Duration, int64) {
 	m, err := unix.Mmap(int(f.Fd()), 0, int(off+size), unix.PROT_READ, unix.MAP_PRIVATE)
 	check(err)
-	defer unix.Munmap(m)
+	defer func() { _ = unix.Munmap(m) }()
 	region := m[off : off+size]
 	start := time.Now()
 	if chunk <= 0 {
