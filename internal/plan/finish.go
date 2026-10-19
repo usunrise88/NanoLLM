@@ -62,6 +62,9 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 		}
 	}
 	p.LockRanges = lockRanges(t.locks)
+	for _, tn := range t.random {
+		p.RandomRanges = append(p.RandomRanges, Range{Role: "model", Offset: tn.Offset, Length: tn.Bytes})
+	}
 	for _, pat := range repackPatterns(t.repacked) {
 		p.Overrides = append(p.Overrides, backend.BufferOverride{Pattern: pat, Device: backend.DeviceCPURepack})
 	}

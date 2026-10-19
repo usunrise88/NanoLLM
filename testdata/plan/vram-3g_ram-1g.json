@@ -30,6 +30,13 @@
   "load_mode": "mmap",
   "lazy_mode": "on",
   "repack": false,
+  "random_ranges": [
+    {
+      "role": "model",
+      "offset": 31317088,
+      "length": 1585446912
+    }
+  ],
   "mtp": {
     "enabled": true,
     "reason": "the drafter (41.9 MiB) runs on llamacpp:cuda0 with the target's output layer and reads its KV cache",

@@ -141,7 +141,10 @@ type Plan struct {
 	Repack     bool                     `json:"repack"`
 	Overrides  []backend.BufferOverride `json:"overrides,omitempty"`
 	LockRanges []Range                  `json:"lock_ranges,omitempty"`
-	MTP        MTP                      `json:"mtp"`
+	// RandomRanges are the file-backed ranges read at random (the PLE
+	// table): the loader tells the kernel not to read ahead in them.
+	RandomRanges []Range `json:"random_ranges,omitempty"`
+	MTP          MTP     `json:"mtp"`
 
 	// Groups is bytes per placement group and target; G5 is the KV cache,
 	// G7 the compute and output buffers of both contexts.

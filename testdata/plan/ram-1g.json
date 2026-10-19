@@ -25,6 +25,870 @@
   "load_mode": "mmap",
   "lazy_mode": "off",
   "repack": false,
+  "lock_ranges": [
+    {
+      "role": "model",
+      "offset": 15822944,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 31316064,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 1616764000,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 1994989664,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2000899168,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2031128672,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2046253152,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2047389824,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2053299328,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2083528832,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2098653312,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2099789984,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2105699488,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2135928992,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2151053472,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2152190144,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2158099648,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2188329152,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2203453632,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2204590304,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2210499808,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2240729312,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2255853792,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2257727744,
+      "length": 12288
+    },
+    {
+      "role": "model",
+      "offset": 2269536512,
+      "length": 2048
+    },
+    {
+      "role": "model",
+      "offset": 2300504320,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2315628800,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2316765472,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2322674976,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2352904480,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2368028960,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2369165632,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2375075136,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2405304640,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2420429120,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2421565792,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2427475296,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2457704800,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2472829280,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2473965952,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2479875456,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2510104960,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2525229440,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2526366112,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2532275616,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2562505120,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2577629600,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2579503552,
+      "length": 12288
+    },
+    {
+      "role": "model",
+      "offset": 2591312320,
+      "length": 2048
+    },
+    {
+      "role": "model",
+      "offset": 2622280128,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2637404608,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2638541280,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2644450784,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2674680288,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2689804768,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2690941440,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2696850944,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2727080448,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2742204928,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2743341600,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2749251104,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2779480608,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2794605088,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2795741760,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2801651264,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2831880768,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2847005248,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2848141920,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2854051424,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2884280928,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2899405408,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2901279360,
+      "length": 12288
+    },
+    {
+      "role": "model",
+      "offset": 2913088128,
+      "length": 2048
+    },
+    {
+      "role": "model",
+      "offset": 2944055936,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2959180416,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2960317088,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2966226592,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2996456096,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3011580576,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3012717248,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 3018626752,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3048856256,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3063980736,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3065117408,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 3071026912,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3101256416,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3116380896,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3117517568,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 3123427072,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3153656576,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3168781056,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3169917728,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 3175827232,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3206056736,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3221181216,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3223055168,
+      "length": 12288
+    },
+    {
+      "role": "model",
+      "offset": 3234863936,
+      "length": 2048
+    },
+    {
+      "role": "model",
+      "offset": 3265831744,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3280956224,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3281355616,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3287264096,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3316756320,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3331880800,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3332280192,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3338188672,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3367680896,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3382805376,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3383204768,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3389113248,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3418605472,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3433729952,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3434129344,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3440037824,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3469530048,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3484654528,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3485053920,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3490962400,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3520454624,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3535579104,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3535978496,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3547785216,
+      "length": 2048
+    },
+    {
+      "role": "model",
+      "offset": 3577278464,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3592402944,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3592802336,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3598710816,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3628203040,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3643327520,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3643726912,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3649635392,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3679127616,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3694252096,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3694651488,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3700559968,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3730052192,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3745176672,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3745576064,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3751484544,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3780976768,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3796101248,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3796500640,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3802409120,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3831901344,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3847025824,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3847425216,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3859231936,
+      "length": 2048
+    },
+    {
+      "role": "model",
+      "offset": 3888725184,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3903849664,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3904249056,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3910157536,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3939649760,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3954774240,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3955173632,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3961082112,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 3990574336,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4005698816,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 4006098208,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4012006688,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 4041498912,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4056623392,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 4057022784,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4062931264,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 4092423488,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4107547968,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 4107947360,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4113855840,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 4143348064,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4158472544,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 4158871936,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4170678656,
+      "length": 2048
+    },
+    {
+      "role": "model",
+      "offset": 4200171904,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4215296384,
+      "length": 30752
+    }
+  ],
+  "random_ranges": [
+    {
+      "role": "model",
+      "offset": 31317088,
+      "length": 1585446912
+    }
+  ],
   "mtp": {
     "enabled": true,
     "reason": "the drafter (41.9 MiB) runs on the CPU with the target's output layer and reads its KV cache",
@@ -57,8 +921,8 @@
     },
     "G4": {
       "vram": 0,
-      "ram_locked": 0,
-      "file_backed": 2241704,
+      "ram_locked": 2241704,
+      "file_backed": 0,
       "disk": 0
     },
     "G5": {
@@ -83,10 +947,10 @@
   "memory": {
     "ram": {
       "budget": 1073741824,
-      "used": 585734553,
+      "used": 587976257,
       "budgeted": true
     },
-    "file_backed": 4243763384,
+    "file_backed": 4241521680,
     "overhead_ram": 201326592
   },
   "compute_calibrated": true,
@@ -95,7 +959,7 @@
     "slots": 1
   },
   "warnings": [
-    "4047.2 MiB stays file-backed: outside every budget, and cold pages fault in from disk"
+    "4045.0 MiB stays file-backed: outside every budget, and cold pages fault in from disk"
   ],
   "tried": [
     {
@@ -135,7 +999,7 @@
       "id": "M7",
       "fits": false,
       "shortfall": {
-        "ram": 2079987113
+        "ram": 2082228817
       }
     },
     {

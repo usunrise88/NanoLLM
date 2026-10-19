@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -33,6 +34,8 @@ type WorkerSpec struct {
 	// (M7, M8), pinned before the load as the server does.
 	Locks        []memlock.Range `json:"locks,omitempty"`
 	DrafterLocks []memlock.Range `json:"drafter_locks,omitempty"`
+	// Random are ranges of the model file read at random (MADV_RANDOM).
+	Random []memlock.Range `json:"random,omitempty"`
 	// Quick skips the depth-N decode, the slowest scenario.
 	Quick bool `json:"quick"`
 	// Place is the worker's NUMA policy and pinned CPUs. numactl applies
@@ -110,6 +113,9 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 		return res, err
 	}
 	defer func() { _ = m.Close() }()
+	if n, err := memlock.AdviseRandom(spec.Load.Path, spec.Random); err == nil && n > 0 {
+		fmt.Fprintf(os.Stderr, "madvise random: %d MiB\n", n>>20)
+	}
 	res.Metrics.LoadMS = ms(time.Since(start))
 	loop := sched.New(m)
 	defer loop.Close()

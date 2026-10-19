@@ -167,6 +167,17 @@ func (r *Runtime) load(ctx context.Context, k pool.Key) (backend.Model, any, err
 		}
 		return nil, nil, err
 	}
+	if p, ok := info.(*plan.Plan); ok && len(p.RandomRanges) > 0 {
+		var ranges []memlock.Range
+		for _, rr := range p.RandomRanges {
+			ranges = append(ranges, memlock.Range{Off: rr.Offset, Len: rr.Length})
+		}
+		if n, err := memlock.AdviseRandom(spec.Path, ranges); err != nil {
+			r.log.Warn("madvise random", "err", err)
+		} else if n > 0 {
+			r.log.Info("madvise random", "mib", n>>20)
+		}
+	}
 	if info == nil {
 		info = spec
 	}

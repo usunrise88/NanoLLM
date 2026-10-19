@@ -2,12 +2,17 @@ package bench
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/usunrise88/nanollm/benchfmt"
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/backend/fake"
+	"github.com/usunrise88/nanollm/internal/plan"
 	"github.com/usunrise88/nanollm/internal/sched"
 )
 
@@ -78,5 +83,24 @@ func TestFakeResultsStayOffThePublicService(t *testing.T) {
 	_, err := (&Client{BaseURL: DefaultSubmitURL}).Submit(context.Background(), res, Anonymous())
 	if err == nil || !strings.Contains(err.Error(), "fake backend") {
 		t.Fatalf("a fake result went to %s: %v", DefaultSubmitURL, err)
+	}
+}
+
+func TestSpawnTimesOut(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs a shell script as the worker")
+	}
+	exe := filepath.Join(t.TempDir(), "slow-worker")
+	if err := os.WriteFile(exe, []byte("#!/bin/sh\nexec sleep 30\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	o := Options{Exe: exe, Backend: fake.New(fake.Options{}), Advisory: true, Timeout: 200 * time.Millisecond}
+	start := time.Now()
+	_, _, err := o.spawn(context.Background(), WorkerSpec{}, plan.Budget{})
+	if err == nil || !strings.Contains(err.Error(), "too slow") {
+		t.Fatalf("got %v", err)
+	}
+	if d := time.Since(start); d > 10*time.Second {
+		t.Fatalf("took %s to give up", d)
 	}
 }
