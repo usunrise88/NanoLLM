@@ -43,6 +43,10 @@ bench:
 EOF
 
 fetch() { curl -sS --cacert "$work/cert.pem" -H 'Accept-Language: en' "$@"; }
+# shows URL TEXT: the page is read whole before grep looks at it. Piping
+# curl into grep -q under pipefail fails at random: grep stops at the first
+# match and curl dies of SIGPIPE.
+shows() { fetch "$1" >"$work/page" && grep -q -- "$2" "$work/page"; }
 fail() {
 	echo "client-e2e: $*" >&2
 	echo "--- benchd log" >&2
@@ -56,9 +60,9 @@ echo "$out"
 id=$(awk '/^sent:/ {print $2}' <<<"$out")
 [ -n "$id" ] || fail "no submission id in: $out"
 
-fetch "$base/benchmarks/s/$id" | grep -q "Intel Core i7-12700H" || fail "the submission page does not show the result"
-fetch "$base/benchmarks" | grep -q "ASUS ROG Zephyrus M16" || fail "/benchmarks does not show the result"
-fetch "$base/api/v1/results?system=asus-rog-zephyrus-m16" | grep -q '"installs": 1' || fail "the results API does not count the install"
+shows "$base/benchmarks/s/$id" "Intel Core i7-12700H" || fail "the submission page does not show the result"
+shows "$base/benchmarks" "ASUS ROG Zephyrus M16" || fail "/benchmarks does not show the result"
+shows "$base/api/v1/results?system=asus-rog-zephyrus-m16" '"installs": 1' || fail "the results API does not count the install"
 
 "$nanollm" bench withdraw -config "$work/nanollm.yaml" "$id" || fail "withdraw failed"
 code=$(fetch -o /dev/null -w '%{http_code}' "$base/benchmarks/s/$id")
@@ -79,5 +83,5 @@ EOF
 	fail "bench run failed: $(cat "$work/run.log")"
 run_id=$(awk '/^sent:/ {print $2}' "$work/run.log")
 [ -n "$run_id" ] || fail "no submission id from the run: $(cat "$work/run.log")"
-fetch "$base/benchmarks/s/$run_id" | grep -q "vram-" || fail "the run's page does not show its presets"
+shows "$base/benchmarks/s/$run_id" "vram-" || fail "the run's page does not show its presets"
 echo "client-e2e: ok ($run_id measured on the fake, submitted and shown)"
