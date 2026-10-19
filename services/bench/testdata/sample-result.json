@@ -4,7 +4,7 @@
   "suite": {
     "id": "standard",
     "version": "v1",
-    "prompts_sha256": "059d9eb2857d7450cb6f694c672b0732dc977731254196615c809a2c51ef318f",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
     "quick": true
   },
   "client": {

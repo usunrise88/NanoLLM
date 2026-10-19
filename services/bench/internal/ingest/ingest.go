@@ -39,7 +39,7 @@ type Suite struct {
 
 // StandardV1Prompts is internal/bench.PromptsSHA256() of NanoLLM for
 // standard/v1. It changes only with a new suite version.
-const StandardV1Prompts = "059d9eb2857d7450cb6f694c672b0732dc977731254196615c809a2c51ef318f"
+const StandardV1Prompts = "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754"
 
 // DefaultSuites are the suites accepted out of the box.
 func DefaultSuites() map[string]Suite {

@@ -55,6 +55,17 @@ func TestChoosePresets(t *testing.T) {
 	}
 }
 
+// TestPromptsPinned fails when the suite's prompts or parameters change, so
+// the change is made on purpose: the bench service refuses results whose
+// hash it does not know.
+func TestPromptsPinned(t *testing.T) {
+	const want = "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754"
+	if got := PromptsSHA256(); got != want {
+		t.Fatalf("standard/%s prompts hash %s, pinned %s: bump SuiteVersion once results are public; "+
+			"until then update this constant, services/bench ingest.StandardV1Prompts and services/bench/testdata/sample-result.json", SuiteVersion, got, want)
+	}
+}
+
 func TestMedianStd(t *testing.T) {
 	m, s := medianStd([]float64{3, 1, 2})
 	if m != 2 || s != 1 {
