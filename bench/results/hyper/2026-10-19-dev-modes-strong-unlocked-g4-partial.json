@@ -1,0 +1,339 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "2b0935f",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "ace20f679e30a39c09a7b17bec14199855469633"
+    },
+    "ggml_cpu_variant": "haswell",
+    "os": "linux",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "AMD",
+      "model": "AMD EPYC 7351P",
+      "cores": 16,
+      "threads": 32,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c"
+      ]
+    },
+    "memory": {
+      "total_bytes": 135036997632
+    },
+    "system": {
+      "vendor": "To Be Filled By O.E.M.",
+      "product": "To Be Filled By O.E.M.",
+      "form_factor": "server",
+      "chassis": "desktop"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "26.04",
+      "kernel_mm": "7.0"
+    },
+    "power": {},
+    "disk": {
+      "type": "hdd"
+    },
+    "extra": [
+      {
+        "key": "numa_nodes",
+        "value": "4"
+      },
+      {
+        "key": "governor",
+        "value": "performance"
+      },
+      {
+        "key": "boost",
+        "value": "1"
+      },
+      {
+        "key": "thp",
+        "value": "madvise"
+      },
+      {
+        "key": "numa_balancing",
+        "value": "1"
+      },
+      {
+        "key": "loadavg_1m",
+        "value": "6.36"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "preset": "ram-8g",
+      "plan_hash": "d55f36973d3444f2",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3,
+        "numa": "interleave",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 52931.575,
+        "pp_tok_s": 45.29748439788709,
+        "tg_tok_s": {
+          "d0": 20.62015713589122
+        },
+        "ttft_ms": 1471.529,
+        "chat_tok_s": 20.319233532502537,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.7905716489964991,
+          "tok_s": 16.06380996013549
+        },
+        "peak_rss": 6979108864,
+        "peak_page_cache": 50339840,
+        "peak_cgroup": 7019945984,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.23058906280010438,
+          "mtp_tok_s": 0.2190777123069195,
+          "pp_tok_s": 1.4129310200990377,
+          "tg_tok_s.d0": 0.27372810727302394,
+          "ttft_ms": 112.0863607774529
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "ram-6g",
+      "plan_hash": "ddd9e9395a6c7d8f",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 16384,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3,
+        "numa": "interleave",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 51107.661,
+        "pp_tok_s": 45.883935909658504,
+        "tg_tok_s": {
+          "d0": 20.674513184779354
+        },
+        "ttft_ms": 1500.126,
+        "chat_tok_s": 20.04863427696927,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.818546475361361,
+          "tok_s": 16.410738923222166
+        },
+        "peak_rss": 6030315520,
+        "peak_page_cache": 50339840,
+        "peak_cgroup": 6069571584,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.3470109340961858,
+          "mtp_tok_s": 0.28569548467597966,
+          "pp_tok_s": 0.3170639791450287,
+          "tg_tok_s.d0": 0.17048112792701828,
+          "ttft_ms": 52.907304968217744
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "ram-4g",
+      "plan_hash": "6b30d01344642d1a",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "interleave",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 25712.26,
+        "pp_tok_s": 26.251812345715177,
+        "tg_tok_s": {
+          "d0": 19.882309287747645
+        },
+        "ttft_ms": 1584.981,
+        "chat_tok_s": 19.837680131725683,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.8129904392918696,
+          "tok_s": 16.127844284823258
+        },
+        "peak_rss": 4507881472,
+        "peak_page_cache": 2208448512,
+        "peak_cgroup": 4496297984,
+        "buffers": {
+          "CPU_Mapped": 2002895427,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 1.2062824359115023,
+          "mtp_tok_s": 0.6909488179594868,
+          "pp_tok_s": 0.11572431278594016,
+          "tg_tok_s.d0": 9.615803204030886,
+          "ttft_ms": 250.59119040048742
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "ram-3g",
+      "plan_hash": "df5cec542192dbbe",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "interleave",
+        "cold": true
+      },
+      "metrics": {
+        "tg_tok_s": {}
+      },
+      "reps": 0,
+      "output": {},
+      "status": "failed",
+      "reason": "tg128: context canceled"
+    },
+    {
+      "preset": "ram-2g",
+      "plan_hash": "c12f1513b0537678",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "interleave",
+        "cold": true
+      },
+      "metrics": {
+        "tg_tok_s": {}
+      },
+      "reps": 0,
+      "output": {},
+      "status": "failed",
+      "reason": "worker: signal: killed: killed under the cgroup limit (out of memory?) 2026/10/19 14:31:26 WARN llama_kv_cache: layer   2: sharing with layer 40. k = 0x76cc377fe040, v = 0x76cc37bfe040 component=llama.cpp"
+    }
+  ],
+  "date": "2026-10-19",
+  "duration_s": 0
+}

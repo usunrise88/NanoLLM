@@ -15,6 +15,7 @@ LABEL=${1:-modes}
 CONFIG=${2:-$HOME/nanollm-data/base.yaml}
 NANOLLM=${NANOLLM:-./dist/nanollm}
 REPS=${REPS:-3}
+TIMEOUT=${TIMEOUT:-15m}
 
 # Presets by mode on the E4B: M6 (8g, 6g), M7 (4g, 3g), M8 (2g, 1.5g), M9 (1g).
 ALL=(ram-8g ram-6g ram-4g ram-3g ram-2g ram-1.5g ram-1g)
@@ -26,7 +27,7 @@ run() { # run NAME ARGS...
 	local name=$1
 	shift
 	echo "=== $(date +%T) $name"
-	nice -n 5 "$NANOLLM" bench --config "$CONFIG" --suite dev --reps "$REPS" --label "$name" "$@"
+	nice -n 5 "$NANOLLM" bench --config "$CONFIG" --suite dev --reps "$REPS" --timeout "$TIMEOUT" --label "$name" "$@"
 }
 
 # shellcheck disable=SC2046
@@ -37,4 +38,7 @@ run "$LABEL-strong-repack" --profile strong --set repack=on,off $(args "${FILE_M
 run "$LABEL-weak" --profile weak $(args "${ALL[@]}")
 # shellcheck disable=SC2046
 run "$LABEL-weak-repack" --profile weak --set repack=on,off $(args "${FILE_MODES[@]}")
+# MADV_RANDOM on the PLE table (the file-backed, randomly read part): on and off.
+# shellcheck disable=SC2046
+run "$LABEL-advise" --profile strong --set env.NANOLLM_NO_ADVISE_RANDOM=0,1 --preset ram-3g --preset ram-2g
 echo "=== $(date +%T) done"
