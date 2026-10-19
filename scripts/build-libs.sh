@@ -77,7 +77,9 @@ if [[ "$GOT" != "$WANT" ]]; then
   echo "build-libs: if the series changed on purpose, write the new hash there." >&2
   exit 1
 fi
-echo "source: $TAG + $([[ $PATCHES -eq 1 ]] && ls "$ROOT"/patches/llama.cpp/*.patch 2>/dev/null | wc -l | tr -d ' ' || echo 0) patches = ${GOT:0:12}"
+NPATCH=0
+[[ $PATCHES -eq 1 ]] && NPATCH=$(ls "$ROOT"/patches/llama.cpp/*.patch 2>/dev/null | wc -l | tr -d ' ')
+echo "source: $TAG + $NPATCH patches = ${GOT:0:12}"
 [[ $PREPARE_ONLY -eq 1 ]] && exit 0
 
 # --- the build ---------------------------------------------------------------
@@ -88,7 +90,9 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   docker build -q -t "$IMAGE" --build-arg VULKAN=$VULKAN -f scripts/build-libs.Dockerfile scripts >/dev/null
 fi
 
-BUILD=$ROOT/.cache/llama.cpp/build-linux_amd64$([[ $PATCHES -eq 0 ]] && echo -upstream)
+SUFFIX=""
+[[ $PATCHES -eq 0 ]] && SUFFIX=-upstream
+BUILD=$ROOT/.cache/llama.cpp/build-linux_amd64$SUFFIX
 mkdir -p "$BUILD" "$ROOT/.cache/ccache"
 CMAKE_VULKAN=()
 [[ $VULKAN -eq 1 ]] && CMAKE_VULKAN=(-DGGML_VULKAN=ON)
@@ -112,7 +116,7 @@ docker run --rm "${DOCKER_CPUS[@]}" -u "$(id -u):$(id -g)" \
 
 # --- the layout fetch-libs.sh --tools makes -----------------------------------
 
-OUT=$ROOT/dist/linux_amd64$([[ $PATCHES -eq 0 ]] && echo -upstream)
+OUT=$ROOT/dist/linux_amd64$SUFFIX
 rm -rf "$OUT/lib" "$OUT/tools"
 mkdir -p "$OUT/lib" "$OUT/tools"
 find "$BUILD/bin" -maxdepth 1 \( -type f -o -type l \) -exec cp -P {} "$OUT/tools/" \;
