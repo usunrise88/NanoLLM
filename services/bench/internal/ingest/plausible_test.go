@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/usunrise88/nanollm/benchfmt"
+	"github.com/usunrise88/nanollm/services/bench/internal/normalize"
 	"github.com/usunrise88/nanollm/services/bench/internal/store"
 )
 
@@ -66,5 +67,72 @@ func TestCeilingUnknown(t *testing.T) {
 	// A refused run is not judged.
 	if p, _ := Plausibility(r, r.Runs[2], "AMD EPYC 9454P", 1.3); p != store.PlausibleUnknown {
 		t.Error(p)
+	}
+}
+
+// EPYC names as the hardware report gives them, then as the service
+// normalizes them: the table is matched on the normalized one.
+func TestHostBandwidthEPYC(t *testing.T) {
+	for _, c := range []struct {
+		model string
+		want  float64 // GB/s
+	}{
+		// Naples: 8 × DDR4-2666 per socket, the P parts single-socket.
+		{"AMD EPYC 7351P 16-Core Processor", 170.7},
+		{"AMD EPYC 7401P 24-Core Processor", 170.7},
+		{"AMD EPYC 7551P 32-Core Processor", 170.7},
+		{"AMD EPYC 7251 8-Core Processor", 170.7 * 2},
+		{"AMD EPYC 7371 16-Core Processor", 170.7 * 2},
+		{"AMD EPYC 7551 32-Core Processor", 170.7 * 2},
+		{"AMD EPYC 7601 32-Core Processor", 170.7 * 2},
+		// The neighbours keep their rows.
+		{"AMD EPYC 7452 32-Core Processor", 204.8 * 2},
+		{"AMD EPYC 7742 64-Core Processor", 204.8 * 2},
+		{"AMD EPYC 7313P 16-Core Processor", 204.8 * 2},
+		{"AMD EPYC 7763 64-Core Processor", 204.8 * 2},
+		{"AMD EPYC 9454P 48-Core Processor", 460.8 * 2},
+	} {
+		cpu := normalize.CPU("AuthenticAMD", c.model)
+		for _, name := range []string{cpu, c.model} {
+			if got := HostBandwidth(benchfmt.Machine{}, name); math.Abs(got-c.want) > 1e-9 {
+				t.Errorf("%q: %v GB/s, want %v", name, got, c.want)
+			}
+		}
+	}
+	// A name that only looks like Naples is not one.
+	if got := HostBandwidth(benchfmt.Machine{}, "AMD EPYC 7V13"); got != 0 {
+		t.Errorf("EPYC 7V13: %v GB/s from a table row, want none", got)
+	}
+}
+
+// The reference machine, a 7351P, decodes E4B at about 20 tok/s; a number
+// well beyond what its memory can deliver is refused, one near it is not.
+func TestPlausibilityEPYCNaples(t *testing.T) {
+	r := sample(60)
+	r.Machine.CPU = benchfmt.CPU{Vendor: "AMD", Model: "AMD EPYC 7351P", Cores: 16, Threads: 32}
+	r.Machine.GPUs = nil
+	r.Machine.Memory = benchfmt.Memory{TotalBytes: 128 << 30}
+	r.Machine.System = benchfmt.System{FormFactor: benchfmt.FormServer}
+	cost := Models["gemma-4-e4b-qat"]
+	total := float64(cost.LayerBytes + cost.OutputBytes)
+	run := benchfmt.Run{Preset: "ram-8g", Status: benchfmt.StatusOK, Reps: 3,
+		Plan: benchfmt.Plan{Mode: "ram-full", Device: "llamacpp:cpu", NCtx: 8192}}
+	cpu := normalize.CPU("AMD", r.Machine.CPU.Model)
+	if got, want := Ceiling(r, run, cpu, 1), 170.7e9/total; math.Abs(got-want) > 1e-6 {
+		t.Fatalf("7351P ceiling %v tok/s, want %v", got, want)
+	}
+	run.Metrics.TGTokS = benchfmt.TG{D0: 20.8, DN: 19}
+	run.Metrics.ChatTokS = 20.2
+	if p, c := Plausibility(r, run, cpu, 1.3); p != store.PlausibleOK || c < 80 || c > 90 {
+		t.Errorf("a measured 20.8 tok/s: %q under %v tok/s", p, c)
+	}
+	run.Metrics.TGTokS.D0 = 90
+	if p, _ := Plausibility(r, run, cpu, 1.3); p != store.PlausibleNo {
+		t.Errorf("90 tok/s on a 7351P: %q", p)
+	}
+	// A 7551 may be a two-socket machine reading both sockets' memory.
+	cpu = normalize.CPU("AMD", "AMD EPYC 7551 32-Core Processor")
+	if p, _ := Plausibility(r, run, cpu, 1.3); p != store.PlausibleOK {
+		t.Errorf("90 tok/s on a 7551: %q", p)
 	}
 }
