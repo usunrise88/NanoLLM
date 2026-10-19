@@ -67,6 +67,13 @@ var hostBandwidth = table(
 	`epyc 8\d\d4`, 230.4*2, // Siena, 6 × DDR5-4800
 	`epyc 7\d\d3`, 204.8*2, // Milan, 8 × DDR4-3200
 	`epyc 7\d\d2`, 204.8*2,
+	// Naples (7001), 8 × DDR4-2666 per socket. The name does not tell the
+	// sockets, so all but the P parts, which are single-socket, count two.
+	// This is the peak of the whole socket, not what is reached: a 7351P has
+	// 4 NUMA nodes at 36.7 GB/s each, and llama.cpp, which does not place
+	// weights per node, decodes E4B at about 20 tok/s on it.
+	`epyc 7\d\d1p`, 170.7,
+	`epyc 7\d\d1`, 170.7*2,
 	`threadripper pro`, 409.6, // 8 × DDR5-6400
 	`threadripper`, 204.8,
 	`xeon`, 614.4*2,

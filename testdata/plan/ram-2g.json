@@ -929,6 +929,13 @@
       "length": 43891840
     }
   ],
+  "random_ranges": [
+    {
+      "role": "model",
+      "offset": 31317088,
+      "length": 1585446912
+    }
+  ],
   "mtp": {
     "enabled": true,
     "reason": "the drafter (41.9 MiB) runs on the CPU with the target's output layer and reads its KV cache",
@@ -1040,7 +1047,7 @@
       "id": "M7",
       "fits": false,
       "shortfall": {
-        "ram": 1006245289
+        "ram": 1008486993
       }
     },
     {

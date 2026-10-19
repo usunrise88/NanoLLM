@@ -55,6 +55,11 @@ type Options struct {
 	// a cold read of the disk. For sweeps of compute settings; the memory
 	// numbers of such a run are not the budget's.
 	Advisory bool
+	// Timeout bounds one worker (all the repetitions of one scenario set); a
+	// run that has not finished by then is recorded as failed, too slow. A
+	// budget so tight that the weights fault in from the disk on every token
+	// would otherwise take hours. Zero is no limit.
+	Timeout time.Duration
 
 	// Exe is the binary to run workers with; empty is this one.
 	Exe     string
@@ -326,6 +331,9 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 			ws.Locks = append(ws.Locks, r)
 		}
 	}
+	for _, rr := range p.RandomRanges {
+		ws.Random = append(ws.Random, memlock.Range{Off: rr.Offset, Len: rr.Length})
+	}
 	run.PlanHash = planHash(ws)
 	run.Plan = benchfmt.Plan{
 		Mode: string(p.Mode), Device: spec.Device, GPULayers: p.GPULayers, NCtx: p.NCtx, Slots: p.Slots,
@@ -353,6 +361,11 @@ func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (
 		enforcement = "strict"
 	}
 	ws.Strict = strict
+	if o.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, o.Timeout)
+		defer cancel()
+	}
 	in, _ := json.Marshal(ws)
 	cmdline := []string{o.Exe, "bench", "worker"}
 	if strict {
@@ -380,6 +393,9 @@ func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()
 	var wr WorkerResult
+	if o.Timeout > 0 && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return wr, enforcement, fmt.Errorf("too slow: no result within %s (a budget that leaves the file-backed weights no page cache thrashes the disk)", o.Timeout)
+	}
 	if jerr := json.Unmarshal(stdout.Bytes(), &wr); jerr != nil {
 		tail := strings.TrimSpace(stderr.String())
 		if i := strings.LastIndex(tail, "\n"); i >= 0 {

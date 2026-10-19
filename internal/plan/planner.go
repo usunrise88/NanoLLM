@@ -326,7 +326,8 @@ type trial struct {
 	cells       KVCells
 	kvBytes     int64
 	locks       []lockedTensor
-	repacked    []string // target tensors overridden to the repacked buffer (M8)
+	random      []gguf.Tensor // file-backed tensors read at random (G1)
+	repacked    []string      // target tensors overridden to the repacked buffer (M8)
 	nOutputsMax int
 	mem         Memory
 	short       Shortfall

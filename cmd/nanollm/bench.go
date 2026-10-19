@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/usunrise88/nanollm/benchfmt"
 	"github.com/usunrise88/nanollm/internal/backend"
@@ -61,6 +62,7 @@ func benchCommand(args []string) error {
 	numaFlag := fs.String("numa", "", "dev suite: off, interleave or node:N")
 	cold := fs.Bool("cold", false, "evict the model file from the page cache before each run (a strict budget does it anyway)")
 	advisory := fs.Bool("advisory", false, "dev suite: plan for the budget but do not enforce it (no cgroup, no cold start): fast sweeps of compute settings")
+	timeout := fs.Duration("timeout", 25*time.Minute, "one run's time limit (a worker that has not finished is recorded as failed, too slow); 0 is none")
 	label := fs.String("label", "", "name of this run, for the result file")
 	machine := fs.String("machine", "", "machine directory under bench/results/ (default: the host's short name)")
 	pos, err := parseFlags(fs, args)
@@ -139,7 +141,7 @@ func benchCommand(args []string) error {
 	defer stop()
 	res, err := bench.Run(ctx, bench.Options{
 		Manifest: m, ModelPath: modelPath, DrafterPath: drafterPath, Backend: b, LibDir: libDir,
-		Suite: *suite, Full: *full, Presets: presets, Reps: *reps, Variants: variants, Place: place, Cold: *cold, Advisory: *advisory,
+		Suite: *suite, Full: *full, Presets: presets, Reps: *reps, Variants: variants, Place: place, Cold: *cold, Advisory: *advisory, Timeout: *timeout,
 		Version: version, Tag: llamacpp.PinnedTag, Commit: llamacpp.PinnedCommit,
 		Events: func(e bench.Event) {
 			switch e.Type {

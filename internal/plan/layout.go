@@ -53,6 +53,13 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 	weight := func(role string, tn gguf.Tensor, g gguf.Group, align int64, lock bool) {
 		var b Bytes
 		dev := onDevice(role, tn)
+		// The small tensors every token reads (norms, scales: G4) sit between
+		// the big matrices of the file. Left to the page cache, each is a
+		// fault that reads a window of its neighbours from the disk whenever
+		// a tight budget has evicted it; a few MiB locked end that.
+		if tn.Group == gguf.G4 && !dev && !spec.hostAnon && !spec.gpu {
+			lock = true
+		}
 		switch {
 		case dev && spec.unified && tn.Group == gguf.G1 && spec.pleFile:
 			b.FileBacked = tn.Bytes
@@ -72,6 +79,9 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 			t.locks = append(t.locks, lockedTensor{role: role, t: tn, pad: align})
 		case tn.Group == gguf.G1 && spec.pleFile:
 			b.FileBacked = tn.Bytes
+			if role == "model" {
+				t.random = append(t.random, tn)
+			}
 		case spec.hostAnon:
 			b.RAMLocked = tn.Bytes
 		case spec.repack && !spec.gpu && repackable(g):
@@ -79,6 +89,9 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 			b.RAMLocked = tn.Bytes
 		default:
 			b.FileBacked = tn.Bytes
+			if role == "model" && tn.Group == gguf.G1 {
+				t.random = append(t.random, tn)
+			}
 		}
 		add(g, b)
 

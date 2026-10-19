@@ -384,8 +384,17 @@ func TestM7Repacks(t *testing.T) {
 	if !rp.OK() || !lk.OK() {
 		t.Fatalf("refused: %q %q", rp.Refused, lk.Refused)
 	}
-	if !rp.Repack || len(rp.LockRanges) != 0 || rp.LoadMode != backend.LoadMMap || rp.LazyMode != backend.LazyOn {
-		t.Errorf("repacked M7: repack %v, %d ranges, load %s lazy %s", rp.Repack, len(rp.LockRanges), rp.LoadMode, rp.LazyMode)
+	if !rp.Repack || rp.LoadMode != backend.LoadMMap || rp.LazyMode != backend.LazyOn {
+		t.Errorf("repacked M7: repack %v, load %s lazy %s", rp.Repack, rp.LoadMode, rp.LazyMode)
+	}
+	// Only the small tensors every token reads (G4) are range-locked: the
+	// matrices are anonymous repacked copies, the PLE table stays in the file.
+	var locked int64
+	for _, r := range rp.LockRanges {
+		locked += r.Length
+	}
+	if len(rp.LockRanges) == 0 || locked > 4*model.Target.Groups[gguf.G4] {
+		t.Errorf("repacked M7 locks %d bytes in %d ranges, want about the %d bytes of G4", locked, len(rp.LockRanges), model.Target.Groups[gguf.G4])
 	}
 	if lk.Repack || len(lk.LockRanges) == 0 {
 		t.Errorf("M7 without repack: repack %v, %d ranges", lk.Repack, len(lk.LockRanges))

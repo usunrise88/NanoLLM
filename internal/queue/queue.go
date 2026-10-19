@@ -60,6 +60,11 @@ type Queue struct {
 	cancel  map[string]context.CancelFunc
 	subs    map[string]map[chan *Job]struct{}
 	running string
+	// hooks counts the webhook deliveries in flight; noHooks is set (under
+	// mu) once Close has stopped the worker, so no delivery starts after
+	// Close began waiting for them.
+	hooks   sync.WaitGroup
+	noHooks bool
 }
 
 // Open opens the database, puts jobs a restart interrupted back in the queue
@@ -91,7 +96,9 @@ func Open(svc core.Service, opts Options) (*Queue, error) {
 }
 
 // Close stops the worker; a job in progress is left running in the database
-// and resumes on the next start.
+// and resumes on the next start. A webhook for a job that just finished is
+// still delivered: Close waits for the attempt in flight (at most the HTTP
+// client's timeout) but not for the waits between retries.
 func (q *Queue) Close() error {
 	close(q.close)
 	q.mu.Lock()
@@ -100,6 +107,10 @@ func (q *Queue) Close() error {
 	}
 	q.mu.Unlock()
 	<-q.done
+	q.mu.Lock()
+	q.noHooks = true
+	q.mu.Unlock()
+	q.hooks.Wait()
 	return q.st.close()
 }
 
@@ -450,10 +461,22 @@ func (q *Queue) notifyWebhook(j *Job) {
 	payload := *j
 	payload.Results = nil // the receiver fetches them; a webhook stays small
 	body, _ := json.Marshal(map[string]any{"type": "job." + j.Status, "job": payload})
+	q.mu.Lock()
+	if q.noHooks { // a cancel that raced Close: the queue is gone
+		q.mu.Unlock()
+		return
+	}
+	q.hooks.Add(1)
+	q.mu.Unlock()
 	go func() {
+		defer q.hooks.Done()
 		for attempt := range 4 {
 			if attempt > 0 {
-				time.Sleep(time.Duration(1<<attempt) * time.Second)
+				select {
+				case <-time.After(time.Duration(1<<attempt) * time.Second):
+				case <-q.close: // shutting down: the retries are given up
+					return
+				}
 			}
 			req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, j.WebhookURL, bytes.NewReader(body))
 			if err != nil {

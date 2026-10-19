@@ -149,3 +149,29 @@ func TestLoadFailureIsReported(t *testing.T) {
 		t.Fatal("failed load left an instance")
 	}
 }
+
+// An instance the pool loads starts pinned when the Pinned hook says so, and
+// is then safe from eviction like one pinned afterwards.
+func TestPinnedHookPinsNewInstances(t *testing.T) {
+	c := &counter{}
+	p := New(c.load, 1)
+	defer p.Close()
+	p.Pinned = func(k Key) bool { return k.Model == "a" }
+	_, release, err := p.Acquire(context.Background(), key("a"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	release()
+	if st := p.Status(); len(st) != 1 || !st[0].Pinned {
+		t.Fatalf("status %+v", st)
+	}
+	if _, _, err := p.Acquire(context.Background(), key("b")); !errors.Is(err, ErrBusy) {
+		t.Fatalf("a pinned instance was evicted: %v", err)
+	}
+	p.Pin(key("a"), false)
+	inst, release, err := p.Acquire(context.Background(), key("b"))
+	if err != nil || inst.pinned {
+		t.Fatalf("b after unpinning a: %v", err)
+	}
+	release()
+}
