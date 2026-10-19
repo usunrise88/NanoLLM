@@ -83,6 +83,7 @@ func (m *model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.Se
 			}
 		}
 	}
+	m.tuneThreads(m.batchTokens(steps, drafts))
 	if rc := llamaProcess(m.ctx, LlamaProcessTypeDecode, m.batch); rc != 0 {
 		return nil, m.decodeError(rc, steps)
 	}
@@ -449,4 +450,42 @@ func (m *model) RestoreSeq(seq int, state []byte) error {
 		return fmt.Errorf("llamacpp: restoring slot %d failed", seq)
 	}
 	return nil
+}
+
+// batchThreadsMinTokens is the batch size from which the prompt-processing
+// team of threads (LoadSpec.ThreadsBatch) is used. llama.cpp switches to it for
+// any batch of more than one token, which would put the verification of a
+// few MTP drafts on the big team: decode is limited by memory bandwidth and
+// peaks at fewer threads than prefill, which is limited by arithmetic (E4B on
+// 16 cores: 20.5 tok/s decoding on 16 threads, 4.2 on 32; prefill 44.6 on 16
+// and 50.6 on 32).
+const batchThreadsMinTokens = 16
+
+// batchTokens is the number of tokens the batch holds.
+func (m *model) batchTokens(steps []backend.SeqStep, drafts [][]backend.Token) int {
+	n := 0
+	for i, s := range steps {
+		n += len(s.Tokens)
+		if drafts != nil {
+			n += len(drafts[i])
+		}
+	}
+	return n
+}
+
+// tuneThreads picks the size of the team for a batch of n tokens: the decode
+// team (Threads) for small batches, ThreadsBatch for prompt chunks.
+func (m *model) tuneThreads(n int) {
+	threads, batch := int32(m.spec.Threads), int32(m.spec.ThreadsBatch)
+	if threads <= 0 || batch <= 0 || batch == threads {
+		return // llama.cpp's own choice is the only one
+	}
+	want := threads
+	if n >= batchThreadsMinTokens {
+		want = batch
+	}
+	if want != m.batchThreads {
+		llamaSetNThreads(m.ctx, threads, want)
+		m.batchThreads = want
+	}
 }

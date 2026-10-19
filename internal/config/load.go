@@ -216,6 +216,9 @@ func (c *Config) Validate() error {
 	if err := ValidNUMA(c.Devices.NUMA); err != nil {
 		return fmt.Errorf("devices.numa: %w", err)
 	}
+	if c.Devices.CPUThreadsBatch < 0 {
+		return fmt.Errorf("devices.cpu_threads_batch must not be negative, got %d", c.Devices.CPUThreadsBatch)
+	}
 	if c.Devices.CPUThreads < 0 {
 		return fmt.Errorf("devices.cpu_threads must not be negative, got %d", c.Devices.CPUThreads)
 	}

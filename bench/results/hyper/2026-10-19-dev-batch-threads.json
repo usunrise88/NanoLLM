@@ -1,0 +1,322 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "3529b68-dirty",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "ace20f679e30a39c09a7b17bec14199855469633"
+    },
+    "ggml_cpu_variant": "haswell",
+    "os": "linux",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "AMD",
+      "model": "AMD EPYC 7351P",
+      "cores": 16,
+      "threads": 32,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c"
+      ]
+    },
+    "memory": {
+      "total_bytes": 135036997632
+    },
+    "system": {
+      "vendor": "To Be Filled By O.E.M.",
+      "product": "To Be Filled By O.E.M.",
+      "form_factor": "server",
+      "chassis": "desktop"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "26.04",
+      "kernel_mm": "7.0"
+    },
+    "power": {},
+    "disk": {
+      "type": "hdd"
+    },
+    "extra": [
+      {
+        "key": "numa_nodes",
+        "value": "4"
+      },
+      {
+        "key": "governor",
+        "value": "performance"
+      },
+      {
+        "key": "boost",
+        "value": "1"
+      },
+      {
+        "key": "thp",
+        "value": "madvise"
+      },
+      {
+        "key": "numa_balancing",
+        "value": "1"
+      },
+      {
+        "key": "loadavg_1m",
+        "value": "21.19"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "preset": "ram-8g",
+      "plan_hash": "548256fb6e70a2e2",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "advisory",
+        "threads_batch": 24,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3,
+        "numa": "interleave"
+      },
+      "metrics": {
+        "load_ms": 52673.184,
+        "pp_tok_s": 48.44690391544471,
+        "tg_tok_s": {
+          "d0": 20.290424923363275
+        },
+        "ttft_ms": 1393.986,
+        "chat_tok_s": 20.03492061422214,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.7792146875092691,
+          "tok_s": 15.611504405684121
+        },
+        "peak_rss": 6986657792,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.18096219712049766,
+          "mtp_tok_s": 0.22067173469810422,
+          "pp_tok_s": 0.24064605723781035,
+          "tg_tok_s.d0": 0.254709038630897,
+          "ttft_ms": 40.59784211424715
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "numa=interleave,threads=16,threads_batch=24"
+    },
+    {
+      "preset": "ram-8g",
+      "plan_hash": "0b40c2f3c656a092",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "advisory",
+        "threads_batch": 24,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 54489.561,
+        "pp_tok_s": 47.10292164398782,
+        "tg_tok_s": {
+          "d0": 18.72447027765151
+        },
+        "ttft_ms": 1449.135,
+        "chat_tok_s": 18.99428066041742,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.43982406596365387,
+          "tok_s": 8.354141750119586
+        },
+        "peak_rss": 6983868416,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.5163050798662205,
+          "mtp_tok_s": 2.093299693344211,
+          "pp_tok_s": 0.15110438328935916,
+          "tg_tok_s.d0": 0.5001465107251704,
+          "ttft_ms": 36.123595299102355
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "numa=off,threads=16,threads_batch=24"
+    },
+    {
+      "preset": "ram-8g",
+      "plan_hash": "5c5211bfa4f38057",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "advisory",
+        "threads_batch": 32,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3,
+        "numa": "interleave"
+      },
+      "metrics": {
+        "load_ms": 54724.578,
+        "pp_tok_s": 50.6132188810868,
+        "tg_tok_s": {
+          "d0": 20.521838454165724
+        },
+        "ttft_ms": 1604.046,
+        "chat_tok_s": 20.0255978292257,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.21128753866785163,
+          "tok_s": 4.231159275689371
+        },
+        "peak_rss": 6988349440,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.06128887841394193,
+          "mtp_tok_s": 0.21638670276319202,
+          "pp_tok_s": 0.40358113972449416,
+          "tg_tok_s.d0": 0.17642900199756398,
+          "ttft_ms": 110.41269920318646
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "numa=interleave,threads=16,threads_batch=32"
+    },
+    {
+      "preset": "ram-8g",
+      "plan_hash": "cf51bec9a5e92d28",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "advisory",
+        "threads_batch": 32,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 53844.345,
+        "pp_tok_s": 47.48852348655692,
+        "tg_tok_s": {
+          "d0": 19.814619623649254
+        },
+        "ttft_ms": 1786.694,
+        "chat_tok_s": 18.70191715103627,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.11375853503598007,
+          "tok_s": 2.127502697466156
+        },
+        "peak_rss": 6987804672,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.4713822948536901,
+          "mtp_tok_s": 0.045918526360244426,
+          "pp_tok_s": 1.0134176269543569,
+          "tg_tok_s.d0": 1.012564088804569,
+          "ttft_ms": 273.3358976284187
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "numa=off,threads=16,threads_batch=32"
+    }
+  ],
+  "date": "2026-10-19",
+  "duration_s": 892.686081251
+}

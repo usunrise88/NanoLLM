@@ -30,6 +30,7 @@ devices:
   default: auto           # auto | cpu | gpu | npu | llamacpp:vulkan0 ...
   fallback: true
   cpu_threads: 0          # 0 = physical cores
+  cpu_threads_batch: 0    # prompt processing; 0 = cpu_threads
   numa: auto              # auto | off | interleave | node:N (several-node machines)
 
 models:

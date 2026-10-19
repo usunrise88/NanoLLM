@@ -48,6 +48,10 @@ type model struct {
 	// batch asks for no more output rows, so Step counts them first.
 	nOutputsMax int
 
+	// batchThreads is the n_threads_batch the context currently has, which
+	// tuneThreads moves between the decode and the prefill team.
+	batchThreads int32
+
 	// dft is the MTP drafter, nil without one.
 	dft *drafter
 
@@ -98,7 +102,8 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 
 	loadMu.Lock()
 	defer loadMu.Unlock()
-	m := &model{b: b, spec: spec}
+	spec = spec.WithDefaultThreads()
+	m := &model{b: b, spec: spec, batchThreads: int32(spec.ThreadsBatch)}
 	untap := addLogTap(func(_ GgmlLogLevel, line string) { m.loadLog = append(m.loadLog, line) })
 	defer untap()
 

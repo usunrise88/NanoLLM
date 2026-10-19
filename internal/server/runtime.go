@@ -39,9 +39,10 @@ type PlaceRequest struct {
 	Override config.ModelOverride
 	// ModelPath and DrafterPath are the files on disk; empty for a backend
 	// that needs none (fake).
-	ModelPath   string
-	DrafterPath string
-	Threads     int
+	ModelPath    string
+	DrafterPath  string
+	Threads      int
+	ThreadsBatch int
 }
 
 // Placer turns a model and a device into a placement: the planner's job.
@@ -268,7 +269,7 @@ func (r *Runtime) placement(ctx context.Context, m registry.Manifest, device str
 	if err != nil {
 		return Placement{}, err
 	}
-	req := PlaceRequest{Manifest: m, Backend: dev.Backend, Device: dev, Override: r.cfg.Models.Overrides[m.ID], Threads: r.cfg.Devices.CPUThreads}
+	req := PlaceRequest{Manifest: m, Backend: dev.Backend, Device: dev, Override: r.cfg.Models.Overrides[m.ID], Threads: r.cfg.Devices.CPUThreads, ThreadsBatch: r.cfg.Devices.CPUThreadsBatch}
 	if dev.Backend != config.BackendFake {
 		if r.store == nil {
 			return Placement{}, core.Errorf(core.CodeModelUnavailable, "no model store is configured")
@@ -312,7 +313,7 @@ func DefaultPlacer(_ context.Context, req PlaceRequest) (Placement, error) {
 	}
 	spec := backend.LoadSpec{
 		Path: req.ModelPath, Device: req.Device.Selector(), NCtx: nctx, Slots: slots,
-		NBatch: 512, NUBatch: 512, Threads: req.Threads, KVTypeK: kv, KVTypeV: kv,
+		NBatch: 512, NUBatch: 512, Threads: req.Threads, ThreadsBatch: req.ThreadsBatch, KVTypeK: kv, KVTypeV: kv,
 		FlashAttention: true, LoadMode: backend.LoadMMap, LazyMode: backend.LazyOff, SWAFull: true,
 	}
 	if req.Device.Type == backend.GPU {

@@ -111,6 +111,10 @@ type Devices struct {
 	Fallback bool `yaml:"fallback"`
 	// CPUThreads is the CPU thread budget. Zero means one per physical core.
 	CPUThreads int `yaml:"cpu_threads"`
+	// CPUThreadsBatch is the thread count for prompt processing; zero is
+	// the same as CPUThreads. Prefill is limited by arithmetic and takes
+	// more threads than decoding, which memory bandwidth limits.
+	CPUThreadsBatch int `yaml:"cpu_threads_batch"`
 	// NUMA is the memory placement on a machine with several NUMA nodes:
 	// auto (interleave when there are several nodes), off (the kernel's
 	// default), interleave, or node:N (memory and threads on one node). A
