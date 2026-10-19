@@ -183,7 +183,7 @@ type Run struct {
 	Status   string  `json:"status"`
 	Reason   string  `json:"reason,omitempty"`
 	// Variant names what a development sweep changed against the preset
-	// ("threads=8,kv=q8_0"); empty for the preset as planned.
+	// ("threads=8,mtp=off"); empty for the preset as planned.
 	Variant string `json:"variant,omitempty"`
 	// SameAs names the preset whose run this one shares because their plans
 	// are identical (deduplicated by plan hash).

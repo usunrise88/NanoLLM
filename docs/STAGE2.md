@@ -44,7 +44,7 @@
 | --- | --- | --- |
 | 2.0 Основа замеров | в работе | потоки, `bench` (перебор, профили, compare, cgroup), NUMA в процессе, `membw`: юнит-тесты и `-race`; метрики и свипы на hyper |
 | 2.1 Своя сборка llama.cpp | в работе | `scripts/build-libs.sh`, Dockerfile, `patches/llama.cpp`; сборка и CI ещё не запущены |
-| 2.2 Гейт v0.1, CPU | в работе | файлы golden по варианту CPU и KV, тест MTP q8_0; golden `haswell` ещё не записаны |
+| 2.2 Гейт v0.1, CPU | в работе | файлы golden по варианту CPU; golden `haswell` (E4B, обычный и MTP) записаны |
 | 2.3 Режимы памяти | не начато | |
 | 2.4 O1, качество | в работе | `kldcorpus` + манифест, `eval gate`, `en-instruct`; эталон и порог KLD ещё не сняты |
 | 2.5 Трек оптимизаций | не начато | |
@@ -102,7 +102,7 @@
   сравнение, cold и strict; memlock поднят.
 - **2-B «Своя сборка»** (2.1): сборка с пустой серией патчей неотличима от
   upstream.
-- **2-C «Гейт CPU»** (2.2): golden для `haswell`, MTP с f16 и q8_0, round-trip.
+- **2-C «Гейт CPU»** (2.2): golden для `haswell`, эквивалентность MTP, round-trip.
 - **2-D «Режимы»** (2.3): все `ram-*` под strict, план сходится с замером.
 - **2-E «Качество»** (2.4): эталон, порог KLD, отчёт по способностям, оценка
   человеком, решения.
@@ -132,7 +132,7 @@
    `set_mempolicy(MPOL_INTERLEAVE)` до загрузки, `llama_numa_init` в bindgen,
    настройка `devices.numa`. Проверка по `/proc/<pid>/numa_maps`.
 3. **`bench` для разработки.** Перебор `--set key=a,b` (threads, n_batch,
-   n_ubatch, kv, n_ctx, draft_max, draft_p_min, repack, numa, mode); профили
+   n_ubatch, n_ctx, draft_max, draft_p_min, repack, numa, mode); профили
    `--profile strong|weak`; в `dev` 5 повторов, разброс и для chat и MTP;
    результаты в `bench/results/<machine>/<date>-<suite>-<label>.json` без
    перезаписи; `bench compare A B`; `--cold` (вытеснение файла модели через
@@ -165,11 +165,11 @@
 
 ## 2.2 Гейт v0.1, CPU-часть
 
-- Golden на вариант CPU: `cpu-<variant>[-<kv>].json`, `cpu-mtp-<variant>[-<kv>].json`;
+- Golden на вариант CPU: `cpu-<variant>.json`, `cpu-mtp-<variant>.json`;
   существующие переименовываются с `-sapphirerapids`; глобы в `TestNativeGolden`
-  и `TestNativeMTPMatchesServer`; `tools/golden` получает `-kv`, `-ctkd`/`-ctvd`.
-  Записываются golden `haswell` для E4B и tiny.
-- Эквивалентность MTP для KV f16 и q8_0, acceptance по типам KV.
+  и `TestNativeMTPMatchesServer`.
+  Записаны golden `haswell` для E4B (`scripts/record-golden.sh`); для tiny — нет: фикстура собирается через torch и transformers, которых на hyper нет.
+- Эквивалентность MTP, acceptance.
 - Round-trip состояния в другой слот.
 - В каталоге `verified: [llamacpp:cpu]`.
 

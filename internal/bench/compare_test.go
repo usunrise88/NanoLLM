@@ -69,14 +69,14 @@ func TestCompareOneSweep(t *testing.T) {
 }
 
 func TestParseSets(t *testing.T) {
-	vs, err := ParseSets([]string{"threads=4,8", "kv=f16,q8_0"})
+	vs, err := ParseSets([]string{"threads=4,8", "mtp=on,off"})
 	if err != nil || len(vs) != 4 {
 		t.Fatalf("%v %v", vs, err)
 	}
-	if vs[0].String() != "kv=f16,threads=4" || vs[3].String() != "kv=q8_0,threads=8" {
+	if vs[0].String() != "mtp=on,threads=4" || vs[3].String() != "mtp=off,threads=8" {
 		t.Errorf("order/labels: %v", vs)
 	}
-	for _, bad := range []string{"threads", "threads=x", "nope=1", "kv=f32", "numa=bogus", "draft_p_min=2"} {
+	for _, bad := range []string{"threads", "threads=x", "nope=1", "mtp=maybe", "numa=bogus", "draft_p_min=2"} {
 		if _, err := ParseSets([]string{bad}); err == nil {
 			t.Errorf("%q should be refused", bad)
 		}
@@ -104,14 +104,14 @@ func TestParseNUMA(t *testing.T) {
 }
 
 func TestVariantApplies(t *testing.T) {
-	vs, err := ParseSets([]string{"n_batch=256", "kv=q8_0", "mode=M7", "mtp=off", "threads=6", "threads_batch=12", "repack=off", "load=mmap", "lazy=on", "env.OMP_PROC_BIND=close"})
+	vs, err := ParseSets([]string{"n_batch=256", "mode=M7", "mtp=off", "threads=6", "threads_batch=12", "repack=off", "load=mmap", "lazy=on", "env.OMP_PROC_BIND=close"})
 	if err != nil || len(vs) != 1 {
 		t.Fatal(vs, err)
 	}
 	v := vs[0]
 	var req plan.Request
 	v.Plan(&req)
-	if req.NBatch != 256 || req.KVType != "q8_0" || req.Mode != plan.RAMPLEDisk || !req.NoMTP {
+	if req.NBatch != 256 || req.Mode != plan.RAMPLEDisk || !req.NoMTP {
 		t.Errorf("request %+v", req)
 	}
 	spec := backend.LoadSpec{Repack: true}
