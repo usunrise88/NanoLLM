@@ -1,0 +1,6 @@
+VARIANT("real", (real::gemm_q4_0_8x8_q8_0_u8_avx<block_q4_0x8>))
+VARIANT("g-r4", (gemm_u8<0, 1, 1>))
+VARIANT("g-r4-shuf", (gemm_u8<1, 1, 1>))
+VARIANT("g-r8", (gemm_u8<0, 1, 2>))
+VARIANT("g-r8-shuf", (gemm_u8<1, 1, 2>))
+VARIANT("g-r4-noxor*", (gemm_u8<0, 0, 1>))
