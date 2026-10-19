@@ -3,6 +3,7 @@ package sched
 import (
 	"context"
 	"errors"
+	"runtime"
 	"sort"
 	"strconv"
 	"sync"
@@ -285,6 +286,14 @@ func (l *Loop) Busy() int {
 
 func (l *Loop) run() {
 	defer close(l.done)
+	// The loop is the only goroutine that calls Step, and ggml's CPU backend
+	// runs its graphs on an OpenMP team owned by the thread that calls it:
+	// libgomp keeps one pool of workers per calling thread. A goroutine the
+	// Go scheduler moves to another thread between steps would build a new
+	// team each time and leave the old one spinning, and the decode rate at
+	// many threads collapses. Pinning the loop to one thread keeps one team.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	for {
 		l.admit()
 		active := l.active()
