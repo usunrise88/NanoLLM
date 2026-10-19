@@ -30,12 +30,14 @@ const SuiteVersion = "v1"
 // Generation parameters every measurement uses: greedy, a fixed seed, and
 // end-of-generation tokens banned so every run decodes the same length.
 const (
-	PPTokens   = 512
-	TGTokens   = 128
-	DepthN     = 4096
-	ChatTokens = 128
-	Seed       = 42
-	Reps       = 3
+	PPTokens = 512
+	TGTokens = 128
+	// SlowTGTokens is the decode length of a Slow run (WorkerSpec.Slow).
+	SlowTGTokens = 12
+	DepthN       = 4096
+	ChatTokens   = 128
+	Seed         = 42
+	Reps         = 3
 	// DevReps is the default for the dev suite: enough repetitions for a
 	// spread that `bench compare` can judge a change against.
 	DevReps = 5

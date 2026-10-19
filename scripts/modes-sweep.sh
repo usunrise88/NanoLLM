@@ -7,7 +7,12 @@
 #
 #   scripts/modes-sweep.sh [LABEL] [CONFIG]
 #
-# Results go to bench/results/<host>/ (one file per run, never overwritten).
+# M6 and M7 (ram-8g … ram-3g) run in full. M8 and M9 (ram-2g and below) read
+# part of the weights from the disk on every token: on a hard disk that is
+# seconds per token, so they run with --slow (pp and 12 decode tokens, one
+# repetition) and a time limit; a run that does not finish is recorded as too
+# slow. Results go to bench/results/<host>/ (one file per run, never
+# overwritten).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -16,29 +21,34 @@ CONFIG=${2:-$HOME/nanollm-data/base.yaml}
 NANOLLM=${NANOLLM:-./dist/nanollm}
 REPS=${REPS:-3}
 TIMEOUT=${TIMEOUT:-15m}
+SLOW_TIMEOUT=${SLOW_TIMEOUT:-12m}
 
-# Presets by mode on the E4B: M6 (8g, 6g), M7 (4g, 3g), M8 (2g, 1.5g), M9 (1g).
-ALL=(ram-8g ram-6g ram-4g ram-3g ram-2g ram-1.5g ram-1g)
-FILE_MODES=(ram-4g ram-3g ram-2g ram-1.5g)
+RESIDENT=(ram-8g ram-6g ram-4g ram-3g) # M6, M6, M7, M7
+STREAMING=(ram-2g ram-1.5g ram-1g)     # M8, M8, M9
+M7=(ram-4g ram-3g)
+M8=(ram-2g ram-1.5g)
 
-args() { for p in "$@"; do printf -- '--preset %s ' "$p"; done; }
+presets() { for p in "$@"; do printf -- '--preset\n%s\n' "$p"; done; }
 
 run() { # run NAME ARGS...
 	local name=$1
 	shift
 	echo "=== $(date +%T) $name"
-	nice -n 5 "$NANOLLM" bench --config "$CONFIG" --suite dev --reps "$REPS" --timeout "$TIMEOUT" --label "$name" "$@"
+	nice -n 5 "$NANOLLM" bench --config "$CONFIG" --suite dev --label "$name" "$@"
 }
+full() { local name=$1; shift; run "$name" --reps "$REPS" --timeout "$TIMEOUT" "$@"; }
+slow() { local name=$1; shift; run "$name" --slow --reps 1 --timeout "$SLOW_TIMEOUT" "$@"; }
 
-# shellcheck disable=SC2046
-run "$LABEL-strong" --profile strong $(args "${ALL[@]}")
-# shellcheck disable=SC2046
-run "$LABEL-strong-repack" --profile strong --set repack=on,off $(args "${FILE_MODES[@]}")
-# shellcheck disable=SC2046
-run "$LABEL-weak" --profile weak $(args "${ALL[@]}")
-# shellcheck disable=SC2046
-run "$LABEL-weak-repack" --profile weak --set repack=on,off $(args "${FILE_MODES[@]}")
+for profile in strong weak; do
+	mapfile -t a < <(presets "${RESIDENT[@]}")
+	full "$LABEL-$profile" --profile "$profile" "${a[@]}"
+	mapfile -t a < <(presets "${M7[@]}")
+	full "$LABEL-$profile-repack" --profile "$profile" --set repack=on,off "${a[@]}"
+	mapfile -t a < <(presets "${STREAMING[@]}")
+	slow "$LABEL-$profile-streaming" --profile "$profile" "${a[@]}"
+	mapfile -t a < <(presets "${M8[@]}")
+	slow "$LABEL-$profile-streaming-repack" --profile "$profile" --set repack=on,off "${a[@]}"
+done
 # MADV_RANDOM on the PLE table (the file-backed, randomly read part): on and off.
-# shellcheck disable=SC2046
-run "$LABEL-advise" --profile strong --set env.NANOLLM_NO_ADVISE_RANDOM=0,1 --preset ram-3g --preset ram-2g
+full "$LABEL-advise" --profile strong --set env.NANOLLM_NO_ADVISE_RANDOM=0,1 --preset ram-3g
 echo "=== $(date +%T) done"

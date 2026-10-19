@@ -34,6 +34,10 @@ type WorkerSpec struct {
 	// (M7, M8), pinned before the load as the server does.
 	Locks        []memlock.Range `json:"locks,omitempty"`
 	DrafterLocks []memlock.Range `json:"drafter_locks,omitempty"`
+	// Slow shortens the run for a configuration that streams weights from a
+	// disk (M8, M9 on a hard disk): pp, then SlowTGTokens of decode, and no
+	// depth, chat or MTP scenario.
+	Slow bool `json:"slow,omitempty"`
 	// Random are ranges of the model file read at random (MADV_RANDOM).
 	Random []memlock.Range `json:"random,omitempty"`
 	// Quick skips the depth-N decode, the slowest scenario.
@@ -180,14 +184,22 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 	// tg128 at depth 0: a short prompt, then TGTokens of decode.
 	short := filler[:8]
 	var tg0 []float64
+	tgTokens := TGTokens
+	if spec.Slow {
+		tgTokens = SlowTGTokens
+	}
 	for range reps {
-		st, toks, err := gen(short, TGTokens, true, true)
+		st, toks, err := gen(short, tgTokens, true, true)
 		if err != nil {
-			return res, fmt.Errorf("tg%d: %w", TGTokens, err)
+			return res, fmt.Errorf("tg%d: %w", tgTokens, err)
 		}
 		tg0 = append(tg0, tokPerSec(len(toks)-1, st.Decode))
 	}
 	res.Metrics.TGTokS.D0, std["tg_tok_s.d0"] = medianStd(tg0)
+	if spec.Slow {
+		res.Metrics.StdDev = std
+		return withMemory(m, res), nil
+	}
 
 	// tg128 at depth N: the context already holds N tokens. The prefix is
 	// prefilled once and reused, as the prompt cache would in serving.
@@ -266,6 +278,11 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 		res.Metrics.MTP = mtp
 	}
 	res.Metrics.StdDev = std
+	return withMemory(m, res), nil
+}
+
+// withMemory adds the process's peaks and the weight buffers to a result.
+func withMemory(m backend.Model, res WorkerResult) WorkerResult {
 	res.Metrics.PeakRSS, res.Metrics.PeakLocked = peakMemory()
 	for _, d := range m.MemoryReport().Devices {
 		if d.Device != "cpu" && !strings.HasSuffix(d.Device, ":cpu") {
@@ -278,7 +295,7 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 			res.Metrics.Buffers[buft] += n
 		}
 	}
-	return res, nil
+	return res
 }
 
 // banEOG keeps every run to its full length: an end-of-generation token

@@ -60,6 +60,9 @@ type Options struct {
 	// budget so tight that the weights fault in from the disk on every token
 	// would otherwise take hours. Zero is no limit.
 	Timeout time.Duration
+	// Slow shortens each run (WorkerSpec.Slow), for budgets that stream the
+	// weights from a hard disk.
+	Slow bool
 
 	// Exe is the binary to run workers with; empty is this one.
 	Exe     string
@@ -322,7 +325,7 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		spec.ThreadsBatch = pinned
 	}
 	spec = spec.WithDefaultThreads()
-	ws := WorkerSpec{Load: spec, Place: place, Env: v.Env(), Cold: o.Cold || budgetOf(name).RAM > 0 && !o.Advisory && userScopes()}
+	ws := WorkerSpec{Load: spec, Place: place, Slow: o.Slow, Env: v.Env(), Cold: o.Cold || budgetOf(name).RAM > 0 && !o.Advisory && userScopes()}
 	for _, lr := range p.LockRanges {
 		r := memlock.Range{Off: lr.Offset, Len: lr.Length}
 		if lr.Role == registry.RoleDrafter {
