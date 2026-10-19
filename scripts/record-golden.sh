@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # Record the golden files of the machine this runs on (docs/STAGE2.md 2.2):
 # greedy output of the pinned tag's llama-server for the E4B, with and without
-# the MTP drafter. The model is the one Q4_0 QAT file and the KV cache is f16:
-# there are no other variants to record. The ggml CPU variant of the machine
-# is in each file's name, so a second machine adds files.
+# the MTP drafter, with the KV cache in f16 and q8_0. The ggml CPU variant of
+# the machine is in each file's name, so a second machine adds files.
 #
 #   scripts/fetch-libs.sh --tools          # or scripts/build-libs.sh
 #   scripts/record-golden.sh [MODEL_DIR]   # default: the E4B under ~/nanollm-data
 #
-# Run it on an idle host: llama-server loads the model twice.
+# Run it on an idle host: llama-server loads the model four times.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.local/go/bin:$HOME/go/bin:$PATH"
@@ -22,18 +21,22 @@ mkdir -p "$out"
 
 # The variant is not known until llama-server has started, so record to a
 # scratch name and let the tool say what the name should be.
-for mode in plain mtp; do
-  tmp=$out/.new-$mode.json
-  args=(-tools "$tools" -model "$model" -threads 4 -out "$tmp")
-  if [[ $mode == mtp ]]; then
-    args+=(-drafter "$drafter" -draft-max 3 -draft-p-min 0 -n 64)
-  else
-    args+=(-n 32)
-  fi
-  go run ./tools/golden "${args[@]}"
-  variant=$(python3 -c "import json; print(json.load(open('$tmp'))['cpu_variant'])")
-  name=cpu-
-  [[ $mode == mtp ]] && name+=mtp-
-  mv "$tmp" "$out/$name$variant.json"
-  echo "recorded $out/$name$variant.json"
+for kv in f16 q8_0; do
+  for mode in plain mtp; do
+    tmp=$out/.new-$mode-$kv.json
+    args=(-tools "$tools" -model "$model" -kv "$kv" -threads 4 -out "$tmp")
+    if [[ $mode == mtp ]]; then
+      args+=(-drafter "$drafter" -draft-max 3 -draft-p-min 0 -n 64)
+    else
+      args+=(-n 32)
+    fi
+    go run ./tools/golden "${args[@]}"
+    variant=$(python3 -c "import json,sys; print(json.load(open('$tmp'))['cpu_variant'])")
+    name=cpu-
+    [[ $mode == mtp ]] && name+=mtp-
+    name+=$variant
+    [[ $kv != f16 ]] && name+=-$kv
+    mv "$tmp" "$out/$name.json"
+    echo "recorded $out/$name.json"
+  done
 done

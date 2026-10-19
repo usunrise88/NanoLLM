@@ -5,8 +5,9 @@
 //	go run ./tools/golden -model gemma-4-e4b.gguf \
 //	    -out testdata/golden/b11600/gemma-4-e4b-qat/cpu-haswell.json
 //
-// The file name carries what the golden depends on: cpu-<variant>.json, and
-// cpu-mtp-<variant>.json with a drafter. The native tests pick every file whose variant and model match
+// The file name carries what the golden depends on: cpu-<variant>[-<kv>].json,
+// and cpu-mtp-<variant>[-<kv>].json with a drafter (the KV type is left out
+// for f16). The native tests pick every file whose variant and model match
 // the machine they run on; the tool says when -out is not that name.
 //
 // It starts llama-server on loopback with the settings the native test uses
@@ -49,15 +50,18 @@ import (
 
 // Golden is the file format, shared with the native test by copy.
 type Golden struct {
-	Tag          string  `json:"tag"`
-	Commit       string  `json:"commit"`
-	Generator    string  `json:"generator"`
-	ModelFile    string  `json:"model_file"`
-	ModelSize    int64   `json:"model_size"`
-	ModelSHA256  string  `json:"model_sha256"`
-	CPUVariant   string  `json:"cpu_variant"`
-	CPUFeatures  string  `json:"cpu_features,omitempty"`
-	Threads      int     `json:"threads"`
+	Tag         string `json:"tag"`
+	Commit      string `json:"commit"`
+	Generator   string `json:"generator"`
+	ModelFile   string `json:"model_file"`
+	ModelSize   int64  `json:"model_size"`
+	ModelSHA256 string `json:"model_sha256"`
+	CPUVariant  string `json:"cpu_variant"`
+	CPUFeatures string `json:"cpu_features,omitempty"`
+	Threads     int    `json:"threads"`
+	// KVType is the K and V cache type, and the drafter's with MTP; empty is
+	// f16.
+	KVType       string  `json:"kv_type,omitempty"`
 	NCtx         int     `json:"n_ctx"`
 	NBatch       int     `json:"n_batch"`
 	NUBatch      int     `json:"n_ubatch"`
@@ -87,6 +91,7 @@ func main() {
 	prompt := flag.String("prompt", DefaultPrompt, "prompt, sent as is with BOS")
 	n := flag.Int("n", 32, "tokens to generate")
 	threads := flag.Int("threads", 4, "CPU threads")
+	kv := flag.String("kv", "f16", "KV cache type for K and V (and the drafter's): f16 or q8_0")
 	drafter := flag.String("drafter", "", "MTP drafter GGUF: record a speculative run")
 	draftMax := flag.Int("draft-max", 3, "tokens drafted per step at most")
 	draftPMin := flag.Float64("draft-p-min", 0, "draft probability floor")
@@ -95,7 +100,11 @@ func main() {
 		fmt.Fprintln(os.Stderr, "golden: -model and -out are required")
 		os.Exit(2)
 	}
-	if err := run(*tools, *model, *out, *prompt, *n, *threads, *drafter, *draftMax, *draftPMin); err != nil {
+	if *kv != "f16" && *kv != "q8_0" {
+		fmt.Fprintln(os.Stderr, "golden: -kv must be f16 or q8_0")
+		os.Exit(2)
+	}
+	if err := run(*tools, *model, *out, *prompt, *n, *threads, *kv, *drafter, *draftMax, *draftPMin); err != nil {
 		fmt.Fprintln(os.Stderr, "golden:", err)
 		os.Exit(1)
 	}
@@ -105,7 +114,7 @@ func defaultTools() string {
 	return filepath.Join("dist", runtime.GOOS+"_"+runtime.GOARCH, "tools")
 }
 
-func run(tools, model, out, prompt string, n, threads int, drafter string, draftMax int, draftPMin float64) error {
+func run(tools, model, out, prompt string, n, threads int, kv, drafter string, draftMax int, draftPMin float64) error {
 	st, err := os.Stat(model)
 	if err != nil {
 		return err
@@ -137,6 +146,9 @@ func run(tools, model, out, prompt string, n, threads int, drafter string, draft
 		Threads: threads, NCtx: 4096, NBatch: 512, NUBatch: 512,
 		Prompt: prompt, NPredict: n,
 	}
+	if kv != "f16" {
+		g.KVType = kv
+	}
 	var extra []string
 	if drafter != "" {
 		dst, err := os.Stat(drafter)
@@ -147,7 +159,9 @@ func run(tools, model, out, prompt string, n, threads int, drafter string, draft
 		g.DrafterSHA = sha256File(drafter)
 		g.Generator += ", MTP draft-mtp"
 		extra = []string{"-md", drafter, "--spec-type", "draft-mtp",
-			"--spec-draft-n-max", strconv.Itoa(draftMax), "--spec-draft-p-min", strconv.FormatFloat(draftPMin, 'f', -1, 64)}
+			"--spec-draft-n-max", strconv.Itoa(draftMax), "--spec-draft-p-min", strconv.FormatFloat(draftPMin, 'f', -1, 64),
+			// The binding's drafter inherits the target's cache types.
+			"-ctkd", kv, "-ctvd", kv}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
@@ -155,7 +169,7 @@ func run(tools, model, out, prompt string, n, threads int, drafter string, draft
 		"-m", model, "--host", "127.0.0.1", "--port", strconv.Itoa(port),
 		"-c", strconv.Itoa(g.NCtx), "-np", "1", "-t", strconv.Itoa(threads), "-tb", strconv.Itoa(threads),
 		"-b", strconv.Itoa(g.NBatch), "-ub", strconv.Itoa(g.NUBatch),
-		"-fa", "on", "-ctk", "f16", "-ctv", "f16", "--no-webui",
+		"-fa", "on", "-ctk", kv, "-ctv", kv, "--no-webui",
 		// -v: the CPU variant and features are logged at a level the
 		// default verbosity hides.
 		"-v"}, extra...)...)
@@ -254,8 +268,8 @@ func run(tools, model, out, prompt string, n, threads int, drafter string, draft
 	if err := os.WriteFile(out, append(data, '\n'), 0o644); err != nil {
 		return err
 	}
-	fmt.Printf("%s: %d prompt tokens, %d generated, cpu %s, drafted %d accepted %d\n%s\n",
-		out, len(g.PromptTokens), len(g.Tokens), g.CPUVariant, g.Drafted, g.Accepted, g.Text)
+	fmt.Printf("%s: %d prompt tokens, %d generated, cpu %s, kv %s, drafted %d accepted %d\n%s\n",
+		out, len(g.PromptTokens), len(g.Tokens), g.CPUVariant, kv, g.Drafted, g.Accepted, g.Text)
 	if want := FileName(g); filepath.Base(out) != want {
 		fmt.Printf("note: the tests expect this golden to be named %s\n", want)
 	}
@@ -323,13 +337,16 @@ func readTrimmed(path string) (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
-// FileName is the name a golden file is stored under: cpu-<variant> or,
-// recorded with a drafter, cpu-mtp-<variant>.
+// FileName is the name a golden file is stored under: cpu-<variant>[-<kv>] or,
+// recorded with a drafter, cpu-mtp-<variant>[-<kv>].
 func FileName(g Golden) string {
 	name := "cpu-"
 	if g.DrafterFile != "" {
 		name += "mtp-"
 	}
 	name += g.CPUVariant
+	if g.KVType != "" && g.KVType != "f16" {
+		name += "-" + g.KVType
+	}
 	return name + ".json"
 }

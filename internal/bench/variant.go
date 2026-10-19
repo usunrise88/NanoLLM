@@ -15,13 +15,14 @@ import (
 type Variant map[string]string
 
 // Keys a sweep may set. Most go through the planner, so the plan stays
-// consistent with them (a larger n_ctx is budgeted as larger); the rest are
+// consistent with them (a q8_0 cache is budgeted as q8_0); the rest are
 // loader settings the planner does not choose per run.
 var variantKeys = map[string]string{
 	"threads":       "CPU threads for decoding (0 is one per physical core)",
 	"threads_batch": "CPU threads for prompt processing (0 follows threads)",
 	"n_batch":       "logical batch size",
 	"n_ubatch":      "physical batch size",
+	"kv":            "KV cache type for K and V: f16 or q8_0",
 	"n_ctx":         "context per slot",
 	"slots":         "parallel sequences",
 	"draft_max":     "MTP tokens drafted per step",
@@ -107,6 +108,10 @@ func checkValue(key, v string) error {
 		if err != nil || f < 0 || f > 1 {
 			return fmt.Errorf("%q is not a probability", v)
 		}
+	case "kv":
+		if v != "f16" && v != "q8_0" {
+			return fmt.Errorf("%q is not f16 or q8_0", v)
+		}
 	case "mtp", "repack", "fa":
 		if v != "on" && v != "off" {
 			return fmt.Errorf("%q is not on or off", v)
@@ -178,6 +183,9 @@ func (v Variant) Plan(req *plan.Request) {
 	}
 	if s, ok := v["draft_p_min"]; ok {
 		req.DraftPMin, _ = strconv.ParseFloat(s, 64)
+	}
+	if s, ok := v["kv"]; ok {
+		req.KVType = s
 	}
 	if v["mtp"] == "off" {
 		req.NoMTP = true
