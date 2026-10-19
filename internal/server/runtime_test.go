@@ -247,6 +247,7 @@ func TestReloadKeepsThePin(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := resident(rt)["alpha"]
+	time.Sleep(40 * time.Millisecond) // longer than a coarse clock's tick (Windows)
 	got, err := rt.Reload(ctx, "alpha")
 	if err != nil || len(got.Loaded) != 1 || !got.Pinned {
 		t.Fatalf("reload: %+v, %v", got, err)
