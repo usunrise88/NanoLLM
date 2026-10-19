@@ -9,16 +9,19 @@
 # Run it under hyper-exclusive.sh, which waits for the host to be quiet and
 # keeps the other benchmark jobs out for the whole queue. The disk here is a
 # hard disk (RAID1, ~110 MB/s sequential); the same queue is meant to be run
-# again on an SSD (SSD=1 changes the labels, not the steps).
+# again on an SSD (SSD=1 changes the labels, DATA points at the copy on it).
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
 LABEL=${1:-night}
 [[ ${SSD:-0} == 1 ]] && LABEL=$LABEL-ssd
+# DATA is the data directory the configs and the models live in; for the SSD
+# run it is a copy on the SSD (scripts/ssd-setup.sh).
+DATA=${DATA:-$HOME/nanollm-data}
 NANOLLM=${NANOLLM:-./dist/nanollm-stage}
 NEXT=${NEXT:-./dist/nanollm-next}
-CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
-NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
+CONFIG=${CONFIG:-$DATA/base.yaml}
+NEXT_CONFIG=${NEXT_CONFIG:-$DATA/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
 STEPS=${STEPS-"diskbw numa batch stream ngram evalngram repack thp tune standard"}
 
@@ -36,7 +39,7 @@ for step in $STEPS; do
 	diskbw)
 		# What the disk can deliver by each way weights reach memory (OPT-8
 		# against OPT-9). Two regions: the layers' area and the PLE table's.
-		MODEL=$(ls "$HOME"/nanollm-data/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
+		MODEL=$(ls "$DATA"/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
 		OUTF=bench/results/$(hostname -s)/$(date +%F)-diskbw$([[ ${SSD:-0} == 1 ]] && echo -ssd).txt
 		{
 			echo "# $(date -Is) $(findmnt -T "$MODEL" -no SOURCE,FSTYPE)"
@@ -49,7 +52,7 @@ for step in $STEPS; do
 		# one per node and whose repack threads first-touch each slab on the
 		# node that will read it (patches/next/0003). Same libraries, same
 		# model, llama-bench, three rounds.
-		MODEL=$(ls "$HOME"/nanollm-data/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
+		MODEL=$(ls "$DATA"/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
 		OUTF=bench/results/$(hostname -s)/$(date +%F)-numa-distribute$([[ ${SSD:-0} == 1 ]] && echo -ssd).txt
 		T=dist/linux_amd64-next/tools
 		{
@@ -73,7 +76,7 @@ for step in $STEPS; do
 		# are read once for all of them, so on a memory-bound CPU the total
 		# should grow almost with N until arithmetic takes over (the planner's
 		# slot count, docs/STAGE2.md 2.8).
-		MODEL=$(ls "$HOME"/nanollm-data/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
+		MODEL=$(ls "$DATA"/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
 		OUTF=bench/results/$(hostname -s)/$(date +%F)-batched$([[ ${SSD:-0} == 1 ]] && echo -ssd).txt
 		T=dist/linux_amd64-next/tools
 		{
@@ -115,7 +118,7 @@ for step in $STEPS; do
 		for suite in ru-instruct json-tools; do
 			for cfg in ref ref-ngram; do
 				echo "=== $(date +%T) eval $suite $cfg"
-				nice -n 5 "$NANOLLM" eval --config "$HOME/nanollm-data/$cfg.yaml" --suite "$suite" --thinking off \
+				nice -n 5 "$NANOLLM" eval --config "$DATA/$cfg.yaml" --suite "$suite" --thinking off \
 					--out "$EV/$(date +%F)-eval-$suite-$cfg-timed.json" || echo "!!! eval $suite $cfg failed"
 			done
 		done
