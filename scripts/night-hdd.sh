@@ -20,7 +20,7 @@ NEXT=${NEXT:-./dist/nanollm-next}
 CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
 NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
-STEPS=${STEPS-"diskbw numa batch stream ngram repack thp tune standard"}
+STEPS=${STEPS-"diskbw numa batch stream ngram evalngram repack thp tune standard"}
 
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
@@ -105,6 +105,20 @@ for step in $STEPS; do
 		full "ngram-strong-n3" --profile strong --preset ram-8g --set ngram=3 --set draft_max=2,4,8
 		full "ngram-strong-n24" --profile strong --preset ram-8g --set ngram=2,4 --set draft_max=4
 		full "ngram-weak" --profile weak --preset ram-4g --set ngram=0,3 --set draft_max=4
+		;;
+	evalngram)
+		# OPT-5 on real tasks: the same suites with and without prompt lookup.
+		# Greedy answers must match; the per-item time says what it gained
+		# (ru/en instructions: free text, json-tools: answers built from the
+		# given data).
+		EV=bench/results/$(hostname -s)
+		for suite in ru-instruct json-tools; do
+			for cfg in ref ref-ngram; do
+				echo "=== $(date +%T) eval $suite $cfg"
+				nice -n 5 "$NANOLLM" eval --config "$HOME/nanollm-data/$cfg.yaml" --suite "$suite" --thinking off \
+					--out "$EV/$(date +%F)-eval-$suite-$cfg-timed.json" || echo "!!! eval $suite $cfg failed"
+			done
+		done
 		;;
 	repack)
 		# OPT-14. Load time with the repack on 1, 4 and 16 threads; warm (the
