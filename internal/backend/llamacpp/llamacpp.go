@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"unsafe"
@@ -72,7 +73,11 @@ func open(libDir string) (backend.Backend, error) {
 	if err := checkCommit(l.commit, PinnedCommit); err != nil {
 		return nil, err
 	}
-	if PinnedCommit != bindingCommit && checkCommit(PinnedCommit, bindingCommit) != nil {
+	// A series of patches that changes no struct or signature (a kernel, a
+	// loader detail) can be tried before its bindings are regenerated:
+	// NANOLLM_DEV_SERIES=<its commit> names the commit the binary is stamped
+	// for. Releases never set it.
+	if PinnedCommit != bindingCommit && os.Getenv("NANOLLM_DEV_SERIES") != PinnedCommit && checkCommit(PinnedCommit, bindingCommit) != nil {
 		return nil, fmt.Errorf("this binary is stamped for llama.cpp %s but its binding was generated from %s; regenerate with tools/bindgen", PinnedCommit, bindingCommit)
 	}
 	if err := l.init(); err != nil {

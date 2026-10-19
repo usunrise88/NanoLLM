@@ -2,7 +2,8 @@
 # Build NanoLLM's llama.cpp libraries and tools: the pinned upstream tag plus
 # the patch series in patches/llama.cpp (docs/STAGE2.md 2.1).
 #
-#   scripts/build-libs.sh [--no-vulkan] [--jobs N] [--cpus N] [--src DIR] [--prepare-only] [--no-patches]
+#   scripts/build-libs.sh [--no-vulkan] [--jobs N] [--cpus N] [--src DIR] [--build DIR] [--out DIR]
+#                         [--prepare-only] [--no-patches] [--next]
 #
 # Writes dist/linux_amd64/{lib,tools} in the layout scripts/fetch-libs.sh
 # --tools produces, so everything downstream (the golden tests, tools/optimize,
@@ -32,14 +33,21 @@ CPUS=""
 SRC=$ROOT/.cache/llama.cpp/src
 PREPARE_ONLY=0
 PATCHES=1
+BUILD_DIR=""
+OUT_DIR=""
+NEXT=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-vulkan) VULKAN=0 ;;
     --jobs) JOBS=$2; shift ;;
     --cpus) CPUS=$2; shift ;;
     --src) SRC=$2; shift ;;
+    --build) BUILD_DIR=$2; shift ;; # a build directory of its own, to build next to a running tree
+    --out) OUT_DIR=$2; shift ;;     # an output directory of its own (default dist/linux_amd64)
     --prepare-only) PREPARE_ONLY=1 ;;
     --no-patches) PATCHES=0 ;; # upstream's own build, to compare a patched one with
+    --next) NEXT=1 ;;          # also apply patches/next (not released yet); output dist/linux_amd64-next,
+                               # no check against scripts/llama.cpp.commit
     *) echo "build-libs: unknown argument $1" >&2; exit 2 ;;
   esac
   shift
@@ -66,19 +74,27 @@ fi
 export GIT_COMMITTER_NAME=NanoLLM GIT_COMMITTER_EMAIL=nanollm@localhost
 shopt -s nullglob
 [[ $PATCHES -eq 0 ]] && WANT=$BASE
-for p in $([[ $PATCHES -eq 1 ]] && echo "$ROOT"/patches/llama.cpp/*.patch); do
+SERIES=()
+if [[ $PATCHES -eq 1 ]]; then
+  SERIES=("$ROOT"/patches/llama.cpp/*.patch)
+  [[ $NEXT -eq 1 ]] && SERIES+=("$ROOT"/patches/next/*.patch)
+fi
+for p in "${SERIES[@]}"; do
   # The committer date follows the patch's author date: no clock in the hash.
   git -C "$SRC" am --quiet --committer-date-is-author-date "$p" \
     || { echo "build-libs: $p does not apply to $BASE" >&2; git -C "$SRC" am --abort || true; exit 1; }
 done
 GOT=$(git -C "$SRC" rev-parse HEAD)
+if [[ $NEXT -eq 1 ]]; then
+  echo "next series: ${#SERIES[@]} patches = $GOT (stamp a binary with -X ...llamacpp.PinnedCommit=$GOT)"
+  WANT=$GOT
+fi
 if [[ "$GOT" != "$WANT" ]]; then
   echo "build-libs: the patched source is $GOT, but scripts/llama.cpp.commit says $WANT." >&2
   echo "build-libs: if the series changed on purpose, write the new hash there." >&2
   exit 1
 fi
-NPATCH=0
-[[ $PATCHES -eq 1 ]] && NPATCH=$(ls "$ROOT"/patches/llama.cpp/*.patch 2>/dev/null | wc -l | tr -d ' ')
+NPATCH=${#SERIES[@]}
 echo "source: $TAG + $NPATCH patches = ${GOT:0:12}"
 [[ $PREPARE_ONLY -eq 1 ]] && exit 0
 
@@ -92,7 +108,8 @@ fi
 
 SUFFIX=""
 [[ $PATCHES -eq 0 ]] && SUFFIX=-upstream
-BUILD=$ROOT/.cache/llama.cpp/build-linux_amd64$SUFFIX
+[[ $NEXT -eq 1 ]] && SUFFIX=-next
+BUILD=${BUILD_DIR:-$ROOT/.cache/llama.cpp/build-linux_amd64$SUFFIX}
 mkdir -p "$BUILD" "$ROOT/.cache/ccache"
 CMAKE_VULKAN=()
 [[ $VULKAN -eq 1 ]] && CMAKE_VULKAN=(-DGGML_VULKAN=ON)
@@ -116,7 +133,7 @@ docker run --rm "${DOCKER_CPUS[@]}" -u "$(id -u):$(id -g)" \
 
 # --- the layout fetch-libs.sh --tools makes -----------------------------------
 
-OUT=$ROOT/dist/linux_amd64$SUFFIX
+OUT=${OUT_DIR:-$ROOT/dist/linux_amd64$SUFFIX}
 rm -rf "$OUT/lib" "$OUT/tools"
 mkdir -p "$OUT/lib" "$OUT/tools"
 find "$BUILD/bin" -maxdepth 1 \( -type f -o -type l \) -exec cp -P {} "$OUT/tools/" \;

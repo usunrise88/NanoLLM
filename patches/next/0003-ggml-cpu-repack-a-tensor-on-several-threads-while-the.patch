@@ -1,0 +1,122 @@
+From 9661b205a235f7a6fbd498dcef7a0351a8d682e6 Mon Sep 17 00:00:00 2001
+From: NanoLLM <nanollm@localhost>
+Date: Mon, 19 Oct 2026 13:00:00 +0000
+Subject: [PATCH] ggml-cpu: repack a tensor on several threads while the model
+ loads
+
+The model loader hands tensors to the repack buffer one at a time, and each
+repack_*_bl function is a single loop over row groups, so loading a Q4_0 model
+into the repacked layout (the default on every CPU with a repack kernel) keeps
+one core busy for ~20 s on a Zen 1 EPYC while the others idle.
+
+A repack rearranges blocks within a group of rows and writes exactly the bytes
+the group occupied, so a slab of rows [r0, r1) reads and writes bytes
+[r0*nb1, r1*nb1) of the source and the destination. Split a 2-D tensor into
+slabs of whole 16-row groups (the widest interleave) and repack them on a
+thread each. GGML_REPACK_THREADS sets the count (default: the machine's, up
+to 16; 1 is the old behaviour); tensors under 1 MiB, with more than two
+dimensions, or whose rows are not a multiple of 16 are repacked as before.
+
+The result is bit-identical: nothing about the layout changes.
+---
+ ggml/src/ggml-cpu/repack.cpp | 67 +++++++++++++++++++++++++++++++++++-
+ 1 file changed, 66 insertions(+), 1 deletion(-)
+
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index 2632ae3..c8074ad 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -11,10 +11,15 @@
+ 
+ #include "arch-fallback.h"
+ 
++#include <algorithm>
++#include <atomic>
+ #include <cmath>
++#include <cstdlib>
+ #include <cstring>
+ #include <cassert>
+ #include <cstdio>  // for GGML_ASSERT
++#include <thread>
++#include <vector>
+ 
+ #include "repack.h"
+ 
+@@ -5147,13 +5152,73 @@ static enum ggml_status ggml_backend_cpu_repack_buffer_init_tensor(ggml_backend_
+     return GGML_STATUS_SUCCESS;
+ }
+ 
++// How many threads repack a tensor while the model loads. A repack is a pure
++// rearrangement of blocks, row group by row group, and the loader hands the
++// tensors over one at a time, so a load is as slow as one core can shuffle
++// ~4 GB (about 20 s on a Zen 1 core). GGML_REPACK_THREADS sets the count; the
++// default is the machine's, up to 16; 1 repacks on the calling thread as
++// before.
++static int ggml_repack_threads() {
++    static const int n = [] {
++        const char * env = getenv("GGML_REPACK_THREADS");
++        if (env && *env) {
++            const int v = atoi(env);
++            if (v >= 1) {
++                return std::min(v, 256);
++            }
++        }
++        return (int) std::max(1u, std::min(16u, std::thread::hardware_concurrency()));
++    }();
++    return n;
++}
++
++// Repacks the rows of a 2-D tensor in slabs, one per thread. The repacked
++// blocks of a group of rows take exactly the bytes the group had, so a slab of
++// rows [r0, r1) reads and writes bytes [r0*nb1, r1*nb1) of source and
++// destination, and each repack function sees a smaller tensor of the same
++// type. A slab is a multiple of 16 rows, the widest interleave there is.
++static int ggml_repack_tensor_parallel(ggml::cpu::repack::tensor_traits_base * traits, struct ggml_tensor * tensor,
++                                       const void * data, size_t size) {
++    const int     nthreads = ggml_repack_threads();
++    const int64_t rows     = tensor->ne[1];
++    constexpr int64_t group = 16;
++    if (nthreads < 2 || ggml_n_dims(tensor) != 2 || size < ((size_t) 1 << 20) || rows % group != 0) {
++        return traits->repack(tensor, data, size);
++    }
++
++    const int64_t groups = rows / group;
++    const int     n      = (int) std::min<int64_t>(nthreads, groups);
++    std::atomic<int> failed{0};
++    std::vector<std::thread> pool;
++    pool.reserve(n);
++    for (int k = 0; k < n; k++) {
++        const int64_t g0 = groups * k / n;
++        const int64_t g1 = groups * (k + 1) / n;
++        pool.emplace_back([=, &failed]() {
++            struct ggml_tensor slab = *tensor;
++            slab.ne[1] = (g1 - g0) * group;
++            slab.nb[2] = slab.ne[1] * slab.nb[1];
++            slab.nb[3] = slab.nb[2];
++            const size_t off = (size_t) (g0 * group) * tensor->nb[1];
++            slab.data = (char *) tensor->data + off;
++            if (traits->repack(&slab, (const char *) data + off, (size_t) slab.ne[1] * tensor->nb[1]) != 0) {
++                failed.store(1);
++            }
++        });
++    }
++    for (auto & t : pool) {
++        t.join();
++    }
++    return failed.load();
++}
++
+ static void ggml_backend_cpu_repack_buffer_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor,
+                                                        const void * data, size_t offset, size_t size) {
+     GGML_ASSERT(offset == 0);
+     GGML_ASSERT(size == ggml_nbytes(tensor));
+ 
+     auto tensor_traits = (ggml::cpu::repack::tensor_traits_base *) tensor->extra;
+-    auto OK            = tensor_traits->repack(tensor, data, size);
++    auto OK            = ggml_repack_tensor_parallel(tensor_traits, tensor, data, size);
+ 
+     GGML_ASSERT(OK == 0);
+     GGML_UNUSED(buffer);
+-- 
+2.53.0
+
