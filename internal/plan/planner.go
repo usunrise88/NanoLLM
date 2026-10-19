@@ -52,8 +52,9 @@ type Request struct {
 	// the preset's target.
 	NCtx  int
 	Slots int
-	// NoMTP plans without the drafter.
-	NoMTP bool
+	// NoMTP plans without the drafter; NoMTPReason says why, for the plan.
+	NoMTP       bool
+	NoMTPReason string
 	// DraftMax bounds MTP drafts per step; 0 is DefaultDraftMax.
 	DraftMax  int
 	DraftPMin float64

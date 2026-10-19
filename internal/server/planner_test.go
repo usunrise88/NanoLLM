@@ -207,3 +207,26 @@ func TestDevicesListsWhatTheBackendsReport(t *testing.T) {
 		t.Errorf("device %+v", d)
 	}
 }
+
+// MTP is off by default on the CPU (the stage 2 sweep found no gain there) and
+// a configuration can turn it on; a GPU device keeps its default.
+func TestPlannerPlacerLeavesMTPOffOnTheCPU(t *testing.T) {
+	m := defaultModel(t)
+	req := cpuRequest(m)
+	req.Override.Preset = "ram-8g"
+	pl, err := PlannerPlacer(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := pl.Plan.(*plan.Plan)
+	if p.MTP.Enabled || pl.Spec.DrafterPath != "" || p.MTP.Reason != CPUMTPOffReason {
+		t.Errorf("default on the CPU: MTP %+v, drafter %q", p.MTP, pl.Spec.DrafterPath)
+	}
+	req.Override.Speculative.Type = config.SpecMTP
+	if pl, err = PlannerPlacer(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if p = pl.Plan.(*plan.Plan); !p.MTP.Enabled || pl.Spec.DrafterPath != "/models/drafter.gguf" {
+		t.Errorf("speculative.type: mtp: MTP %+v, drafter %q", p.MTP, pl.Spec.DrafterPath)
+	}
+}

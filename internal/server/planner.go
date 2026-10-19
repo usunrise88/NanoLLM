@@ -16,6 +16,9 @@ import (
 // measured inventory. The preset is models.overrides.<id>.preset; without
 // one it is derived from what the chosen device has free, so a default
 // installation uses the machine it is on without being told its size.
+// CPUMTPOffReason is the plan's reason for the default of MTP on the CPU.
+const CPUMTPOffReason = "off by default on the CPU: the measured speed-up is at best 1.04x on a 16-core EPYC 7351P (threshold 1.2x, docs/STAGE2.md 2.7); models.<id>.speculative.type: mtp turns it on"
+
 func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	if req.Backend == config.BackendFake {
 		return DefaultPlacer(ctx, req)
@@ -41,6 +44,12 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		Model: model, Preset: preset, Mode: mode, KVType: ov.KVType, Proven: plan.ProvenFor(runtime.GOOS),
 		NCtx: ov.NCtx.N, Slots: ov.Slots.N,
 		NoMTP: ov.Speculative.Type == config.SpecNone, DraftMax: ov.Speculative.NMax, DraftPMin: ov.Speculative.PMin,
+	}
+	// MTP is off by default on the CPU: the stage 2 sweep (docs/STAGE2.md 2.7)
+	// found at best 1.04x on a 16-core EPYC (threshold 1.2x), and the drafter
+	// costs memory. speculative.type: mtp turns it on.
+	if ov.Speculative.Type == "" && req.Device.Type == backend.CPU {
+		r.NoMTP, r.NoMTPReason = true, CPUMTPOffReason
 	}
 	if req.Device.Type != backend.CPU {
 		r.Device = &plan.Device{

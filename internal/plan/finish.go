@@ -1,6 +1,7 @@
 package plan
 
 import (
+	"cmp"
 	"fmt"
 	"sort"
 
@@ -73,7 +74,7 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 	case pl.req.Model.Drafter == nil:
 		p.MTP = MTP{Reason: "the model has no drafter"}
 	case pl.req.NoMTP:
-		p.MTP = MTP{Reason: "disabled by the request"}
+		p.MTP = MTP{Reason: cmp.Or(pl.req.NoMTPReason, "disabled by the request")}
 	default:
 		where := "the CPU"
 		if t.spec.gpu && pl.dev != nil {
