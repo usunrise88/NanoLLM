@@ -118,12 +118,8 @@ func runCmd(args []string) error {
 		if ctx.Err() != nil {
 			return errors.New("llama-server did not become ready")
 		}
-		if resp, err := http.Get(base + "/health"); err == nil {
-			ok := resp.StatusCode == http.StatusOK
-			resp.Body.Close()
-			if ok {
-				break
-			}
+		if code, err := do(ctx, http.MethodGet, base+"/health", nil, nil); err == nil && code == http.StatusOK {
+			break
 		}
 		time.Sleep(time.Second)
 	}
@@ -131,9 +127,9 @@ func runCmd(args []string) error {
 	rec := Recording{Tools: *tools, Model: filepath.Base(*model), Threads: *threads}
 	for i, p := range prompts {
 		body, _ := json.Marshal(map[string]any{"prompt": p, "n_predict": 1, "n_probs": 100, "temperature": 0, "cache_prompt": false})
-		resp, err := http.Post(base+"/completion", "application/json", bytes.NewReader(body))
-		if err != nil {
-			return err
+		var data []byte
+		if code, err := do(ctx, http.MethodPost, base+"/completion", body, &data); err != nil || code != http.StatusOK {
+			return fmt.Errorf("prompt %d: status %d: %w", i, code, err)
 		}
 		var r struct {
 			Probs []struct {
@@ -143,8 +139,6 @@ func runCmd(args []string) error {
 				} `json:"top_logprobs"`
 			} `json:"completion_probabilities"`
 		}
-		data, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
 		if err := json.Unmarshal(data, &r); err != nil || len(r.Probs) == 0 || len(r.Probs[0].Top) == 0 {
 			return fmt.Errorf("prompt %d: no probabilities in %.200s", i, data)
 		}
@@ -236,4 +230,23 @@ func diffCmd(args []string) error {
 	fmt.Printf("%d prompts; top-1 agree %d (%.1f%%); KL mean %.3g, median %.3g, p99 %.3g, max %.3g\n",
 		len(ds), same, 100*float64(same)/float64(len(ds)), mean, ds[len(ds)/2], ds[min(len(ds)-1, len(ds)*99/100)], ds[len(ds)-1])
 	return nil
+}
+
+// do sends one request; a response body is returned through out when given.
+func do(ctx context.Context, method, url string, body []byte, out *[]byte) (int, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if out != nil {
+		*out = data
+	}
+	return resp.StatusCode, err
 }

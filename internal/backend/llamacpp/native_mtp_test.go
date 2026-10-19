@@ -196,6 +196,9 @@ func TestNativeMTPEquivalence(t *testing.T) {
 // quantized cache, which rounds differently from f16. The models are loaded
 // here and freed after, one pair at a time.
 func TestNativeMTPEquivalenceQ8(t *testing.T) {
+	if os.Getenv("NANOLLM_TEST_LONG") == "" {
+		t.Skip("loads the model twice with a quantized cache; set NANOLLM_TEST_LONG=1")
+	}
 	b := testBackend(t)
 	path, drafter := testModelPath(t), testDrafterPath(t)
 	releaseSharedMTP()

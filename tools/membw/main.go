@@ -18,6 +18,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -99,7 +100,7 @@ func child(place string, threads, mib int, sec float64) float64 {
 	if err != nil {
 		fatal(err)
 	}
-	cmd := exec.Command(exe, "-worker", "-threads", strconv.Itoa(threads), "-mib", strconv.Itoa(mib), "-sec", strconv.FormatFloat(sec, 'f', -1, 64))
+	cmd := exec.CommandContext(context.Background(), exe, "-worker", "-threads", strconv.Itoa(threads), "-mib", strconv.Itoa(mib), "-sec", strconv.FormatFloat(sec, 'f', -1, 64))
 	cmd.Env = os.Environ()
 	if place != "" {
 		cmd.Env = append(cmd.Env, numa.EnvPlace+"="+place)

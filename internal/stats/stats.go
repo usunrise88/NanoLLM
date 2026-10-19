@@ -178,7 +178,9 @@ func (m *Metrics) Observe(r Request) {
 	if r.QueueMS > 0 {
 		m.Queue.Observe(r.QueueMS)
 	}
-	if r.TotalMS > 0 {
+	// Every finished request has a total time, however coarse the clock:
+	// on Windows a fast request can read as zero.
+	if r.TotalMS >= 0 {
 		m.Total.Observe(r.TotalMS)
 	}
 	if r.DecodeMS > 0 && r.Completion > 1 {

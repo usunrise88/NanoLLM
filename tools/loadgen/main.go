@@ -96,10 +96,9 @@ type gen struct {
 	http             *http.Client
 	start            time.Time
 
-	mu      sync.Mutex
-	window  []sample // since the last report
-	totals  map[string]int
-	started int
+	mu     sync.Mutex
+	window []sample // since the last report
+	totals map[string]int
 }
 
 type sample struct {
@@ -325,7 +324,7 @@ func (g *gen) stream(ctx context.Context, kind string, body map[string]any, stop
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		io.Copy(io.Discard, resp.Body)
+		_, _ = io.Copy(io.Discard, resp.Body)
 		g.add(sample{kind: kind, outcome: "http_" + strconv.Itoa(resp.StatusCode)})
 		return "", false
 	}
@@ -451,7 +450,7 @@ func (g *gen) longPrompt(ctx context.Context, rng *rand.Rand) {
 	for sb.Len() < 9000 {
 		sb.WriteString("The old library smelled of paper and dust, and the clock on the wall was five minutes slow. ")
 	}
-	sb.WriteString(fmt.Sprintf("\n\nThe code word is %d. What is the code word? Answer with the number.", 1000+rng.IntN(9000)))
+	fmt.Fprintf(&sb, "\n\nThe code word is %d. What is the code word? Answer with the number.", 1000+rng.IntN(9000))
 	b := g.body([]chatMsg{{"user", sb.String()}}, "", false)
 	b["max_tokens"] = 16
 	g.plain(ctx, "long", b, nil)
