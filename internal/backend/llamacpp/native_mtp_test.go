@@ -118,7 +118,7 @@ func TestNativeMTPLoads(t *testing.T) {
 // own MTP (tools/golden -drafter) under greedy decoding: the same tokens and
 // the same numbers of drafted and accepted tokens.
 func TestNativeMTPMatchesServer(t *testing.T) {
-	files, _ := filepath.Glob(filepath.Join("..", "..", "..", "testdata", "golden", bindingTag, "*", "cpu-mtp.json"))
+	files := goldenFiles(true)
 	if len(files) == 0 {
 		t.Skip("no MTP golden files for " + bindingTag)
 	}
@@ -145,6 +145,7 @@ func TestNativeMTPMatchesServer(t *testing.T) {
 		ran = true
 		spec := mtpSpec(path, drafter)
 		spec.NCtx, spec.Slots, spec.NBatch, spec.NUBatch, spec.Threads = g.NCtx, 1, g.NBatch, g.NUBatch, g.Threads
+		spec.KVTypeK, spec.KVTypeV = g.kv(), g.kv()
 		spec.DraftMax, spec.DraftPMin, spec.NOutputsMax = g.DraftMax, g.DraftPMin, 1+g.DraftMax
 		mm, err := b.Load(context.Background(), spec)
 		if err != nil {
@@ -187,8 +188,33 @@ var equivalencePrompts = []string{
 // rounds differently from one-token decoding) from a bug (a wide margin).
 // It also checks that drafts get accepted and reports both speeds.
 func TestNativeMTPEquivalence(t *testing.T) {
-	plain := sharedModel(t)
-	mtp := sharedMTPModel(t)
+	mtpEquivalence(t, sharedModel(t), sharedMTPModel(t))
+}
+
+// TestNativeMTPEquivalenceQ8 is the same with a q8_0 cache: the drafter
+// inherits the target's cache types, and its drafts are verified against a
+// quantized cache, which rounds differently from f16. The models are loaded
+// here and freed after, one pair at a time.
+func TestNativeMTPEquivalenceQ8(t *testing.T) {
+	b := testBackend(t)
+	path, drafter := testModelPath(t), testDrafterPath(t)
+	releaseSharedMTP()
+	load := func(s backend.LoadSpec) *model {
+		s.KVTypeK, s.KVTypeV = "q8_0", "q8_0"
+		m, err := b.Load(context.Background(), s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = m.Close() })
+		return m.(*model)
+	}
+	plain := load(baseSpec(path))
+	mtp := load(mtpSpec(path, drafter))
+	mtpEquivalence(t, plain, mtp)
+}
+
+func mtpEquivalence(t *testing.T, plain, mtp *model) {
+	t.Helper()
 	const n = 48
 	var drafted, accepted, genPlain, genMTP int
 	var tPlain, tMTP time.Duration

@@ -658,6 +658,7 @@ type golden struct {
 	ModelSHA256  string  `json:"model_sha256"`
 	CPUVariant   string  `json:"cpu_variant"`
 	Threads      int     `json:"threads"`
+	KVType       string  `json:"kv_type"` // empty is f16
 	NCtx         int     `json:"n_ctx"`
 	NBatch       int     `json:"n_batch"`
 	NUBatch      int     `json:"n_ubatch"`
@@ -674,12 +675,35 @@ type golden struct {
 	Accepted     int     `json:"accepted"`
 }
 
+// kv is the cache type the golden was recorded with.
+func (g golden) kv() string {
+	if g.KVType == "" {
+		return "f16"
+	}
+	return g.KVType
+}
+
+// goldenFiles lists the recorded goldens of the pinned tag: cpu-<variant>[-<kv>]
+// .json, or with mtp the cpu-mtp-… ones (tools/golden names them so). Which
+// of them apply on this machine is decided by what each records: the model
+// file, the CPU variant.
+func goldenFiles(mtp bool) []string {
+	all, _ := filepath.Glob(filepath.Join("..", "..", "..", "testdata", "golden", bindingTag, "*", "cpu-*.json"))
+	var out []string
+	for _, f := range all {
+		if strings.HasPrefix(filepath.Base(f), "cpu-mtp-") == mtp {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
 // TestNativeGolden compares greedy decoding with llama-server's output of the
 // same tag (tools/golden). It applies only to the model file the golden was
 // recorded from and only on the same ggml CPU variant: other kernels round
 // differently, and greedy picks may flip.
 func TestNativeGolden(t *testing.T) {
-	files, _ := filepath.Glob(filepath.Join("..", "..", "..", "testdata", "golden", bindingTag, "*", "cpu.json"))
+	files := goldenFiles(false)
 	if len(files) == 0 {
 		t.Skip("no golden files for " + bindingTag)
 	}
@@ -711,6 +735,7 @@ func TestNativeGolden(t *testing.T) {
 		ran = true
 		spec := baseSpec(path)
 		spec.NCtx, spec.Slots, spec.NBatch, spec.NUBatch, spec.Threads = g.NCtx, 1, g.NBatch, g.NUBatch, g.Threads
+		spec.KVTypeK, spec.KVTypeV = g.kv(), g.kv()
 		mm, err := b.Load(context.Background(), spec)
 		if err != nil {
 			t.Fatal(err)

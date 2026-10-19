@@ -351,7 +351,7 @@ v0.11.2 и NanoASR.
     калибровка G7.
 - **Golden:**
   - `fetch-libs --tools` достаёт инструменты тега;
-  - `testdata/golden/b11600/gemma-4-e4b-qat/cpu.json`: промпт, текст, id и
+  - `testdata/golden/b11600/gemma-4-e4b-qat/cpu-sapphirerapids.json`: промпт, текст, id и
     CPU-вариант ggml;
   - генерируется на VM один раз.
 - **lavapipe:**
@@ -398,7 +398,7 @@ v0.11.2 и NanoASR.
 - **Итог на VM (b11600, E4B Q4_0 QAT + int4-драфтер, CPU sapphirerapids):**
   - эталон — `llama-server --spec-type draft-mtp` (у `llama-cli` нет счётчиков):
     64 токена, 111 драфтов, 25 принятых — совпадает токен в токен и по
-    счётчикам (`testdata/golden/b11600/*/cpu-mtp.json`);
+    счётчикам (`testdata/golden/b11600/*/cpu-mtp-sapphirerapids.json`);
   - 5 промптов: greedy с драфтером и без совпадает точно, acceptance 35 %;
   - decode 6,5 tok/s без MTP; n_max 2 — 8,2 tok/s (×1,26), n_max 3 —
     ×1,17, n_max 4 — ×0,93: на CPU драфт окупается до n_max 2–3;
