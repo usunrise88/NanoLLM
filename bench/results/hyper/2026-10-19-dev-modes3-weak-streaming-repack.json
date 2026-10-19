@@ -1,0 +1,260 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "d6976bc-dirty",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "ace20f679e30a39c09a7b17bec14199855469633"
+    },
+    "ggml_cpu_variant": "haswell",
+    "os": "linux",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "AMD",
+      "model": "AMD EPYC 7351P",
+      "cores": 16,
+      "threads": 32,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c"
+      ]
+    },
+    "memory": {
+      "total_bytes": 135036997632
+    },
+    "system": {
+      "vendor": "To Be Filled By O.E.M.",
+      "product": "To Be Filled By O.E.M.",
+      "form_factor": "server",
+      "chassis": "desktop"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "26.04",
+      "kernel_mm": "7.0"
+    },
+    "power": {},
+    "disk": {
+      "type": "hdd"
+    },
+    "extra": [
+      {
+        "key": "numa_nodes",
+        "value": "4"
+      },
+      {
+        "key": "governor",
+        "value": "performance"
+      },
+      {
+        "key": "boost",
+        "value": "1"
+      },
+      {
+        "key": "thp",
+        "value": "madvise"
+      },
+      {
+        "key": "numa_balancing",
+        "value": "1"
+      },
+      {
+        "key": "loadavg_1m",
+        "value": "6.83"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "preset": "ram-2g",
+      "plan_hash": "d58e92de2325a83c",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "tg_tok_s": {}
+      },
+      "reps": 0,
+      "output": {},
+      "status": "failed",
+      "reason": "worker: signal: killed: killed under the cgroup limit (out of memory?) 2026/10/19 16:58:01 WARN load: '\u003c/s\u003e' is a normal token here, removing it from EOG list component=llama.cpp",
+      "variant": "repack=on"
+    },
+    {
+      "preset": "ram-2g",
+      "plan_hash": "38f1e10d028e1810",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 15722.414,
+        "pp_tok_s": 8.986388178799828,
+        "tg_tok_s": {
+          "d0": 0.12345322711091097
+        },
+        "peak_rss": 3922952192,
+        "peak_locked": 1552605184,
+        "peak_page_cache": 1754857472,
+        "peak_cgroup": 2348814336,
+        "buffers": {
+          "CPU_Mapped": 4243796759
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "repack=off"
+    },
+    {
+      "preset": "ram-1.5g",
+      "plan_hash": "0530238b3aa5ed77",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "tg_tok_s": {}
+      },
+      "reps": 0,
+      "output": {},
+      "status": "failed",
+      "reason": "worker: signal: killed: killed under the cgroup limit (out of memory?) 2026/10/19 17:01:11 WARN load: '\u003c/s\u003e' is a normal token here, removing it from EOG list component=llama.cpp",
+      "variant": "repack=on"
+    },
+    {
+      "preset": "ram-1.5g",
+      "plan_hash": "8fafc0a059f28eee",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 11046.738,
+        "pp_tok_s": 8.694369554025776,
+        "tg_tok_s": {
+          "d0": 0.08217246710839914
+        },
+        "peak_rss": 2853335040,
+        "peak_locked": 1021861888,
+        "peak_page_cache": 1217507328,
+        "peak_cgroup": 1811943424,
+        "buffers": {
+          "CPU_Mapped": 4243796759
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "repack=off"
+    }
+  ],
+  "date": "2026-10-19",
+  "duration_s": 424.246757366
+}

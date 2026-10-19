@@ -50,5 +50,5 @@ for profile in strong weak; do
 	slow "$LABEL-$profile-streaming-repack" --profile "$profile" --set repack=on,off "${a[@]}"
 done
 # MADV_RANDOM on the PLE table (the file-backed, randomly read part): on and off.
-full "$LABEL-advise" --profile strong --set env.NANOLLM_NO_ADVISE_RANDOM=0,1 --preset ram-3g
+full "$LABEL-advise" --profile strong --set env.NANOLLM_ADVISE_RANDOM=0,1 --preset ram-3g
 echo "=== $(date +%T) done"

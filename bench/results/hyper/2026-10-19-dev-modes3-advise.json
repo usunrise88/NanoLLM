@@ -1,0 +1,214 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "d6976bc-dirty",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "ace20f679e30a39c09a7b17bec14199855469633"
+    },
+    "ggml_cpu_variant": "haswell",
+    "os": "linux",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "AMD",
+      "model": "AMD EPYC 7351P",
+      "cores": 16,
+      "threads": 32,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c"
+      ]
+    },
+    "memory": {
+      "total_bytes": 135036997632
+    },
+    "system": {
+      "vendor": "To Be Filled By O.E.M.",
+      "product": "To Be Filled By O.E.M.",
+      "form_factor": "server",
+      "chassis": "desktop"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "26.04",
+      "kernel_mm": "7.0"
+    },
+    "power": {},
+    "disk": {
+      "type": "hdd"
+    },
+    "extra": [
+      {
+        "key": "numa_nodes",
+        "value": "4"
+      },
+      {
+        "key": "governor",
+        "value": "performance"
+      },
+      {
+        "key": "boost",
+        "value": "1"
+      },
+      {
+        "key": "thp",
+        "value": "madvise"
+      },
+      {
+        "key": "numa_balancing",
+        "value": "1"
+      },
+      {
+        "key": "loadavg_1m",
+        "value": "5.29"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "preset": "ram-3g",
+      "plan_hash": "802fdd842fa34328",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "interleave",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 22965.253,
+        "pp_tok_s": 44.480374119172474,
+        "tg_tok_s": {
+          "d0": 19.04586790182477
+        },
+        "ttft_ms": 1633.479,
+        "chat_tok_s": 17.788922163058455,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.8609599843874005,
+          "tok_s": 15.315550147775491
+        },
+        "peak_rss": 3436310528,
+        "peak_locked": 2932736,
+        "peak_page_cache": 1666166784,
+        "peak_cgroup": 3422556160,
+        "buffers": {
+          "CPU_Mapped": 2002895427,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 2.527324550388861,
+          "mtp_tok_s": 1.2361524301609528,
+          "pp_tok_s": 2.77989986928736,
+          "tg_tok_s.d0": 2.7994214418714796,
+          "ttft_ms": 331.1166932472598
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "env.NANOLLM_NO_ADVISE_RANDOM=0"
+    },
+    {
+      "preset": "ram-3g",
+      "plan_hash": "69648e8b0b6f9f39",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3,
+        "numa": "interleave",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 22423.423,
+        "pp_tok_s": 46.09144826997218,
+        "tg_tok_s": {
+          "d0": 19.53859193902414
+        },
+        "ttft_ms": 1607.288,
+        "chat_tok_s": 18.69380811658759,
+        "mtp": {
+          "acceptance": 0.4444444444444444,
+          "speedup": 0.8110234475924131,
+          "tok_s": 15.1611167073459
+        },
+        "peak_rss": 3437494272,
+        "peak_locked": 2932736,
+        "peak_page_cache": 1679667200,
+        "peak_cgroup": 3422556160,
+        "buffers": {
+          "CPU_Mapped": 2002895427,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 1.825886138348705,
+          "mtp_tok_s": 0.6257555777309911,
+          "pp_tok_s": 2.8146110073302757,
+          "tg_tok_s.d0": 2.4927592024935854,
+          "ttft_ms": 196.74337861539337
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "env.NANOLLM_NO_ADVISE_RANDOM=1"
+    }
+  ],
+  "date": "2026-10-19",
+  "duration_s": 272.322994921
+}

@@ -12,18 +12,20 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// EnvNoAdvise turns AdviseRandom off ("1"), for A/B measurements.
-const EnvNoAdvise = "NANOLLM_NO_ADVISE_RANDOM"
+// EnvAdvise turns AdviseRandom on ("1"). It is off by default: the A/B run on
+// hyper (docs/AUTOTUNE.md) found no gain, but the variant is kept for disks and
+// kernels where readahead hurts, and for the autotuner to try.
+const EnvAdvise = "NANOLLM_ADVISE_RANDOM"
 
 // AdviseRandom tells the kernel that the given ranges of path are read at
 // random (MADV_RANDOM) in every mapping of the file this process holds: no
 // readahead on a fault. The PLE table is the case: a token reads one row, and
 // a fault that drags in 128 KiB around it evicts the hot rows of a page cache
-// that a tight budget (M7, M8) leaves very small. It returns the bytes
+// that a tight budget (M7, M8) leaves very small. Only with EnvAdvise=1. It returns the bytes
 // advised; a file that is not mapped (yet) advises nothing, which is not an
 // error.
 func AdviseRandom(path string, ranges []Range) (int64, error) {
-	if len(ranges) == 0 || os.Getenv(EnvNoAdvise) == "1" {
+	if len(ranges) == 0 || os.Getenv(EnvAdvise) != "1" {
 		return 0, nil
 	}
 	want, err := filepath.EvalSymlinks(path)
