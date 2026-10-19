@@ -35,14 +35,39 @@ var Targets = map[string]Target{
 	"uma-4g":         {8192, 1},
 }
 
-// TargetFor returns the preset's target, or the floor for a budget that is
-// not one of the defined presets.
+// TargetFor returns the preset's target. A budget that is not a defined
+// preset (the one DerivedPreset names for a machine's free memory, "ram-72g")
+// gets the target of the largest defined preset of the same kind that fits
+// inside it, so a big machine is not held to the floor; a budget below every
+// row gets the floor.
 func TargetFor(preset string) Target {
 	if t, ok := Targets[preset]; ok {
 		return t
 	}
-	return Target{FloorNCtx, FloorSlots}
+	want, err := ParsePreset(preset)
+	if err != nil {
+		return Target{FloorNCtx, FloorSlots}
+	}
+	best, bestTotal := Target{FloorNCtx, FloorSlots}, int64(0)
+	for name, t := range Targets {
+		p, err := ParsePreset(name)
+		if err != nil || !sameKinds(p.Budget, want.Budget) || !fitsIn(p.Budget, want.Budget) {
+			continue
+		}
+		if tot := p.Budget.Total(); tot > bestTotal {
+			best, bestTotal = t, tot
+		}
+	}
+	return best
 }
+
+// sameKinds reports whether two budgets grant the same kinds of memory.
+func sameKinds(a, b Budget) bool {
+	return (a.VRAM > 0) == (b.VRAM > 0) && (a.RAM > 0) == (b.RAM > 0) && (a.Unified > 0) == (b.Unified > 0)
+}
+
+// fitsIn reports whether a is no larger than b in every kind.
+func fitsIn(a, b Budget) bool { return a.VRAM <= b.VRAM && a.RAM <= b.RAM && a.Unified <= b.Unified }
 
 // ProvenModes says which modes the planner may pick: a mode whose mechanism
 // has not been shown to work on this tag is skipped with its reason rather

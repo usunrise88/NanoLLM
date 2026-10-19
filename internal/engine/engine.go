@@ -26,6 +26,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/pool"
 	"github.com/usunrise88/nanollm/internal/registry"
 	"github.com/usunrise88/nanollm/internal/sched"
+	"github.com/usunrise88/nanollm/internal/stats"
 )
 
 // Context overflow policies (config.Generation.ContextOverflow).
@@ -61,6 +62,8 @@ type Service struct {
 	cfg     Config
 	pool    *pool.Pool
 	resolve Resolver
+	// Metrics counts finished requests; it is never nil.
+	Metrics *stats.Metrics
 }
 
 // New returns the service.
@@ -68,7 +71,7 @@ func New(cfg Config, p *pool.Pool, resolve Resolver) *Service {
 	if cfg.ContextOverflow == "" {
 		cfg.ContextOverflow = OverflowError
 	}
-	return &Service{cfg: cfg, pool: p, resolve: resolve}
+	return &Service{cfg: cfg, pool: p, resolve: resolve, Metrics: stats.New()}
 }
 
 var _ core.Service = (*Service)(nil)
@@ -77,14 +80,39 @@ var _ core.Service = (*Service)(nil)
 type timer struct {
 	stages map[core.Stage]float64
 	last   time.Time
+	start  time.Time // when the request began, for the metrics
 }
 
-func newTimer() *timer { return &timer{stages: map[core.Stage]float64{}, last: time.Now()} }
+func newTimer() *timer {
+	now := time.Now()
+	return &timer{stages: map[core.Stage]float64{}, last: now, start: now}
+}
 
 func (t *timer) mark(s core.Stage) {
 	now := time.Now()
 	t.stages[s] += float64(now.Sub(t.last).Microseconds()) / 1000
 	t.last = now
+}
+
+// record counts a finished generation in the server's metrics. A request the
+// client ended (context cancelled or past its deadline) is not an error.
+func (s *Service) record(kind string, start time.Time, out *genOut, err error) {
+	r := stats.Request{Kind: kind, Outcome: stats.OutcomeOK, TotalMS: float64(time.Since(start).Microseconds()) / 1000}
+	switch {
+	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		r.Outcome = stats.OutcomeCancelled
+	case err != nil:
+		r.Outcome = stats.OutcomeError
+	}
+	if out != nil {
+		r.Prompt, r.Cached = out.usage.PromptTokens, out.usage.CachedTokens
+		r.Completion, r.Reasoning = out.usage.CompletionTokens, out.usage.ReasoningTokens
+		r.Drafted, r.Accepted = out.drafted, out.accepted
+		r.TTFTMS = out.stats.TTFTMS
+		r.QueueMS = float64(out.queued.Microseconds()) / 1000
+		r.DecodeMS = out.stats.StagesMS[core.StageDecode]
+	}
+	s.Metrics.Observe(r)
 }
 
 // acquire resolves and loads the model of a request.
@@ -171,6 +199,7 @@ func (s *Service) Chat(ctx context.Context, req core.ChatRequest, sink core.Sink
 		return nil, err
 	}
 	out, err := g.run(ctx, req.Generation)
+	s.record("chat", tm.start, out, err)
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +236,7 @@ func (s *Service) Complete(ctx context.Context, req core.CompletionRequest, sink
 		return nil, err
 	}
 	out, err := g.run(ctx, req.Generation)
+	s.record("complete", tm.start, out, err)
 	if err != nil {
 		return nil, err
 	}
@@ -287,6 +317,10 @@ type genOut struct {
 	usage              core.Usage
 	stats              core.Stats
 	warnings           []core.Warning
+	// queued is the time the request waited for a slot, drafted and accepted
+	// the MTP tokens, for the server's metrics.
+	queued            time.Duration
+	drafted, accepted int
 }
 
 // constrain builds the sampler: request values over the model card's, and
@@ -429,6 +463,7 @@ func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 	var final *sched.Event
 	var firstTok time.Time
 	var drafted, accepted int
+	var queued time.Duration
 	cached := 0
 	slot := 0
 	var prefillDur time.Duration
@@ -505,6 +540,9 @@ func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 			if errors.As(err, &ce) {
 				return nil, core.Errorf(core.CodeContextOverflow, "the prompt is %d tokens and the context holds %d", ce.Prompt, ce.NCtx).WithParam("messages")
 			}
+			if errors.Is(err, sched.ErrOverloaded) {
+				return nil, core.Errorf(core.CodeQueueFull, "the server is at its limit: too many requests are waiting for this model; retry shortly").WithCause(err)
+			}
 			return nil, core.Errorf(core.CodeModelUnavailable, "the model is unloading; retry").WithCause(err)
 		}
 		restart := false
@@ -553,6 +591,7 @@ func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 			}
 			if ev.Done {
 				if ev.Stats != nil {
+					queued += ev.Stats.Queued
 					drafted += ev.Stats.Drafted
 					accepted += ev.Stats.Accepted
 					slot = ev.Stats.Slot
@@ -656,6 +695,7 @@ func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 	if ms := g.tm.stages[core.StageDecode]; ms > 0 && len(generated) > 1 {
 		out.stats.DecodeTokS = float64(len(generated)-1) / (ms / 1000)
 	}
+	out.queued, out.drafted, out.accepted = queued, drafted, accepted
 	if drafted > 0 {
 		a := float64(accepted) / float64(drafted)
 		out.stats.DraftAcceptance = &a

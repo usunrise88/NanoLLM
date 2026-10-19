@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/usunrise88/nanollm/internal/backend"
@@ -64,6 +65,11 @@ type Stats struct {
 // ErrClosed is returned for requests on a loop that has stopped.
 var ErrClosed = errors.New("sched: model is unloading")
 
+// ErrOverloaded is returned when the requests waiting for a slot are already
+// as many as the loop was told to hold (SetMaxPending): an unbounded queue
+// only turns an overload into a growing wait for everyone.
+var ErrOverloaded = errors.New("sched: too many requests are waiting for a slot")
+
 // Loop is the scheduling loop of one loaded model. It is the only goroutine
 // that calls the model's Step and changes slot state: requests join between
 // steps, and every step batches all active slots — prefill chunks and decode
@@ -79,9 +85,38 @@ type Loop struct {
 	pending []*Handle
 	closed  bool
 	wake    chan struct{}
+	// maxPending bounds the requests waiting for a slot; zero is no bound.
+	maxPending int
 
 	slots []slot
 	clock uint64
+
+	// Read from other goroutines (Snapshot), written by the loop.
+	busy       atomic.Int32
+	steps      atomic.Int64
+	stepTokens atomic.Int64
+}
+
+// LoopStats is the loop's state at an instant, for the operator.
+type LoopStats struct {
+	Slots   int `json:"slots"`
+	Busy    int `json:"busy"`    // slots running a request
+	Pending int `json:"pending"` // requests waiting for a slot
+	// Steps is the model steps taken and StepTokens the tokens in their
+	// batches; their ratio is how full the batches run.
+	Steps      int64 `json:"steps"`
+	StepTokens int64 `json:"step_tokens"`
+}
+
+// Snapshot reads the loop's counters; it is safe from any goroutine.
+func (l *Loop) Snapshot() LoopStats {
+	l.mu.Lock()
+	pending := len(l.pending)
+	l.mu.Unlock()
+	return LoopStats{
+		Slots: len(l.slots), Busy: int(l.busy.Load()), Pending: pending,
+		Steps: l.steps.Load(), StepTokens: l.stepTokens.Load(),
+	}
 }
 
 type slot struct {
@@ -111,6 +146,15 @@ func New(m backend.Model) *Loop {
 	}
 	go l.run()
 	return l
+}
+
+// SetMaxPending bounds the requests that may wait for a slot (not those
+// running in one); a Submit past it fails with ErrOverloaded. Zero removes
+// the bound.
+func (l *Loop) SetMaxPending(n int) {
+	l.mu.Lock()
+	l.maxPending = n
+	l.mu.Unlock()
 }
 
 // Handle is one submitted request.
@@ -148,6 +192,9 @@ func (l *Loop) Submit(ctx context.Context, req Request) (*Handle, error) {
 	defer l.mu.Unlock()
 	if l.closed {
 		return nil, ErrClosed
+	}
+	if l.maxPending > 0 && len(l.pending) >= l.maxPending {
+		return nil, ErrOverloaded
 	}
 	l.pending = append(l.pending, h)
 	select {
@@ -350,6 +397,7 @@ func (l *Loop) assign(seq int, h *Handle) {
 	}
 	s.cached = s.cached[:reuse]
 	s.h = h
+	l.busy.Add(1)
 	s.session = h.req.SessionID
 	h.pos = reuse
 	h.stats = Stats{Slot: seq, PromptTokens: len(h.req.Prompt), CachedTokens: reuse}
@@ -378,7 +426,11 @@ func (l *Loop) step(active []int) {
 	for _, seq := range active {
 		h := l.slots[seq].h
 		if err := h.ctx.Err(); err != nil {
-			l.finish(seq, Event{Err: err})
+			// Cancelled between steps: the cache is exactly what the slot
+			// mirrors, so it stays. A client that goes away, a stop sequence
+			// and a reasoning budget all end here, and the next request —
+			// the continuation, the next turn — reuses the prefix.
+			l.release(seq, Event{Err: err}, false)
 			continue
 		}
 		if h.hasNext {
@@ -445,6 +497,10 @@ func (l *Loop) step(active []int) {
 
 	// The step's own context: cancelling it would abandon every slot in the
 	// batch, so it is never tied to one request.
+	l.steps.Add(1)
+	for _, st := range steps {
+		l.stepTokens.Add(int64(len(st.Tokens)))
+	}
 	outs, err := l.model.Step(context.Background(), steps)
 	if err != nil {
 		for _, st := range steps {
@@ -515,14 +571,22 @@ func (l *Loop) deliver(seq int, out backend.SeqOut) {
 }
 
 // finish ends the request in a slot and frees it. The slot keeps its cache
-// for the next request that shares the prefix.
+// for the next request that shares the prefix, unless the request failed: an
+// error may have struck mid-step, and the cache can then differ from what the
+// slot mirrors.
 func (l *Loop) finish(seq int, ev Event) {
+	l.release(seq, ev, ev.Err != nil)
+}
+
+// release is finish with the cache decision made by the caller.
+func (l *Loop) release(seq int, ev Event, clear bool) {
 	s := &l.slots[seq]
 	h := s.h
 	if h == nil {
 		return
 	}
 	s.h = nil
+	l.busy.Add(-1)
 	now := time.Now()
 	st := h.stats
 	st.Completion = h.generated
@@ -535,9 +599,7 @@ func (l *Loop) finish(seq int, ev Event) {
 	}
 	ev.Done = true
 	ev.Stats = &st
-	if ev.Err != nil {
-		// A slot whose request failed mid-step may hold a cache that no
-		// longer matches what we think it holds.
+	if clear {
 		l.model.ClearSeq(seq)
 		s.cached = nil
 		s.session = ""

@@ -199,3 +199,61 @@ func TestCloseEndsRequests(t *testing.T) {
 		}
 	}
 }
+
+// A request cancelled between steps (a client that left, a stop sequence, the
+// reasoning budget) keeps the slot's cache: the next request over the same
+// prompt, as the continuation after a budget is, reuses it.
+func TestCancelKeepsTheCache(t *testing.T) {
+	l, m := newLoop(t, fake.Options{DecodeRate: 200}, backend.LoadSpec{Slots: 1})
+	p := prompt(m, "a prompt that is long enough to be worth caching [[fake:loop]]")
+	ctx, cancel := context.WithCancel(context.Background())
+	h, err := l.Submit(ctx, Request{Prompt: p, Logprobs: -1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ev, err := h.Next(context.Background()); err != nil || ev.Done {
+		t.Fatalf("first event %+v, %v", ev, err)
+	}
+	cancel()
+	var last Event
+	for !last.Done {
+		if last, err = h.Next(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !errors.Is(last.Err, context.Canceled) {
+		t.Fatalf("cancelled request ended with %v", last.Err)
+	}
+	_, ev := run(t, l, m, Request{Prompt: p, MaxTokens: 3, Logprobs: -1})
+	if ev.Stats.CachedTokens < len(p)-1 {
+		t.Fatalf("the next request reused %d of %d prompt tokens: the cancel cleared the slot", ev.Stats.CachedTokens, len(p))
+	}
+}
+
+// Past the bound on waiting requests a Submit is refused, not queued: the
+// queue is for a burst, not for a server that cannot keep up.
+func TestMaxPending(t *testing.T) {
+	l, m := newLoop(t, fake.Options{DecodeRate: 50}, backend.LoadSpec{Slots: 1})
+	l.SetMaxPending(2)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var handles []*Handle
+	var refused int
+	for i := 0; i < 6; i++ {
+		h, err := l.Submit(ctx, Request{Prompt: prompt(m, "a request that runs for a while [[fake:loop]]"), Logprobs: -1})
+		switch {
+		case errors.Is(err, ErrOverloaded):
+			refused++
+		case err != nil:
+			t.Fatal(err)
+		default:
+			handles = append(handles, h)
+		}
+	}
+	// One runs, at most two wait; whatever the loop had not yet admitted when
+	// the submissions came counts as waiting, so the exact split varies.
+	if refused < 2 || len(handles) > 4 {
+		t.Fatalf("%d refused, %d accepted of 6 submissions with one slot and two waiting", refused, len(handles))
+	}
+	cancel()
+}

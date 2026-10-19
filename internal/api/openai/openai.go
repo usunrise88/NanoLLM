@@ -95,6 +95,12 @@ type chatRequest struct {
 		EnableThinking *bool `json:"enable_thinking"`
 	} `json:"chat_template_kwargs"`
 	MaxReasoningTokens int `json:"max_reasoning_tokens"`
+	// SessionID pins a conversation to the slot that holds its cache, and
+	// CachePrompt=false opts out of prefix reuse: the native dialect's
+	// fields, which a client of this one can set too (llama-server's
+	// cache_prompt is the same name).
+	SessionID   string `json:"session_id"`
+	CachePrompt *bool  `json:"cache_prompt"`
 }
 
 type streamOptions struct {
@@ -230,6 +236,7 @@ func (req chatRequest) core() (core.ChatRequest, error) {
 	out.Generation = core.Generation{
 		Model: req.Model, Sampling: smp, MaxTokens: req.MaxTokens, Stop: req.Stop,
 		Logprobs: req.Logprobs, TopLogprobs: req.TopLogprobs,
+		SessionID: req.SessionID, CachePrompt: req.CachePrompt,
 	}
 	if req.MaxCompletionTokens > 0 {
 		out.MaxTokens = req.MaxCompletionTokens
@@ -599,6 +606,7 @@ type completionRequest struct {
 	BestOf      *int            `json:"best_of"`
 	StreamOpts  *streamOptions  `json:"stream_options"`
 	CachePrompt *bool           `json:"cache_prompt"`
+	SessionID   string          `json:"session_id"`
 	sampling
 }
 
@@ -683,7 +691,7 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request) {
 		maxTokens = *req.MaxTokens
 	}
 	creq := core.CompletionRequest{Prompt: prompt, Generation: core.Generation{
-		Model: req.Model, Sampling: smp, MaxTokens: maxTokens, Stop: req.Stop, CachePrompt: req.CachePrompt,
+		Model: req.Model, Sampling: smp, MaxTokens: maxTokens, Stop: req.Stop, CachePrompt: req.CachePrompt, SessionID: req.SessionID,
 	}}
 	if req.Logprobs != nil {
 		creq.Logprobs, creq.TopLogprobs = true, *req.Logprobs

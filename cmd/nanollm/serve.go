@@ -159,6 +159,7 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 		return err
 	}
 
+	rt.MountStats(mux)
 	if libDir, err := backend.ResolveLibDir(cfg.Backends.LibDir); err == nil {
 		rt.MountBench(mux, server.BenchInfo{LibDir: libDir, Version: version, Tag: llamacpp.PinnedTag, Commit: llamacpp.PinnedCommit})
 	}

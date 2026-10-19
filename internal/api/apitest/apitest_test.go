@@ -257,3 +257,37 @@ func TestNativeTokenize(t *testing.T) {
 		t.Fatalf("%+v", dr)
 	}
 }
+
+// The OpenAI dialect carries session_id and cache_prompt like the native one
+// (llama-server's cache_prompt is the same name): a client that cannot speak
+// the native dialect can still keep its conversation on a slot and opt out of
+// prefix reuse.
+func TestOpenAISessionAndCachePrompt(t *testing.T) {
+	srv := server(t)
+	cached := func(body string) int {
+		t.Helper()
+		resp := post(t, srv, "/v1/chat/completions", body)
+		if resp.StatusCode != 200 {
+			t.Fatalf("status %d for %s", resp.StatusCode, body)
+		}
+		var out struct {
+			Usage struct {
+				Details struct {
+					Cached int `json:"cached_tokens"`
+				} `json:"prompt_tokens_details"`
+			}
+		}
+		decodeJSON(t, resp.Body, &out)
+		return out.Usage.Details.Cached
+	}
+	msg := `"messages":[{"role":"user","content":"a prompt long enough to be worth caching [[fake:echo]]"}]`
+	if n := cached(`{"model":"tiny",` + msg + `,"session_id":"s1"}`); n != 0 {
+		t.Fatalf("a first request cached %d tokens", n)
+	}
+	if n := cached(`{"model":"tiny",` + msg + `,"session_id":"s1"}`); n == 0 {
+		t.Fatal("the second request did not reuse the first one's cache")
+	}
+	if n := cached(`{"model":"tiny",` + msg + `,"cache_prompt":false}`); n != 0 {
+		t.Fatalf("cache_prompt:false still reused %d tokens", n)
+	}
+}

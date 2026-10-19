@@ -64,6 +64,10 @@ type Status struct {
 	LoadedAt time.Time `json:"loaded_at"`
 	LastUse  time.Time `json:"last_use"`
 	Info     any       `json:"info,omitempty"`
+	// Loop is the scheduling loop's state: slots, busy slots, queue.
+	Loop sched.LoopStats `json:"loop"`
+	// Memory is what the load log reported for the model's buffers.
+	Memory backend.MemoryReport `json:"memory"`
 }
 
 // Pool keeps instances resident. A request acquires an instance and releases
@@ -72,6 +76,9 @@ type Status struct {
 type Pool struct {
 	load LoadFunc
 	max  int
+	// MaxPending bounds the requests that may wait for a slot of one model;
+	// set before the first Acquire. Zero is no bound.
+	MaxPending int
 
 	mu        sync.Mutex
 	instances map[Key]*Instance
@@ -151,7 +158,9 @@ func (p *Pool) Acquire(ctx context.Context, k Key) (*Instance, func(), error) {
 		delete(p.loading, k)
 		if err == nil {
 			now := time.Now()
-			inst := &Instance{Key: k, Model: m, Loop: sched.New(m), Info: info, loadedAt: now, lastUse: now}
+			loop := sched.New(m)
+			loop.SetMaxPending(p.MaxPending)
+			inst := &Instance{Key: k, Model: m, Loop: loop, Info: info, loadedAt: now, lastUse: now}
 			if p.closed {
 				err = ErrClosed
 				p.mu.Unlock()
@@ -291,6 +300,7 @@ func (p *Pool) Status() []Status {
 		out = append(out, Status{
 			Key: inst.Key, Refs: inst.refs, Busy: inst.Loop.Busy(), Pinned: inst.pinned,
 			Retired: inst.retired, LoadedAt: inst.loadedAt, LastUse: inst.lastUse, Info: inst.Info,
+			Loop: inst.Loop.Snapshot(), Memory: inst.Model.MemoryReport(),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Key.String() < out[j].Key.String() })

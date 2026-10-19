@@ -95,6 +95,7 @@ func New(ctx context.Context, o Options) *Runtime {
 	}
 	r.devices = r.probe(ctx)
 	r.Pool = pool.New(r.load, o.Config.Pool.MaxResidentModels)
+	r.Pool.MaxPending = o.Config.Pool.MaxPending
 	r.Engine = engine.New(engine.Config{
 		DefaultModel:    o.Config.Models.Default,
 		EnableThinking:  o.Config.Generation.EnableThinking,

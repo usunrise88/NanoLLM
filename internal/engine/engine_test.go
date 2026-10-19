@@ -235,3 +235,39 @@ func TestUTF8Stream(t *testing.T) {
 		t.Fatalf("%q", got)
 	}
 }
+
+// Finished requests are counted by outcome, with their tokens: the
+// operator's /metrics and the soak test read these.
+func TestMetricsCountRequests(t *testing.T) {
+	s := newService(t, Config{}, fake.Options{}, backend.LoadSpec{})
+	if _, err := s.Chat(context.Background(), core.ChatRequest{Messages: user("count me [[fake:echo]]")}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Complete(context.Background(), core.CompletionRequest{Prompt: "a raw prompt [[fake:echo]]"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := s.Chat(ctx, core.ChatRequest{Messages: user("never runs")}, nil); err == nil {
+		t.Fatal("a cancelled request succeeded")
+	}
+	if _, err := s.Chat(context.Background(), core.ChatRequest{Generation: core.Generation{Model: "nope"}, Messages: user("x")}, nil); err == nil {
+		t.Fatal("an unknown model succeeded")
+	}
+	snap := s.Metrics.Snapshot()
+	if snap.Requests["chat/ok"] != 1 || snap.Requests["complete/ok"] != 1 {
+		t.Errorf("requests %v", snap.Requests)
+	}
+	if snap.Tokens.Prompt == 0 || snap.Tokens.Completion == 0 {
+		t.Errorf("tokens %+v", snap.Tokens)
+	}
+	if snap.Requests["chat/cancelled"] != 1 {
+		t.Errorf("the cancelled request is counted as cancelled: %v", snap.Requests)
+	}
+	if snap.Requests["chat/error"] != 0 {
+		t.Errorf("a cancelled or refused request counted as an error: %v", snap.Requests)
+	}
+	if snap.LatencyMS["total"].Count != 3 {
+		t.Errorf("total latency observations %d, want the 3 that reached generation", snap.LatencyMS["total"].Count)
+	}
+}
