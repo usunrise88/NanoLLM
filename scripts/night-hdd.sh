@@ -20,7 +20,7 @@ NEXT=${NEXT:-./dist/nanollm-next}
 CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
 NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
-STEPS=${STEPS-"stream ngram repack"}
+STEPS=${STEPS-"stream ngram repack thp"}
 
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
@@ -64,6 +64,14 @@ for step in $STEPS; do
 		bench "$NEXT" "$NEXT_CONFIG" "repack-cold" --reps 1 --timeout 20m --profile strong --preset ram-8g --set env.GGML_REPACK_THREADS=1,4,16
 		bench "$NEXT" "$NEXT_CONFIG" "repack-warm" --reps 1 --timeout 20m --advisory --profile strong --preset ram-8g --set env.GGML_REPACK_THREADS=1,4,16
 		unset NANOLLM_DEV_SERIES
+		;;
+	thp)
+		# OPT-6, transparent huge pages for the repacked weights: glibc's malloc
+		# madvises the big mappings (the repack buffer, the KV cache) with
+		# MADV_HUGEPAGE when glibc.malloc.hugetlb=1; the host's THP mode is
+		# madvise. Fewer TLB misses on a 2.5 GB scan per token.
+		full "thp-strong" --profile strong --preset ram-8g --set env.GLIBC_TUNABLES=glibc.malloc.hugetlb=0,glibc.malloc.hugetlb=1
+		full "thp-weak" --profile weak --preset ram-4g --set env.GLIBC_TUNABLES=glibc.malloc.hugetlb=0,glibc.malloc.hugetlb=1
 		;;
 	esac
 done

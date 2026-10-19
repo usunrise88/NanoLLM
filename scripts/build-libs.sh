@@ -3,7 +3,7 @@
 # the patch series in patches/llama.cpp (docs/STAGE2.md 2.1).
 #
 #   scripts/build-libs.sh [--no-vulkan] [--jobs N] [--cpus N] [--src DIR] [--build DIR] [--out DIR]
-#                         [--prepare-only] [--no-patches] [--next]
+#                         [--prepare-only] [--no-patches] [--next] [--cmake-arg ARG]...
 #
 # Writes dist/linux_amd64/{lib,tools} in the layout scripts/fetch-libs.sh
 # --tools produces, so everything downstream (the golden tests, tools/optimize,
@@ -36,6 +36,7 @@ PATCHES=1
 BUILD_DIR=""
 OUT_DIR=""
 NEXT=0
+EXTRA_CMAKE=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-vulkan) VULKAN=0 ;;
@@ -46,6 +47,7 @@ while [[ $# -gt 0 ]]; do
     --out) OUT_DIR=$2; shift ;;     # an output directory of its own (default dist/linux_amd64)
     --prepare-only) PREPARE_ONLY=1 ;;
     --no-patches) PATCHES=0 ;; # upstream's own build, to compare a patched one with
+    --cmake-arg) EXTRA_CMAKE+=("$2"); shift ;; # an extra cmake argument (tuning builds: -DGGML_LTO=ON)
     --next) NEXT=1 ;;          # also apply patches/next (not released yet); output dist/linux_amd64-next,
                                # no check against scripts/llama.cpp.commit
     *) echo "build-libs: unknown argument $1" >&2; exit 2 ;;
@@ -127,7 +129,7 @@ docker run --rm "${DOCKER_CPUS[@]}" -u "$(id -u):$(id -g)" \
       -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
       -DCMAKE_INSTALL_RPATH='\$ORIGIN' -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
       -DGGML_BACKEND_DL=ON -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=ON ${CMAKE_VULKAN[*]} \
-      -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_TOOLS=ON -DLLAMA_BUILD_SERVER=ON -DGGML_RPC=ON
+      -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_TOOLS=ON -DLLAMA_BUILD_SERVER=ON -DGGML_RPC=ON ${EXTRA_CMAKE[*]}
     cmake --build /build --config Release -j $JOBS
   "
 
