@@ -20,7 +20,7 @@ NEXT=${NEXT:-./dist/nanollm-next}
 CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
 NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
-STEPS=${STEPS-"numa batch stream ngram repack thp tune standard"}
+STEPS=${STEPS-"diskbw numa batch stream ngram repack thp tune standard"}
 
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
@@ -33,6 +33,16 @@ full() { local name=$1; shift; bench "$NANOLLM" "$CONFIG" "$name" --reps "${REPS
 
 for step in $STEPS; do
 	case $step in
+	diskbw)
+		# What the disk can deliver by each way weights reach memory (OPT-8
+		# against OPT-9). Two regions: the layers' area and the PLE table's.
+		MODEL=$(ls "$HOME"/nanollm-data/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)
+		OUTF=bench/results/$(hostname -s)/$(date +%F)-diskbw$([[ ${SSD:-0} == 1 ]] && echo -ssd).txt
+		{
+			echo "# $(date -Is) $(findmnt -T "$MODEL" -no SOURCE,FSTYPE)"
+			./dist/diskbw -file "$MODEL" -offset-mib 2100 -size-mib 1024 -threads 1,4,16
+		} | tee "$OUTF"
+		;;
 	numa)
 		# OPT-6, NUMA-local weights: the interleave policy (the default of the
 		# server) against ggml's distribute strategy, whose threads are pinned
