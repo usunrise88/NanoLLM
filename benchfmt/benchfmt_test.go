@@ -3,6 +3,7 @@ package benchfmt
 import (
 	"bytes"
 	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"os"
@@ -116,4 +117,59 @@ func TestOutputPrefixes(t *testing.T) {
 	if err := r.Validate(); err == nil || !strings.Contains(err.Error(), "prefixes[1]") {
 		t.Fatalf("a malformed prefix must be refused, got %v", err)
 	}
+}
+
+// The signature covers the document, not the Go struct: a member this version
+// does not know is signed too, so an older service verifies a newer client's
+// result, and cannot be fooled by a changed unknown member.
+func TestVerifyJSONCoversUnknownMembers(t *testing.T) {
+	_, key, _ := ed25519.GenerateKey(nil)
+	r := sample()
+	// The newer client has a member this struct lacks.
+	b, _ := json.Marshal(r)
+	b = bytes.Replace(b, []byte(`"date"`), []byte(`"future_field":{"x":1.50,"y":"<a&b>"},"date"`), 1)
+	signed := signDoc(t, key, b)
+	if err := VerifyJSON(signed); err != nil {
+		t.Fatalf("a document with a member this version does not know: %v", err)
+	}
+	// The struct this version reads from it would re-serialize without the
+	// member, which the old scheme signed over; the new one does not care.
+	if _, err := Parse(signed); err != nil {
+		t.Fatal(err)
+	}
+	// Changing the unknown member breaks the signature.
+	bad := bytes.Replace(signed, []byte(`"x":1.50`), []byte(`"x":1.5`), 1)
+	if VerifyJSON(bad) == nil {
+		t.Fatal("a changed unknown member was not detected")
+	}
+	// White space and key order do not matter.
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(signed, &m); err != nil {
+		t.Fatal(err)
+	}
+	pretty, _ := json.MarshalIndent(m, "", "  ")
+	if err := VerifyJSON(pretty); err != nil {
+		t.Fatalf("re-formatted document: %v", err)
+	}
+}
+
+// signDoc signs a document the way Sign does, for a document that has members
+// the struct does not.
+func signDoc(t *testing.T, key ed25519.PrivateKey, doc []byte) []byte {
+	t.Helper()
+	pub := hex.EncodeToString(key.Public().(ed25519.PublicKey))
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(doc, &m); err != nil {
+		t.Fatal(err)
+	}
+	m["install_id"], _ = json.Marshal(pub)
+	delete(m, "signature")
+	unsigned, _ := json.Marshal(m)
+	c, err := Canonical(unsigned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m["signature"], _ = json.Marshal(hex.EncodeToString(ed25519.Sign(key, c)))
+	out, _ := json.Marshal(m)
+	return out
 }

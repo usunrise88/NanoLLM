@@ -178,7 +178,7 @@ func (s *Service) Submit(ctx context.Context, body []byte, ipKey string) (*Recei
 	if res.InstallID == "" || res.Signature == "" {
 		return nil, refuse(http.StatusUnprocessableEntity, "a submission is signed: install_id and signature are required")
 	}
-	if err := res.Verify(); err != nil {
+	if err := benchfmt.VerifyJSON(body); err != nil {
 		return nil, refuse(http.StatusUnprocessableEntity, "%v", err)
 	}
 	fake := res.Client.GGMLCPUVariant == benchfmt.FakeCPUVariant
