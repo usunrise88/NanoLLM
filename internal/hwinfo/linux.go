@@ -112,7 +112,37 @@ func linuxProfile(fsys fs.FS) benchfmt.Machine {
 
 	m.Power = linuxPower(fsys, read)
 	m.Disk.Type = linuxDisk(fsys, read)
+	m.Extra = linuxExtra(fsys, read)
 	return m
+}
+
+// linuxExtra is what shapes CPU inference speed beyond the model of the CPU:
+// the NUMA layout, the frequency governor and boost, transparent huge pages,
+// automatic NUMA balancing and how busy the machine was when the run began.
+// A result that differs from another only here is explained by it.
+func linuxExtra(fsys fs.FS, read func(string) string) []benchfmt.Field {
+	var out []benchfmt.Field
+	add := func(k, v string) {
+		if v != "" {
+			out = append(out, benchfmt.Field{Key: k, Value: v})
+		}
+	}
+	if nodes := numaNodes(fsys); len(nodes) > 1 {
+		add("numa_nodes", strconv.Itoa(len(nodes)))
+	}
+	add("governor", read("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"))
+	add("boost", read("/sys/devices/system/cpu/cpufreq/boost"))
+	if thp := read("/sys/kernel/mm/transparent_hugepage/enabled"); thp != "" {
+		// "always [madvise] never": the bracketed word is the setting.
+		if i, j := strings.Index(thp, "["), strings.Index(thp, "]"); i >= 0 && j > i {
+			add("thp", thp[i+1:j])
+		}
+	}
+	add("numa_balancing", read("/proc/sys/kernel/numa_balancing"))
+	if f := strings.Fields(read("/proc/loadavg")); len(f) > 0 {
+		add("loadavg_1m", f[0])
+	}
+	return out
 }
 
 // marketingName picks the name people know the machine by. Lenovo puts the

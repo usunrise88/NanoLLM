@@ -256,6 +256,12 @@
         "properties": {
           "metrics": {
             "properties": {
+              "buffers": {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
               "chat_tok_s": {
                 "type": "number"
               },
@@ -269,6 +275,9 @@
                   },
                   "speedup": {
                     "type": "number"
+                  },
+                  "tok_s": {
+                    "type": "number"
                   }
                 },
                 "required": [
@@ -276,6 +285,9 @@
                   "speedup"
                 ],
                 "type": "object"
+              },
+              "peak_cgroup": {
+                "type": "integer"
               },
               "peak_locked": {
                 "type": "integer"
@@ -352,8 +364,20 @@
           },
           "plan": {
             "properties": {
+              "cold": {
+                "type": "boolean"
+              },
+              "cpus": {
+                "type": "string"
+              },
               "device": {
                 "type": "string"
+              },
+              "draft_max": {
+                "type": "integer"
+              },
+              "draft_p_min": {
+                "type": "number"
               },
               "enforcement": {
                 "type": "string"
@@ -367,14 +391,35 @@
               "kv": {
                 "type": "string"
               },
+              "kv_v": {
+                "type": "string"
+              },
+              "lazy": {
+                "type": "string"
+              },
+              "load_mode": {
+                "type": "string"
+              },
               "mode": {
                 "type": "string"
               },
               "mtp": {
                 "type": "boolean"
               },
+              "n_batch": {
+                "type": "integer"
+              },
               "n_ctx": {
                 "type": "integer"
+              },
+              "n_ubatch": {
+                "type": "integer"
+              },
+              "numa": {
+                "type": "string"
+              },
+              "repack": {
+                "type": "string"
               },
               "slots": {
                 "type": "integer"
@@ -383,6 +428,9 @@
                 "type": "boolean"
               },
               "threads": {
+                "type": "integer"
+              },
+              "threads_batch": {
                 "type": "integer"
               }
             },
@@ -410,6 +458,9 @@
             "type": "string"
           },
           "status": {
+            "type": "string"
+          },
+          "variant": {
             "type": "string"
           }
         },

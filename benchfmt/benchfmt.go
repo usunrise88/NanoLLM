@@ -182,6 +182,9 @@ type Run struct {
 	Output   Output  `json:"output"`
 	Status   string  `json:"status"`
 	Reason   string  `json:"reason,omitempty"`
+	// Variant names what a development sweep changed against the preset
+	// ("threads=8,kv=q8_0"); empty for the preset as planned.
+	Variant string `json:"variant,omitempty"`
 	// SameAs names the preset whose run this one shares because their plans
 	// are identical (deduplicated by plan hash).
 	SameAs string `json:"same_as,omitempty"`
@@ -199,21 +202,46 @@ type Plan struct {
 	MTP         bool   `json:"mtp"`
 	Threads     int    `json:"threads,omitempty"`
 	Enforcement string `json:"enforcement,omitempty"` // strict | advisory
+
+	// What the run loaded with and where it ran. All of these are omitted
+	// when unset, so a v1 document without them still verifies.
+	ThreadsBatch int     `json:"threads_batch,omitempty"`
+	NBatch       int     `json:"n_batch,omitempty"`
+	NUBatch      int     `json:"n_ubatch,omitempty"`
+	KVV          string  `json:"kv_v,omitempty"`
+	Repack       string  `json:"repack,omitempty"`    // on | off
+	LoadMode     string  `json:"load_mode,omitempty"` // none | mmap | mlock | mmap+mlock | dio
+	Lazy         string  `json:"lazy,omitempty"`      // off | auto | on
+	DraftMax     int     `json:"draft_max,omitempty"`
+	DraftPMin    float64 `json:"draft_p_min,omitempty"`
+	// NUMA is the memory policy the worker ran under (off, interleave,
+	// node:N); CPUs the cpu list it was pinned to, when it was.
+	NUMA string `json:"numa,omitempty"`
+	CPUs string `json:"cpus,omitempty"`
+	// Cold means the model file was evicted from the page cache first.
+	Cold bool `json:"cold,omitempty"`
 }
 
 // Metrics are medians over Reps; StdDev holds the spread of the main ones.
 type Metrics struct {
-	LoadMS        float64            `json:"load_ms,omitempty"`
-	PPTokS        float64            `json:"pp_tok_s,omitempty"`
-	TGTokS        TG                 `json:"tg_tok_s"`
-	TTFTMS        float64            `json:"ttft_ms,omitempty"`
-	ChatTokS      float64            `json:"chat_tok_s,omitempty"`
-	MTP           *MTP               `json:"mtp,omitempty"`
-	PeakRSS       int64              `json:"peak_rss,omitempty"`
-	PeakVRAM      int64              `json:"peak_vram,omitempty"`
-	PeakLocked    int64              `json:"peak_locked,omitempty"`
-	PeakPageCache int64              `json:"peak_page_cache,omitempty"`
-	StdDev        map[string]float64 `json:"stddev,omitempty"`
+	LoadMS        float64 `json:"load_ms,omitempty"`
+	PPTokS        float64 `json:"pp_tok_s,omitempty"`
+	TGTokS        TG      `json:"tg_tok_s"`
+	TTFTMS        float64 `json:"ttft_ms,omitempty"`
+	ChatTokS      float64 `json:"chat_tok_s,omitempty"`
+	MTP           *MTP    `json:"mtp,omitempty"`
+	PeakRSS       int64   `json:"peak_rss,omitempty"`
+	PeakVRAM      int64   `json:"peak_vram,omitempty"`
+	PeakLocked    int64   `json:"peak_locked,omitempty"`
+	PeakPageCache int64   `json:"peak_page_cache,omitempty"`
+	// PeakCgroup is the memory.peak of the worker's strict cgroup: resident
+	// pages plus the page cache charged to it, which is what the budget
+	// limits.
+	PeakCgroup int64 `json:"peak_cgroup,omitempty"`
+	// Buffers is the weights by ggml buffer type (CPU_Mapped, CPU_REPACK,
+	// Vulkan0, …), from the load log.
+	Buffers map[string]int64   `json:"buffers,omitempty"`
+	StdDev  map[string]float64 `json:"stddev,omitempty"`
 }
 
 // TG is token generation at depth 0 and at depth N (DepthN tokens of
@@ -227,6 +255,9 @@ type TG struct {
 type MTP struct {
 	Acceptance float64 `json:"acceptance"`
 	Speedup    float64 `json:"speedup"`
+	// TokS is the chat-ru decode rate with drafting on, absolute: Speedup is
+	// a ratio of two noisy numbers and hides which one moved.
+	TokS float64 `json:"tok_s,omitempty"`
 }
 
 // Output fingerprints what the model generated under greedy decoding: two

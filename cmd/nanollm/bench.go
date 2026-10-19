@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -24,6 +25,8 @@ import (
 // (docs/BENCHMARKS.md).
 //
 //	nanollm bench [MODEL] [--suite standard|dev] [--quick|--full] [--preset P]... [--submit] [--out FILE]
+//	nanollm bench --suite dev --preset P --set threads=8,16 [--profile weak] [--numa interleave] [--cold] [--label L]
+//	nanollm bench compare A.json [B.json]
 //	nanollm bench submit FILE
 //	nanollm bench withdraw ID
 //	nanollm bench worker            (internal: one preset, spec on stdin)
@@ -34,6 +37,8 @@ func benchCommand(args []string) error {
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 			return bench.Worker(ctx, os.Stdin, os.Stdout)
+		case "compare":
+			return benchCompare(args[1:])
 		case "submit":
 			return benchSubmit(args[1:])
 		case "withdraw":
@@ -47,12 +52,46 @@ func benchCommand(args []string) error {
 	fs.Bool("quick", true, "auto and two representative presets (the default)")
 	var presets multiFlag
 	fs.Var(&presets, "preset", "run this preset (repeatable) instead of the suite's choice")
-	reps := fs.Int("reps", bench.Reps, "repetitions per scenario")
+	reps := fs.Int("reps", 0, "repetitions per scenario (default 3, or 5 for the dev suite)")
 	submit := fs.Bool("submit", false, "send the result without asking (for scripts)")
-	out := fs.String("out", "", "result file (default bench-<date>.json in bench/results/)")
+	out := fs.String("out", "", "result file (default bench/results/<machine>/<date>-<suite>[-<label>].json)")
+	var sets multiFlag
+	fs.Var(&sets, "set", "dev suite: sweep key=a,b (repeatable; the product of all axes runs)\n"+bench.VariantKeys())
+	profile := fs.String("profile", "", "dev suite: strong, weak or <cpus>:<preset> (e.g. 0-3:ram-2g): where and with what budget to run")
+	numaFlag := fs.String("numa", "", "dev suite: off, interleave or node:N")
+	cold := fs.Bool("cold", false, "evict the model file from the page cache before each run (a strict budget does it anyway)")
+	advisory := fs.Bool("advisory", false, "dev suite: plan for the budget but do not enforce it (no cgroup, no cold start): fast sweeps of compute settings")
+	label := fs.String("label", "", "name of this run, for the result file")
+	machine := fs.String("machine", "", "machine directory under bench/results/ (default: the host's short name)")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
+	}
+	if *suite == bench.SuiteStandard && (len(sets) > 0 || *profile != "" || *numaFlag != "" || *cold || *advisory) {
+		return errors.New("bench: --set, --profile, --numa, --cold and --advisory change what is measured; use --suite dev")
+	}
+	variants, err := bench.ParseSets(sets)
+	if err != nil {
+		return err
+	}
+	var place bench.Placement
+	place.NUMA = *numaFlag
+	if _, err := bench.ParseNUMA(*numaFlag); err != nil {
+		return err
+	}
+	if *profile != "" {
+		prof, err := bench.ParseProfile(*profile)
+		if err != nil {
+			return err
+		}
+		if place.NUMA == "" {
+			place.NUMA = prof.Place.NUMA
+		}
+		place.CPUs = prof.Place.CPUs
+		*cold = *cold || prof.Cold
+		if len(presets) == 0 && prof.Preset != "" {
+			presets = append(presets, prof.Preset)
+		}
 	}
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
@@ -100,15 +139,15 @@ func benchCommand(args []string) error {
 	defer stop()
 	res, err := bench.Run(ctx, bench.Options{
 		Manifest: m, ModelPath: modelPath, DrafterPath: drafterPath, Backend: b, LibDir: libDir,
-		Suite: *suite, Full: *full, Presets: presets, Reps: *reps,
+		Suite: *suite, Full: *full, Presets: presets, Reps: *reps, Variants: variants, Place: place, Cold: *cold, Advisory: *advisory,
 		Version: version, Tag: llamacpp.PinnedTag, Commit: llamacpp.PinnedCommit,
 		Events: func(e bench.Event) {
 			switch e.Type {
 			case "start":
-				fmt.Fprintf(os.Stderr, "[%d/%d] %s …\n", e.Index+1, e.Total, e.Preset)
+				fmt.Fprintf(os.Stderr, "[%d/%d] %s %s …\n", e.Index+1, e.Total, e.Preset, e.Variant)
 			case "result":
 				r := e.Run
-				fmt.Fprintf(os.Stderr, "[%d/%d] %-16s %-8s pp %.1f tok/s  tg %.1f tok/s  %s\n", e.Index+1, e.Total, r.Preset, r.Status, r.Metrics.PPTokS, r.Metrics.TGTokS.D0, r.Reason)
+				fmt.Fprintf(os.Stderr, "[%d/%d] %-8s %-24s %-8s pp %.1f tok/s  tg %.1f tok/s  %s\n", e.Index+1, e.Total, r.Preset, r.Variant, r.Status, r.Metrics.PPTokS, r.Metrics.TGTokS.D0, r.Reason)
 			case "estimate":
 				fmt.Fprintf(os.Stderr, "      about %.0f min left\n", e.RemainS/60)
 			}
@@ -118,9 +157,7 @@ func benchCommand(args []string) error {
 		return err
 	}
 	if *out == "" {
-		dir := "bench/results"
-		_ = os.MkdirAll(dir, 0o755)
-		*out = fmt.Sprintf("%s/bench-%s-%s.json", dir, res.Date, *suite)
+		*out = resultPath(*machine, res.Date, *suite, *label)
 	}
 	if werr := writeJSON(*out, res); werr != nil {
 		return werr
@@ -225,3 +262,74 @@ type multiFlag []string
 
 func (m *multiFlag) String() string     { return strings.Join(*m, ",") }
 func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
+
+// resultPath is bench/results/<machine>/<date>-<suite>[-<label>].json; a
+// result already there is never overwritten, the name gets -2, -3, …
+func resultPath(machine, date, suite, label string) string {
+	if machine == "" {
+		machine, _ = os.Hostname()
+		machine, _, _ = strings.Cut(machine, ".")
+	}
+	dir := filepath.Join("bench", "results", slug(machine))
+	_ = os.MkdirAll(dir, 0o755)
+	name := date + "-" + suite
+	if label != "" {
+		name += "-" + slug(label)
+	}
+	path := filepath.Join(dir, name+".json")
+	for n := 2; ; n++ {
+		if _, err := os.Stat(path); err != nil {
+			return path
+		}
+		path = filepath.Join(dir, fmt.Sprintf("%s-%d.json", name, n))
+	}
+}
+
+// slug keeps a name safe as a path element.
+func slug(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
+			return r
+		}
+		return '-'
+	}, s)
+}
+
+// benchCompare is `nanollm bench compare A.json [B.json]`: the runs of A
+// against those of B, or the variants of one sweep against its first.
+func benchCompare(args []string) error {
+	pos := args
+	if len(pos) < 1 || len(pos) > 2 {
+		return errors.New("usage: nanollm bench compare A.json [B.json]")
+	}
+	load := func(path string) (*benchfmt.Result, error) {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		// Not benchfmt.Parse: a development sweep has more runs than the
+		// public format allows.
+		var r benchfmt.Result
+		if err := json.Unmarshal(b, &r); err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+		return &r, nil
+	}
+	a, err := load(pos[0])
+	if err != nil {
+		return err
+	}
+	var b *benchfmt.Result
+	if len(pos) == 2 {
+		if b, err = load(pos[1]); err != nil {
+			return err
+		}
+	}
+	rows := bench.Compare(a, b)
+	if len(rows) == 0 {
+		return errors.New("bench compare: no run of the same preset and variant in both files")
+	}
+	bench.WriteComparison(os.Stdout, rows)
+	return nil
+}

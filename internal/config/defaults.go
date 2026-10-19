@@ -29,12 +29,13 @@ func Default() Config {
 		Devices: Devices{
 			Default:  DeviceAuto,
 			Fallback: true,
+			NUMA:     "auto",
 		},
 		Models: Models{
 			Default: DefaultModel,
 			Preload: []string{DefaultModel},
 		},
-		Pool:  Pool{MaxResidentModels: 1},
+		Pool:  Pool{MaxResidentModels: 1, MaxPending: 64},
 		Cache: Cache{Prompt: true, MaxSnapshots: 8},
 		Generation: Generation{
 			// Off by default: the user waits for every token of thinking

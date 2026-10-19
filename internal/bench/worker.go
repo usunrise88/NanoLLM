@@ -35,6 +35,16 @@ type WorkerSpec struct {
 	DrafterLocks []memlock.Range `json:"drafter_locks,omitempty"`
 	// Quick skips the depth-N decode, the slowest scenario.
 	Quick bool `json:"quick"`
+	// Place is the worker's NUMA policy and pinned CPUs. numactl applies
+	// it; it is here so two placements never share a plan hash.
+	Place Placement `json:"place,omitempty"`
+	// Env is added to the worker's environment (a sweep's env.* keys).
+	Env map[string]string `json:"env,omitempty"`
+	// Cold means the orchestrator evicted the model file before the start.
+	Cold bool `json:"cold,omitempty"`
+	// Strict means the worker runs alone in a cgroup with a memory limit:
+	// its memory.peak and page cache are then the run's own, and recorded.
+	Strict bool `json:"strict,omitempty"`
 }
 
 // WorkerResult is what a worker writes on stdout.
@@ -80,6 +90,10 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 	if cv, ok := b.(cpuVarianter); ok {
 		res.CPUVariant = cv.CPUVariant()
 	}
+	var cg *cgroupWatch
+	if spec.Strict {
+		cg = watchCgroup()
+	}
 	start := time.Now()
 	for path, ranges := range map[string][]memlock.Range{spec.Load.Path: spec.Locks, spec.Load.DrafterPath: spec.DrafterLocks} {
 		if len(ranges) == 0 || path == "" {
@@ -99,7 +113,13 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 	res.Metrics.LoadMS = ms(time.Since(start))
 	loop := sched.New(m)
 	defer loop.Close()
-	return run(ctx, m, loop, spec, res)
+	res, err = run(ctx, m, loop, spec, res)
+	if cg != nil {
+		// Read while the model is still loaded: the peak and the page cache
+		// at that point are the run's.
+		res.Metrics.PeakCgroup, res.Metrics.PeakPageCache = cg.finish()
+	}
+	return res, err
 }
 
 // run measures the scenarios through the scheduling loop the server uses, so
@@ -201,8 +221,17 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 			}
 			out = toks
 		}
-		ttft, _ = medianStd(ttfts)
-		tps, _ = medianStd(rates)
+		var ttftSD, tpsSD float64
+		ttft, ttftSD = medianStd(ttfts)
+		tps, tpsSD = medianStd(rates)
+		key := "chat_tok_s"
+		if !noDraft {
+			key = "mtp_tok_s"
+		}
+		std[key] = tpsSD
+		if noDraft {
+			std["ttft_ms"] = ttftSD
+		}
 		if len(accs) > 0 {
 			a, _ := medianStd(accs)
 			acc = &a
@@ -224,6 +253,7 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 		if acc != nil {
 			mtp.Acceptance = *acc
 		}
+		mtp.TokS = drafted
 		if plain > 0 {
 			mtp.Speedup = drafted / plain
 		}
@@ -234,6 +264,12 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 	for _, d := range m.MemoryReport().Devices {
 		if d.Device != "cpu" && !strings.HasSuffix(d.Device, ":cpu") {
 			res.Metrics.PeakVRAM += d.Weights + d.KV + d.Compute
+		}
+		for buft, n := range d.WeightBuffers {
+			if res.Metrics.Buffers == nil {
+				res.Metrics.Buffers = map[string]int64{}
+			}
+			res.Metrics.Buffers[buft] += n
 		}
 	}
 	return res, nil

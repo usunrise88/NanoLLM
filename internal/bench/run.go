@@ -11,12 +11,14 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/usunrise88/nanollm/benchfmt"
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/hwinfo"
 	"github.com/usunrise88/nanollm/internal/memlock"
+	"github.com/usunrise88/nanollm/internal/numa"
 	"github.com/usunrise88/nanollm/internal/plan"
 	"github.com/usunrise88/nanollm/internal/registry"
 )
@@ -37,6 +39,23 @@ type Options struct {
 	Presets []string
 	Reps    int
 
+	// Sets are the sweep axes of the dev suite (ParseSets); every preset
+	// runs once per variant. Empty is the preset as planned.
+	Variants []Variant
+	// Place is where workers run (NUMA policy, pinned CPUs); a variant's
+	// numa key overrides its policy.
+	Place Placement
+	// Cold evicts the model file from the page cache before each worker, so
+	// the load reads the disk. A strict budget does it regardless: pages the
+	// cache already holds are charged to whoever read them first, not to the
+	// worker's cgroup, and would sit outside the limit.
+	Cold bool
+	// Advisory plans for the preset's budget but does not enforce it: no
+	// cgroup scope and no forced eviction, so a run costs seconds instead of
+	// a cold read of the disk. For sweeps of compute settings; the memory
+	// numbers of such a run are not the budget's.
+	Advisory bool
+
 	// Exe is the binary to run workers with; empty is this one.
 	Exe     string
 	Version string
@@ -50,6 +69,7 @@ type Options struct {
 type Event struct {
 	Type      string        `json:"type"` // plan | start | result | estimate | done
 	Preset    string        `json:"preset,omitempty"`
+	Variant   string        `json:"variant,omitempty"`
 	Index     int           `json:"index"`
 	Total     int           `json:"total"`
 	Run       *benchfmt.Run `json:"run,omitempty"`
@@ -72,6 +92,12 @@ func Run(ctx context.Context, o Options) (*benchfmt.Result, error) {
 	}
 	if o.Reps <= 0 {
 		o.Reps = Reps
+		if o.Suite == SuiteDev {
+			o.Reps = DevReps
+		}
+	}
+	if len(o.Variants) == 0 {
+		o.Variants = []Variant{{}}
 	}
 	if o.Exe == "" {
 		exe, err := os.Executable()
@@ -134,47 +160,57 @@ func Run(ctx context.Context, o Options) (*benchfmt.Result, error) {
 	seen := map[string]string{} // plan hash → preset that ran it
 	var measured time.Duration
 	nMeasured := 0
-	for i, name := range names {
-		if err := ctx.Err(); err != nil {
-			return res, err
-		}
-		o.emit(Event{Type: "plan", Preset: name, Index: i, Total: len(names)})
-		run, spec, refused := planRun(o, model, name, cpu, gpu)
-		if refused {
-			res.Runs = append(res.Runs, run)
-			o.emit(Event{Type: "result", Preset: name, Index: i, Total: len(names), Run: &run})
-			continue
-		}
-		if prev, ok := seen[run.PlanHash]; ok {
-			run.Status, run.SameAs = benchfmt.StatusSkipped, prev
-			run.Reason = "same plan as " + prev
-			res.Runs = append(res.Runs, run)
-			o.emit(Event{Type: "result", Preset: name, Index: i, Total: len(names), Run: &run})
-			continue
-		}
-		seen[run.PlanHash] = name
-		o.emit(Event{Type: "start", Preset: name, Index: i, Total: len(names)})
-		t0 := time.Now()
-		wr, enforcement, err := o.spawn(ctx, spec, budgetOf(name))
-		run.Plan.Enforcement = enforcement
-		if err != nil {
-			run.Status, run.Reason = benchfmt.StatusFailed, err.Error()
-		} else {
-			run.Status, run.Metrics, run.Output, run.Reps = benchfmt.StatusOK, wr.Metrics, wr.Output, o.Reps
-			if res.Client.GGMLCPUVariant == "" {
-				res.Client.GGMLCPUVariant = wr.CPUVariant
+	total := len(names) * len(o.Variants)
+	i := -1
+	for _, name := range names {
+		for _, v := range o.Variants {
+			i++
+			if err := ctx.Err(); err != nil {
+				return res, err
 			}
-		}
-		measured += time.Since(t0)
-		nMeasured++
-		res.Runs = append(res.Runs, run)
-		o.emit(Event{Type: "result", Preset: name, Index: i, Total: len(names), Run: &run, ElapsedMS: ms(time.Since(t0))})
-		if left := len(names) - i - 1; left > 0 {
-			o.emit(Event{Type: "estimate", Index: i, Total: len(names), RemainS: measured.Seconds() / float64(nMeasured) * float64(left)})
+			label := name
+			if len(v) > 0 {
+				label += " [" + v.String() + "]"
+			}
+			o.emit(Event{Type: "plan", Preset: name, Variant: v.String(), Index: i, Total: total})
+			run, spec, refused := planRun(o, model, name, v, cpu, gpu)
+			run.Variant = v.String()
+			if refused {
+				res.Runs = append(res.Runs, run)
+				o.emit(Event{Type: "result", Preset: name, Variant: run.Variant, Index: i, Total: total, Run: &run})
+				continue
+			}
+			if prev, ok := seen[run.PlanHash]; ok {
+				run.Status, run.SameAs = benchfmt.StatusSkipped, prev
+				run.Reason = "same plan as " + prev
+				res.Runs = append(res.Runs, run)
+				o.emit(Event{Type: "result", Preset: name, Variant: run.Variant, Index: i, Total: total, Run: &run})
+				continue
+			}
+			seen[run.PlanHash] = label
+			o.emit(Event{Type: "start", Preset: name, Variant: run.Variant, Index: i, Total: total})
+			t0 := time.Now()
+			wr, enforcement, err := o.spawn(ctx, spec, budgetOf(name))
+			run.Plan.Enforcement = enforcement
+			if err != nil {
+				run.Status, run.Reason = benchfmt.StatusFailed, err.Error()
+			} else {
+				run.Status, run.Metrics, run.Output, run.Reps = benchfmt.StatusOK, wr.Metrics, wr.Output, o.Reps
+				if res.Client.GGMLCPUVariant == "" {
+					res.Client.GGMLCPUVariant = wr.CPUVariant
+				}
+			}
+			measured += time.Since(t0)
+			nMeasured++
+			res.Runs = append(res.Runs, run)
+			o.emit(Event{Type: "result", Preset: name, Variant: run.Variant, Index: i, Total: total, Run: &run, ElapsedMS: ms(time.Since(t0))})
+			if left := total - i - 1; left > 0 {
+				o.emit(Event{Type: "estimate", Index: i, Total: total, RemainS: measured.Seconds() / float64(nMeasured) * float64(left)})
+			}
 		}
 	}
 	res.DurationS = time.Since(started).Seconds()
-	o.emit(Event{Type: "done", Total: len(names)})
+	o.emit(Event{Type: "done", Total: total})
 	return res, nil
 }
 
@@ -230,7 +266,7 @@ func budgetOf(name string) plan.Budget {
 }
 
 // planRun plans one preset. A refused preset is a result, not an error.
-func planRun(o Options, model plan.Model, name string, cpu, gpu *backend.Device) (benchfmt.Run, WorkerSpec, bool) {
+func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *backend.Device) (benchfmt.Run, WorkerSpec, bool) {
 	run := benchfmt.Run{Preset: name}
 	preset, err := plan.ParsePreset(name)
 	if err != nil {
@@ -238,6 +274,7 @@ func planRun(o Options, model plan.Model, name string, cpu, gpu *backend.Device)
 		return run, WorkerSpec{}, true
 	}
 	req := plan.Request{Model: model, Preset: preset, Proven: plan.ProvenFor(runtime.GOOS), NoMTP: o.DrafterPath == ""}
+	v.Plan(&req)
 	if (preset.Budget.VRAM > 0 || preset.Budget.Unified > 0) && gpu != nil {
 		req.Device = &plan.Device{
 			Selector: gpu.Selector(), Backend: strings.TrimRight(gpu.ID, "0123456789"),
@@ -261,8 +298,26 @@ func planRun(o Options, model plan.Model, name string, cpu, gpu *backend.Device)
 	if p.Device == nil {
 		spec.Device = cpu.Selector()
 	}
+	v.Load(&spec)
+	place := o.Place
+	if n, ok := v["numa"]; ok {
+		place.NUMA = n
+	}
+	place, pinned, err := place.Resolve()
+	if err != nil {
+		run.Status, run.Reason = benchfmt.StatusRefused, err.Error()
+		return run, WorkerSpec{}, true
+	}
+	if spec.Threads == 0 && pinned > 0 && !spec.FullyOnGPU() {
+		// A pinned worker defaults to the physical cores it may run on;
+		// this process sees the whole machine.
+		spec.Threads = pinned
+	}
+	if spec.ThreadsBatch == 0 && pinned > 0 && !spec.FullyOnGPU() {
+		spec.ThreadsBatch = pinned
+	}
 	spec = spec.WithDefaultThreads()
-	ws := WorkerSpec{Load: spec}
+	ws := WorkerSpec{Load: spec, Place: place, Env: v.Env(), Cold: o.Cold || budgetOf(name).RAM > 0 && !o.Advisory && userScopes()}
 	for _, lr := range p.LockRanges {
 		r := memlock.Range{Off: lr.Offset, Len: lr.Length}
 		if lr.Role == registry.RoleDrafter {
@@ -275,26 +330,51 @@ func planRun(o Options, model plan.Model, name string, cpu, gpu *backend.Device)
 	run.Plan = benchfmt.Plan{
 		Mode: string(p.Mode), Device: spec.Device, GPULayers: p.GPULayers, NCtx: p.NCtx, Slots: p.Slots,
 		KV: p.KV.TypeK, FA: p.FlashAttention, SWAFull: p.KV.SWAFull, MTP: p.MTP.Enabled, Threads: spec.Threads,
+		ThreadsBatch: spec.ThreadsBatch, NBatch: spec.NBatch, NUBatch: spec.NUBatch, KVV: spec.KVTypeV, LoadMode: string(spec.LoadMode), Lazy: string(spec.LazyMode),
+		NUMA: place.NUMA, CPUs: place.CPUs, Cold: ws.Cold,
+	}
+	run.Plan.Repack = onOff(spec.Repack)
+	if p.MTP.Enabled {
+		run.Plan.DraftMax, run.Plan.DraftPMin = spec.DraftMax, spec.DraftPMin
 	}
 	return run, ws, false
 }
 
 // spawn runs one worker. On Linux a RAM budget is enforced with a transient
 // systemd scope when the user manager is there (strict); otherwise the
-// budget is only planned for (advisory). Windows Job Objects arrive with
-// stage 3.
+// budget is only planned for (advisory). A placement is handed to the worker
+// in its environment, and the worker places itself before it starts.
+// Windows Job Objects arrive with stage 3.
 func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (WorkerResult, string, error) {
 	ws.Backend, ws.LibDir, ws.Reps, ws.Quick = o.Backend.Name(), o.LibDir, o.Reps, !o.Full
-	in, _ := json.Marshal(ws)
-	args := []string{"bench", "worker"}
-	name := o.Exe
 	enforcement := "advisory"
-	if runtime.GOOS == "linux" && budget.RAM > 0 && userScopes() {
-		limit := budget.RAM + plan.HostOverhead
-		args = append([]string{"--user", "--scope", "--quiet", "-p", "MemoryMax=" + strconv.FormatInt(limit, 10), "-p", "MemorySwapMax=0", "--", o.Exe}, args...)
-		name, enforcement = "systemd-run", "strict"
+	strict := runtime.GOOS == "linux" && budget.RAM > 0 && !o.Advisory && userScopes()
+	if strict {
+		enforcement = "strict"
 	}
+	ws.Strict = strict
+	in, _ := json.Marshal(ws)
+	cmdline := []string{o.Exe, "bench", "worker"}
+	if strict {
+		limit := budget.RAM + plan.HostOverhead
+		cmdline = append([]string{"systemd-run", "--user", "--scope", "--quiet", "-p", "MemoryMax=" + strconv.FormatInt(limit, 10), "-p", "MemorySwapMax=0", "--"}, cmdline...)
+	}
+	if ws.Cold {
+		evictFile(ws.Load.Path)
+		evictFile(ws.Load.DrafterPath)
+	}
+	name, args := cmdline[0], cmdline[1:]
 	cmd := exec.CommandContext(ctx, name, args...)
+	// The worker places itself (internal/numa) before it reads its spec.
+	if len(ws.Env) > 0 || !ws.Place.IsZero() {
+		cmd.Env = os.Environ()
+		for k, val := range ws.Env {
+			cmd.Env = append(cmd.Env, k+"="+val)
+		}
+		if !ws.Place.IsZero() {
+			cmd.Env = append(cmd.Env, numa.EnvPlace+"="+ws.Place.Spec())
+		}
+	}
 	cmd.Stdin = bytes.NewReader(in)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -304,6 +384,9 @@ func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (
 		tail := strings.TrimSpace(stderr.String())
 		if i := strings.LastIndex(tail, "\n"); i >= 0 {
 			tail = tail[i+1:]
+		}
+		if strict && err != nil && strings.Contains(err.Error(), "killed") {
+			tail = strings.TrimSpace("killed under the cgroup limit (out of memory?) " + tail)
 		}
 		if err == nil {
 			err = jerr
@@ -316,15 +399,24 @@ func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (
 	return wr, enforcement, nil
 }
 
-// userScopes reports whether systemd-run can make a scope for this user.
+// userScopes reports whether systemd-run can make a scope for this user. It
+// is asked once: each probe starts a scope.
 func userScopes() bool {
-	if _, err := exec.LookPath("systemd-run"); err != nil {
-		return false
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	return exec.CommandContext(ctx, "systemd-run", "--user", "--scope", "--quiet", "true").Run() == nil
+	userScopesOnce.Do(func() {
+		if _, err := exec.LookPath("systemd-run"); err != nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		userScopesOK = exec.CommandContext(ctx, "systemd-run", "--user", "--scope", "--quiet", "true").Run() == nil
+	})
+	return userScopesOK
 }
+
+var (
+	userScopesOnce sync.Once
+	userScopesOK   bool
+)
 
 // ChoosePresets is the preset list Run would use, for a caller that wants to
 // show it before the run starts.
@@ -353,4 +445,11 @@ func ChoosePresets(ctx context.Context, o Options) ([]string, error) {
 		return nil, errors.New("bench: the backend lists no CPU device")
 	}
 	return choosePresets(o, cpu, gpu), nil
+}
+
+func onOff(b bool) string {
+	if b {
+		return "on"
+	}
+	return "off"
 }

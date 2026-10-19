@@ -121,7 +121,13 @@ type LoadSpec struct {
 	// compute buffer reserves n_vocab × n_ubatch logits — 512 MiB for E4B —
 	// that the planner did not budget.
 	NOutputsMax int
-	Threads     int
+	// Threads is the CPU threads for decoding and ThreadsBatch for prompt
+	// processing (llama.cpp's n_threads and n_threads_batch); zero is one
+	// per physical core, and a zero ThreadsBatch follows Threads. Decoding
+	// is limited by memory bandwidth and can peak at fewer threads than
+	// prefill, which is limited by arithmetic.
+	Threads      int
+	ThreadsBatch int
 	// KVTypeK and KVTypeV are ggml type names (f16, q8_0). A quantized V
 	// needs flash attention.
 	KVTypeK string
@@ -145,14 +151,17 @@ type LoadSpec struct {
 // ran with. A model fully offloaded to a GPU keeps zero: it does no CPU
 // matrix work, and polling threads would only take cores from the host.
 func (s LoadSpec) WithDefaultThreads() LoadSpec {
-	if s.Threads == 0 && !s.fullyOnGPU() {
+	if s.Threads == 0 && !s.FullyOnGPU() {
 		s.Threads = hwinfo.DefaultThreads()
+	}
+	if s.ThreadsBatch == 0 {
+		s.ThreadsBatch = s.Threads
 	}
 	return s
 }
 
-// fullyOnGPU is a spec that names a GPU device and offloads every layer.
-func (s LoadSpec) fullyOnGPU() bool {
+// FullyOnGPU is a spec that names a GPU device and offloads every layer.
+func (s LoadSpec) FullyOnGPU() bool {
 	id := s.Device
 	if i := strings.LastIndex(id, ":"); i >= 0 {
 		id = id[i+1:]
@@ -260,6 +269,10 @@ type DeviceMemory struct {
 	Weights int64  `json:"weights"`
 	KV      int64  `json:"kv"`
 	Compute int64  `json:"compute"`
+	// WeightBuffers splits Weights by the name of the ggml buffer type that
+	// holds them (CPU_Mapped, CPU_REPACK, Vulkan0, …): how much of the model
+	// was repacked, and how much stayed in the file's mapping.
+	WeightBuffers map[string]int64 `json:"weight_buffers,omitempty"`
 }
 
 // Model is one loaded model with its context and slots.

@@ -43,6 +43,9 @@ func main() {
 		}
 		return
 	}
+	// A worker of `nanollm bench` is placed before it reads its spec: the
+	// placement survives the re-execution, a pipe does not.
+	placeFromEnv()
 	var err error
 	switch verb, args := os.Args[1], os.Args[2:]; verb {
 	case "init":

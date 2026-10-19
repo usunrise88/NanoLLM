@@ -284,7 +284,7 @@ func (b *llamaBackend) contextParams(spec backend.LoadSpec) (LlamaContextParams,
 	if maxSeq := int(llamaMaxParallelSequences()); slots > maxSeq {
 		return p, fmt.Errorf("llamacpp: %d slots, at most %d", slots, maxSeq)
 	}
-	if spec.NCtx < 0 || spec.NBatch < 0 || spec.NUBatch < 0 || spec.Threads < 0 {
+	if spec.NCtx < 0 || spec.NBatch < 0 || spec.NUBatch < 0 || spec.Threads < 0 || spec.ThreadsBatch < 0 {
 		return p, errors.New("llamacpp: negative context size, batch or thread count")
 	}
 	nctx := spec.NCtx
@@ -305,9 +305,9 @@ func (b *llamaBackend) contextParams(spec backend.LoadSpec) (LlamaContextParams,
 	if p.NUbatch > p.NBatch {
 		return p, fmt.Errorf("llamacpp: n_ubatch %d is larger than n_batch %d", p.NUbatch, p.NBatch)
 	}
-	if threads := spec.WithDefaultThreads().Threads; threads > 0 {
-		p.NThreads = int32(threads)
-		p.NThreadsBatch = int32(threads)
+	if t := spec.WithDefaultThreads(); t.Threads > 0 {
+		p.NThreads = int32(t.Threads)
+		p.NThreadsBatch = int32(max(t.ThreadsBatch, 1))
 	}
 	// The planner sizes n_outputs_max to slots × (1 + DraftMax): the default
 	// (n_batch) reserves n_vocab logits per batch token in the compute
@@ -442,6 +442,13 @@ func memoryFromLog(log []string, b *llamaBackend) backend.MemoryReport {
 	for _, l := range log {
 		if m := reModelBuf.FindStringSubmatch(l); m != nil {
 			add(m[1], m[2], func(d *backend.DeviceMemory) *int64 { return &d.Weights })
+			if v, err := strconv.ParseFloat(m[2], 64); err == nil {
+				d := per[bufferDevice(m[1])]
+				if d.WeightBuffers == nil {
+					d.WeightBuffers = map[string]int64{}
+				}
+				d.WeightBuffers[m[1]] += int64(v * (1 << 20))
+			}
 		} else if m := reKVBuf.FindStringSubmatch(l); m != nil {
 			add(m[1], m[2], func(d *backend.DeviceMemory) *int64 { return &d.KV })
 		} else if m := reComputeBuf.FindStringSubmatch(l); m != nil {

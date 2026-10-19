@@ -70,6 +70,11 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 		cfg.Log.File = *logFile
 	}
 
+	// Before anything is opened: a placement re-executes the process.
+	if err := placeProcess(cfg.Devices.NUMA); err != nil {
+		slog.Warn("devices.numa", "value", cfg.Devices.NUMA, "err", err)
+	}
+
 	logw, closeLog, err := openLog(cfg.Log.File)
 	if err != nil {
 		return fmt.Errorf("open the log file: %w", err)

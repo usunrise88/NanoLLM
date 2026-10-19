@@ -213,6 +213,9 @@ func (c *Config) Validate() error {
 	if err := ValidDevice(c.Devices.Default); err != nil {
 		return fmt.Errorf("devices.default: %w", err)
 	}
+	if err := ValidNUMA(c.Devices.NUMA); err != nil {
+		return fmt.Errorf("devices.numa: %w", err)
+	}
 	if c.Devices.CPUThreads < 0 {
 		return fmt.Errorf("devices.cpu_threads must not be negative, got %d", c.Devices.CPUThreads)
 	}
@@ -229,6 +232,9 @@ func (c *Config) Validate() error {
 		if err := o.validate(); err != nil {
 			return fmt.Errorf("models.overrides.%s: %w", id, err)
 		}
+	}
+	if c.Pool.MaxPending < 0 {
+		return fmt.Errorf("pool.max_pending must not be negative, got %d", c.Pool.MaxPending)
 	}
 	if c.Pool.MaxResidentModels < 1 {
 		return fmt.Errorf("pool.max_resident_models must be at least 1, got %d", c.Pool.MaxResidentModels)
@@ -378,4 +384,17 @@ func IsLoopback(addr string) bool {
 	}
 	ip := net.ParseIP(strings.Trim(host, "[]"))
 	return ip != nil && ip.IsLoopback()
+}
+
+// ValidNUMA accepts devices.numa: empty or auto, off, interleave, node:N.
+func ValidNUMA(s string) error {
+	switch {
+	case s == "", s == "auto", s == "off", s == "interleave":
+		return nil
+	case strings.HasPrefix(s, "node:"):
+		if n, err := strconv.Atoi(strings.TrimPrefix(s, "node:")); err == nil && n >= 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("%q is not auto, off, interleave or node:N", s)
 }

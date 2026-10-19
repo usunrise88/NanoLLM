@@ -35,8 +35,15 @@ func Collect(ctx context.Context, gpus []benchfmt.GPU) benchfmt.Machine {
 	if m.CPU.Vendor == "" {
 		m.CPU.Vendor = cpuVendor(m.CPU.Model)
 	}
+	// Dedicated servers often report the chassis of a tower or nothing at
+	// all; an EPYC or a Xeon is a server whatever the firmware says.
+	if serverCPU.MatchString(m.CPU.Model) && (m.System.FormFactor == benchfmt.FormDesktop || m.System.FormFactor == benchfmt.FormUnknown) {
+		m.System.FormFactor = benchfmt.FormServer
+	}
 	return m
 }
+
+var serverCPU = regexp.MustCompile(`(?i)\b(EPYC|Xeon)\b`)
 
 // FormFactorOfChassis maps an SMBIOS chassis type (DMI chassis_type) to a
 // form factor.

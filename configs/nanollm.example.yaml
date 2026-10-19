@@ -30,6 +30,7 @@ devices:
   default: auto           # auto | cpu | gpu | npu | llamacpp:vulkan0 ...
   fallback: true
   cpu_threads: 0          # 0 = physical cores
+  numa: auto              # auto | off | interleave | node:N (several-node machines)
 
 models:
   default: gemma-4-e4b-qat
@@ -48,6 +49,7 @@ models:
 
 pool:
   max_resident_models: 1
+  max_pending: 64         # requests waiting for a slot, per model; the next gets 503 queue_full (0 = no limit)
 
 cache:
   prompt: true

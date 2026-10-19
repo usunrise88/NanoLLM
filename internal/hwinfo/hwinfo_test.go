@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"io/fs"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -202,5 +203,60 @@ func TestDefaultThreads(t *testing.T) {
 		t.Fatalf("DefaultThreads = %d", n)
 	} else {
 		t.Logf("DefaultThreads = %d", n)
+	}
+}
+
+func TestNUMAAndExtra(t *testing.T) {
+	fsys := fstest.MapFS{
+		"sys/devices/system/node/node0/cpulist":                file("0-3,16-19\n"),
+		"sys/devices/system/node/node1/cpulist":                file("4-7,20-23\n"),
+		"sys/devices/system/node/has_cpu":                      file("0-1\n"),
+		"sys/devices/system/cpu/cpu0/cpufreq/scaling_governor": file("performance\n"),
+		"sys/devices/system/cpu/cpufreq/boost":                 file("1\n"),
+		"sys/kernel/mm/transparent_hugepage/enabled":           file("always [madvise] never\n"),
+		"proc/sys/kernel/numa_balancing":                       file("1\n"),
+		"proc/loadavg":                                         file("2.63 1.14 1.23 3/1500 123456\n"),
+	}
+	nodes := numaNodes(fsys)
+	if len(nodes) != 2 || nodes[0].ID != 0 || len(nodes[0].CPUs) != 8 || nodes[1].CPUs[0] != 4 {
+		t.Fatalf("nodes %+v", nodes)
+	}
+	read := func(p string) string {
+		b, _ := fs.ReadFile(fsys, strings.TrimPrefix(p, "/"))
+		return strings.TrimSpace(string(b))
+	}
+	got := map[string]string{}
+	for _, f := range linuxExtra(fsys, read) {
+		got[f.Key] = f.Value
+	}
+	want := map[string]string{"numa_nodes": "2", "governor": "performance", "boost": "1", "thp": "madvise", "numa_balancing": "1", "loadavg_1m": "2.63"}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("extra[%s] = %q, want %q", k, got[k], v)
+		}
+	}
+}
+
+func TestCPUList(t *testing.T) {
+	for in, want := range map[string]string{"0-3,16-19": "0-3,16-19", "5": "5", "3,1,2": "1-3", "": ""} {
+		if got := FormatCPUList(ParseCPUList(in)); got != want {
+			t.Errorf("%q round-trips to %q, want %q", in, got, want)
+		}
+	}
+	if ParseCPUList("a-b") != nil || ParseCPUList("5-2") != nil {
+		t.Error("a malformed list should parse to nothing")
+	}
+}
+
+func TestFirstThreads(t *testing.T) {
+	fsys := fstest.MapFS{}
+	for cpu := 0; cpu < 8; cpu++ {
+		base := "sys/devices/system/cpu/cpu" + num(cpu) + "/topology/"
+		fsys[base+"core_id"] = file(num(cpu%4) + "\n")
+		fsys[base+"physical_package_id"] = file("0\n")
+	}
+	got := firstThreads(fsys, []int{0, 1, 2, 3, 4, 5, 6, 7})
+	if FormatCPUList(got) != "0-3" {
+		t.Errorf("first threads %v, want 0-3", got)
 	}
 }

@@ -36,6 +36,9 @@ const (
 	ChatTokens = 128
 	Seed       = 42
 	Reps       = 3
+	// DevReps is the default for the dev suite: enough repetitions for a
+	// spread that `bench compare` can judge a change against.
+	DevReps = 5
 )
 
 // ppText is the prefill text, repeated to PPTokens; chatPrompt is the

@@ -111,6 +111,11 @@ type Devices struct {
 	Fallback bool `yaml:"fallback"`
 	// CPUThreads is the CPU thread budget. Zero means one per physical core.
 	CPUThreads int `yaml:"cpu_threads"`
+	// NUMA is the memory placement on a machine with several NUMA nodes:
+	// auto (interleave when there are several nodes), off (the kernel's
+	// default), interleave, or node:N (memory and threads on one node). A
+	// process already started under numactl keeps its policy.
+	NUMA string `yaml:"numa"`
 }
 
 type Models struct {
@@ -157,6 +162,9 @@ type Speculative struct {
 
 type Pool struct {
 	MaxResidentModels int `yaml:"max_resident_models"`
+	// MaxPending is how many requests may wait for a slot of one model
+	// before the next is refused with 503 queue_full; 0 is no limit.
+	MaxPending int `yaml:"max_pending"`
 }
 
 type Cache struct {
