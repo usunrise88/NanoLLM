@@ -1,3 +1,5 @@
+//go:build linux
+
 // Command diskbw measures how fast a file can be read from the disk by the
 // ways a model's weights reach memory: one sequential O_DIRECT stream,
 // several parallel O_DIRECT streams (queue depth), page faults through an
