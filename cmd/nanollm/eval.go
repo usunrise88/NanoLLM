@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,10 +10,14 @@ import (
 	"math/rand/v2"
 	"os"
 	"os/signal"
+	"sort"
+	"strconv"
 	"syscall"
 
+	"github.com/usunrise88/nanollm/internal/backend/llamacpp"
 	"github.com/usunrise88/nanollm/internal/config"
 	"github.com/usunrise88/nanollm/internal/eval"
+	"github.com/usunrise88/nanollm/internal/hwinfo"
 	"github.com/usunrise88/nanollm/internal/registry"
 	"github.com/usunrise88/nanollm/internal/server"
 )
@@ -23,6 +28,7 @@ import (
 //	nanollm eval MODEL --suite NAME|FILE [--thinking off|on|both] [--out FILE]
 //	nanollm eval rate REPORT [--all]
 //	nanollm eval compare A.json B.json [--out FILE]
+//	nanollm eval gate REFERENCE.json CANDIDATE.json [--tolerance 0.1]
 func evalCommand(args []string) error {
 	if len(args) > 0 {
 		switch args[0] {
@@ -30,6 +36,8 @@ func evalCommand(args []string) error {
 			return evalRate(args[1:])
 		case "compare":
 			return evalCompare(args[1:])
+		case "gate":
+			return evalGate(args[1:])
 		case "suites":
 			for _, s := range eval.Suites() {
 				fmt.Println(s)
@@ -95,7 +103,7 @@ func evalCommand(args []string) error {
 	if rep == nil {
 		return err
 	}
-	rep.Config = map[string]string{"device": cfg.Devices.Default}
+	rep.Config = runConfig(cfg, rt, model)
 	if *out == "" {
 		*out = "eval-" + sanitize(*suite) + ".json"
 	}
@@ -207,4 +215,96 @@ func sanitize(s string) string {
 		out = append(out, r)
 	}
 	return string(out)
+}
+
+// runConfig is what the report records about the configuration it ran under,
+// so that two reports can be told apart by it: the plan that loaded (preset,
+// mode, cache type, MTP), the threads, the NUMA policy, the library build and
+// the model file.
+func runConfig(cfg config.Config, rt *server.Runtime, model string) map[string]string {
+	c := map[string]string{
+		"device":  cfg.Devices.Default,
+		"numa":    cfg.Devices.NUMA,
+		"threads": strconv.Itoa(cmp.Or(cfg.Devices.CPUThreads, hwinfo.DefaultThreads())),
+		"tag":     llamacpp.PinnedTag,
+		"commit":  llamacpp.PinnedCommit,
+	}
+	if cat, err := registry.Builtin(); err == nil {
+		if m, ok := registry.Find(cat, model); ok {
+			if f, ok := m.File(registry.RoleModel); ok {
+				c["model_sha256"] = f.SHA256
+			}
+		}
+	}
+	for _, st := range rt.Pool.Status() {
+		b, err := json.Marshal(st.Info)
+		if err != nil {
+			continue
+		}
+		var p struct {
+			Preset string `json:"preset"`
+			Mode   string `json:"mode"`
+			KV     struct {
+				TypeK string `json:"type_k"`
+			} `json:"kv"`
+			MTP struct {
+				Enabled bool `json:"enabled"`
+			} `json:"mtp"`
+			Repack bool `json:"repack"`
+		}
+		if json.Unmarshal(b, &p) != nil || p.Mode == "" {
+			continue
+		}
+		c["preset"], c["mode"], c["kv"] = p.Preset, p.Mode, p.KV.TypeK
+		c["mtp"], c["repack"] = strconv.FormatBool(p.MTP.Enabled), strconv.FormatBool(p.Repack)
+		break
+	}
+	return c
+}
+
+// evalGate is `nanollm eval gate REFERENCE.json CANDIDATE.json`: the two
+// reports compared capability by capability. It exits non-zero when the
+// candidate regressed, so a script can stop on it.
+func evalGate(args []string) error {
+	fs := flag.NewFlagSet("eval gate", flag.ExitOnError)
+	tol := fs.Float64("tolerance", eval.DefaultTolerance, "the drop in a capability's pass rate that is let through")
+	pos, err := parseFlags(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 2 {
+		return errors.New("usage: nanollm eval gate REFERENCE.json CANDIDATE.json [--tolerance 0.1]")
+	}
+	a, _, err := loadReport(pos[0])
+	if err != nil {
+		return err
+	}
+	b, _, err := loadReport(pos[1])
+	if err != nil {
+		return err
+	}
+	rows, ok, err := eval.Gate(a, b, *tol)
+	if err != nil {
+		return err
+	}
+	for _, side := range []struct {
+		name string
+		r    *eval.Report
+	}{{"reference", a}, {"candidate", b}} {
+		keys := make([]string, 0, len(side.r.Config))
+		for k := range side.r.Config {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		fmt.Printf("%s:", side.name)
+		for _, k := range keys {
+			fmt.Printf(" %s=%s", k, side.r.Config[k])
+		}
+		fmt.Println()
+	}
+	eval.WriteGate(os.Stdout, rows)
+	if !ok {
+		return errors.New("the candidate regressed on at least one capability")
+	}
+	return nil
 }

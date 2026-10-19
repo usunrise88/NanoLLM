@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/usunrise88/nanollm/internal/core"
 )
@@ -71,7 +72,9 @@ func LongContext(lengths []int) []Item {
 	return items
 }
 
-// haystack is about chars characters of plain filler with the needle at frac.
+// haystack is about chars characters (runes: Cyrillic is two bytes a letter,
+// so counting bytes would halve the length it promises) of plain filler with
+// the needle at frac.
 func haystack(chars int, needle string, frac float64) string {
 	sentences := []string{
 		"Утром над рекой поднимался туман, и рыбаки не спешили выходить на лодках.",
@@ -82,13 +85,18 @@ func haystack(chars int, needle string, frac float64) string {
 		"Инженер проверял чертежи моста третий раз, потому что не любил ошибок.",
 	}
 	var sb strings.Builder
+	runes := 0
+	write := func(s string) {
+		sb.WriteString(s)
+		runes += utf8.RuneCountInString(s)
+	}
 	placed := false
-	for i := 0; sb.Len() < chars; i++ {
-		if !placed && float64(sb.Len()) >= frac*float64(chars) {
-			sb.WriteString(needle + " ")
+	for i := 0; runes < chars; i++ {
+		if !placed && float64(runes) >= frac*float64(chars) {
+			write(needle + " ")
 			placed = true
 		}
-		sb.WriteString(sentences[i%len(sentences)] + " ")
+		write(sentences[i%len(sentences)] + " ")
 	}
 	if !placed {
 		sb.WriteString(needle)
