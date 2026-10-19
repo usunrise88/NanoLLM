@@ -4,6 +4,7 @@ package llamacpp
 
 import (
 	"context"
+	"runtime"
 	"slices"
 	"testing"
 
@@ -63,6 +64,9 @@ func TestNativeLayerStreaming(t *testing.T) {
 		"probe":       {Ranges: ranges, Probe: true},
 	} {
 		t.Run(name, func(t *testing.T) {
+			if name != "probe" && runtime.GOOS != "linux" {
+				t.Skip("layer streaming asks the kernel with madvise; Linux only for now")
+			}
 			m, got := run(st)
 			defer m.Close()
 			if !slices.Equal(got, want) {

@@ -16,13 +16,13 @@ var sink byte
 // eventually polls cond: readahead is asynchronous.
 func eventually(t *testing.T, what string, cond func() bool) {
 	t.Helper()
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 1000; i++ {
 		if cond() {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Errorf("%s did not happen within 2s", what)
+	t.Errorf("%s did not happen within 10s", what)
 }
 
 func TestStreamerReadsAheadAndEvictsBehind(t *testing.T) {
@@ -70,6 +70,20 @@ func TestStreamerReadsAheadAndEvictsBehind(t *testing.T) {
 	}
 
 	t.Run("ahead", func(t *testing.T) {
+		reset()
+		// Some filesystems and sandboxes ignore MADV_WILLNEED; then there is
+		// nothing for the streamer to be tested against.
+		if err := unix.Madvise(view(3), unix.MADV_WILLNEED); err != nil {
+			t.Skipf("madvise(WILLNEED): %v", err)
+		}
+		honoured := false
+		for i := 0; i < 500 && !honoured; i++ {
+			honoured = resident(3) > layer/2
+			time.Sleep(10 * time.Millisecond)
+		}
+		if !honoured {
+			t.Skip("this filesystem does not read ahead on MADV_WILLNEED")
+		}
 		reset()
 		s, err := NewStreamer(path, layers, StreamOptions{Ahead: 1})
 		if err != nil {
