@@ -20,7 +20,7 @@ NEXT=${NEXT:-./dist/nanollm-next}
 CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
 NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
-STEPS=${STEPS-"stream ngram repack thp tune"}
+STEPS=${STEPS-"stream ngram repack thp tune standard"}
 
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
@@ -80,6 +80,12 @@ for step in $STEPS; do
 			echo "=== $(date +%T) tune A/B"
 			scripts/tools-ab.sh tune dist/linux_amd64-next/tools dist/tune-znver1/tools dist/tune-lto/tools dist/tune-both/tools -- 2 || echo "!!! tune failed"
 		fi
+		;;
+	standard)
+		# 2.9: the standard suite as a user runs it (auto and two presets,
+		# strict budgets, three repetitions), not submitted anywhere.
+		echo "=== $(date +%T) standard quick"
+		nice -n 5 "$NANOLLM" bench --config "$CONFIG" --suite standard --label "$LABEL-standard" || echo "!!! standard failed (rc=$?)"
 		;;
 	esac
 done
