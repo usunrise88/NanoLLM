@@ -14,6 +14,7 @@ import (
 	"unsafe"
 
 	"github.com/usunrise88/nanollm/internal/backend"
+	"github.com/usunrise88/nanollm/internal/memlock"
 )
 
 // loadMu serializes model loads, so the log lines a load produces (buffer
@@ -54,6 +55,11 @@ type model struct {
 
 	// dft is the MTP drafter, nil without one.
 	dft *drafter
+
+	// stream feeds the file-backed layers (OPT-8); streamID is the key of
+	// the eval callback's user_data. Both are zero without streaming.
+	stream   *memlock.Streamer
+	streamID uintptr
 
 	slots []slot
 }
@@ -112,8 +118,12 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 	if m.mdl == 0 {
 		return nil, fmt.Errorf("llamacpp: load %s failed%s", spec.Path, lastErrors(m.loadLog))
 	}
+	if st := spec.Stream.WithEnv(); st.Active() {
+		m.attachStream(st, &cp)
+	}
 	m.ctx = llamaInitFromModel(m.mdl, cp)
 	if m.ctx == 0 {
+		m.detachStream()
 		llamaModelFree(m.mdl)
 		return nil, fmt.Errorf("llamacpp: create a context for %s failed%s", spec.Path, lastErrors(m.loadLog))
 	}
@@ -620,6 +630,7 @@ func (m *model) Close() error {
 	if m.batch != 0 {
 		llamaBatchExtFree(m.batch)
 	}
+	m.detachStream()
 	llamaFree(m.ctx)
 	llamaModelFree(m.mdl)
 	m.batch, m.ctx, m.mdl, m.vocab, m.mem = 0, 0, 0, 0, 0

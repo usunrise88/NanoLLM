@@ -328,6 +328,7 @@ type trial struct {
 	kvBytes     int64
 	locks       []lockedTensor
 	random      []gguf.Tensor // file-backed tensors read at random (G1)
+	stream      []gguf.Tensor // file-backed layer tensors every token reads (OPT-8)
 	repacked    []string      // target tensors overridden to the repacked buffer (M8)
 	nOutputsMax int
 	mem         Memory

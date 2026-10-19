@@ -936,6 +936,638 @@
       "length": 1585446912
     }
   ],
+  "stream_ranges": [
+    {
+      "layer": 0,
+      "offset": 2001637472,
+      "length": 14745600
+    },
+    {
+      "layer": 0,
+      "offset": 2016383072,
+      "length": 14745600
+    },
+    {
+      "layer": 0,
+      "offset": 2031138912,
+      "length": 14745600
+    },
+    {
+      "layer": 1,
+      "offset": 2054037632,
+      "length": 14745600
+    },
+    {
+      "layer": 1,
+      "offset": 2068783232,
+      "length": 14745600
+    },
+    {
+      "layer": 1,
+      "offset": 2083539072,
+      "length": 14745600
+    },
+    {
+      "layer": 2,
+      "offset": 2106437792,
+      "length": 14745600
+    },
+    {
+      "layer": 2,
+      "offset": 2121183392,
+      "length": 14745600
+    },
+    {
+      "layer": 2,
+      "offset": 2135939232,
+      "length": 14745600
+    },
+    {
+      "layer": 3,
+      "offset": 2158837952,
+      "length": 14745600
+    },
+    {
+      "layer": 3,
+      "offset": 2173583552,
+      "length": 14745600
+    },
+    {
+      "layer": 3,
+      "offset": 2188339392,
+      "length": 14745600
+    },
+    {
+      "layer": 4,
+      "offset": 2211238112,
+      "length": 14745600
+    },
+    {
+      "layer": 4,
+      "offset": 2225983712,
+      "length": 14745600
+    },
+    {
+      "layer": 4,
+      "offset": 2240739552,
+      "length": 14745600
+    },
+    {
+      "layer": 5,
+      "offset": 2271013120,
+      "length": 14745600
+    },
+    {
+      "layer": 5,
+      "offset": 2285758720,
+      "length": 14745600
+    },
+    {
+      "layer": 5,
+      "offset": 2300514560,
+      "length": 14745600
+    },
+    {
+      "layer": 6,
+      "offset": 2323413280,
+      "length": 14745600
+    },
+    {
+      "layer": 6,
+      "offset": 2338158880,
+      "length": 14745600
+    },
+    {
+      "layer": 6,
+      "offset": 2352914720,
+      "length": 14745600
+    },
+    {
+      "layer": 7,
+      "offset": 2375813440,
+      "length": 14745600
+    },
+    {
+      "layer": 7,
+      "offset": 2390559040,
+      "length": 14745600
+    },
+    {
+      "layer": 7,
+      "offset": 2405314880,
+      "length": 14745600
+    },
+    {
+      "layer": 8,
+      "offset": 2428213600,
+      "length": 14745600
+    },
+    {
+      "layer": 8,
+      "offset": 2442959200,
+      "length": 14745600
+    },
+    {
+      "layer": 8,
+      "offset": 2457715040,
+      "length": 14745600
+    },
+    {
+      "layer": 9,
+      "offset": 2480613760,
+      "length": 14745600
+    },
+    {
+      "layer": 9,
+      "offset": 2495359360,
+      "length": 14745600
+    },
+    {
+      "layer": 9,
+      "offset": 2510115200,
+      "length": 14745600
+    },
+    {
+      "layer": 10,
+      "offset": 2533013920,
+      "length": 14745600
+    },
+    {
+      "layer": 10,
+      "offset": 2547759520,
+      "length": 14745600
+    },
+    {
+      "layer": 10,
+      "offset": 2562515360,
+      "length": 14745600
+    },
+    {
+      "layer": 11,
+      "offset": 2592788928,
+      "length": 14745600
+    },
+    {
+      "layer": 11,
+      "offset": 2607534528,
+      "length": 14745600
+    },
+    {
+      "layer": 11,
+      "offset": 2622290368,
+      "length": 14745600
+    },
+    {
+      "layer": 12,
+      "offset": 2645189088,
+      "length": 14745600
+    },
+    {
+      "layer": 12,
+      "offset": 2659934688,
+      "length": 14745600
+    },
+    {
+      "layer": 12,
+      "offset": 2674690528,
+      "length": 14745600
+    },
+    {
+      "layer": 13,
+      "offset": 2697589248,
+      "length": 14745600
+    },
+    {
+      "layer": 13,
+      "offset": 2712334848,
+      "length": 14745600
+    },
+    {
+      "layer": 13,
+      "offset": 2727090688,
+      "length": 14745600
+    },
+    {
+      "layer": 14,
+      "offset": 2749989408,
+      "length": 14745600
+    },
+    {
+      "layer": 14,
+      "offset": 2764735008,
+      "length": 14745600
+    },
+    {
+      "layer": 14,
+      "offset": 2779490848,
+      "length": 14745600
+    },
+    {
+      "layer": 15,
+      "offset": 2802389568,
+      "length": 14745600
+    },
+    {
+      "layer": 15,
+      "offset": 2817135168,
+      "length": 14745600
+    },
+    {
+      "layer": 15,
+      "offset": 2831891008,
+      "length": 14745600
+    },
+    {
+      "layer": 16,
+      "offset": 2854789728,
+      "length": 14745600
+    },
+    {
+      "layer": 16,
+      "offset": 2869535328,
+      "length": 14745600
+    },
+    {
+      "layer": 16,
+      "offset": 2884291168,
+      "length": 14745600
+    },
+    {
+      "layer": 17,
+      "offset": 2914564736,
+      "length": 14745600
+    },
+    {
+      "layer": 17,
+      "offset": 2929310336,
+      "length": 14745600
+    },
+    {
+      "layer": 17,
+      "offset": 2944066176,
+      "length": 14745600
+    },
+    {
+      "layer": 18,
+      "offset": 2966964896,
+      "length": 14745600
+    },
+    {
+      "layer": 18,
+      "offset": 2981710496,
+      "length": 14745600
+    },
+    {
+      "layer": 18,
+      "offset": 2996466336,
+      "length": 14745600
+    },
+    {
+      "layer": 19,
+      "offset": 3019365056,
+      "length": 14745600
+    },
+    {
+      "layer": 19,
+      "offset": 3034110656,
+      "length": 14745600
+    },
+    {
+      "layer": 19,
+      "offset": 3048866496,
+      "length": 14745600
+    },
+    {
+      "layer": 20,
+      "offset": 3071765216,
+      "length": 14745600
+    },
+    {
+      "layer": 20,
+      "offset": 3086510816,
+      "length": 14745600
+    },
+    {
+      "layer": 20,
+      "offset": 3101266656,
+      "length": 14745600
+    },
+    {
+      "layer": 21,
+      "offset": 3124165376,
+      "length": 14745600
+    },
+    {
+      "layer": 21,
+      "offset": 3138910976,
+      "length": 14745600
+    },
+    {
+      "layer": 21,
+      "offset": 3153666816,
+      "length": 14745600
+    },
+    {
+      "layer": 22,
+      "offset": 3176565536,
+      "length": 14745600
+    },
+    {
+      "layer": 22,
+      "offset": 3191311136,
+      "length": 14745600
+    },
+    {
+      "layer": 22,
+      "offset": 3206066976,
+      "length": 14745600
+    },
+    {
+      "layer": 23,
+      "offset": 3236340544,
+      "length": 14745600
+    },
+    {
+      "layer": 23,
+      "offset": 3251086144,
+      "length": 14745600
+    },
+    {
+      "layer": 23,
+      "offset": 3265841984,
+      "length": 14745600
+    },
+    {
+      "layer": 24,
+      "offset": 3287265120,
+      "length": 14745600
+    },
+    {
+      "layer": 24,
+      "offset": 3302010720,
+      "length": 14745600
+    },
+    {
+      "layer": 24,
+      "offset": 3316766560,
+      "length": 14745600
+    },
+    {
+      "layer": 25,
+      "offset": 3338189696,
+      "length": 14745600
+    },
+    {
+      "layer": 25,
+      "offset": 3352935296,
+      "length": 14745600
+    },
+    {
+      "layer": 25,
+      "offset": 3367691136,
+      "length": 14745600
+    },
+    {
+      "layer": 26,
+      "offset": 3389114272,
+      "length": 14745600
+    },
+    {
+      "layer": 26,
+      "offset": 3403859872,
+      "length": 14745600
+    },
+    {
+      "layer": 26,
+      "offset": 3418615712,
+      "length": 14745600
+    },
+    {
+      "layer": 27,
+      "offset": 3440038848,
+      "length": 14745600
+    },
+    {
+      "layer": 27,
+      "offset": 3454784448,
+      "length": 14745600
+    },
+    {
+      "layer": 27,
+      "offset": 3469540288,
+      "length": 14745600
+    },
+    {
+      "layer": 28,
+      "offset": 3490963424,
+      "length": 14745600
+    },
+    {
+      "layer": 28,
+      "offset": 3505709024,
+      "length": 14745600
+    },
+    {
+      "layer": 28,
+      "offset": 3520464864,
+      "length": 14745600
+    },
+    {
+      "layer": 29,
+      "offset": 3547787264,
+      "length": 14745600
+    },
+    {
+      "layer": 29,
+      "offset": 3562532864,
+      "length": 14745600
+    },
+    {
+      "layer": 29,
+      "offset": 3577288704,
+      "length": 14745600
+    },
+    {
+      "layer": 30,
+      "offset": 3598711840,
+      "length": 14745600
+    },
+    {
+      "layer": 30,
+      "offset": 3613457440,
+      "length": 14745600
+    },
+    {
+      "layer": 30,
+      "offset": 3628213280,
+      "length": 14745600
+    },
+    {
+      "layer": 31,
+      "offset": 3649636416,
+      "length": 14745600
+    },
+    {
+      "layer": 31,
+      "offset": 3664382016,
+      "length": 14745600
+    },
+    {
+      "layer": 31,
+      "offset": 3679137856,
+      "length": 14745600
+    },
+    {
+      "layer": 32,
+      "offset": 3700560992,
+      "length": 14745600
+    },
+    {
+      "layer": 32,
+      "offset": 3715306592,
+      "length": 14745600
+    },
+    {
+      "layer": 32,
+      "offset": 3730062432,
+      "length": 14745600
+    },
+    {
+      "layer": 33,
+      "offset": 3751485568,
+      "length": 14745600
+    },
+    {
+      "layer": 33,
+      "offset": 3766231168,
+      "length": 14745600
+    },
+    {
+      "layer": 33,
+      "offset": 3780987008,
+      "length": 14745600
+    },
+    {
+      "layer": 34,
+      "offset": 3802410144,
+      "length": 14745600
+    },
+    {
+      "layer": 34,
+      "offset": 3817155744,
+      "length": 14745600
+    },
+    {
+      "layer": 34,
+      "offset": 3831911584,
+      "length": 14745600
+    },
+    {
+      "layer": 35,
+      "offset": 3859233984,
+      "length": 14745600
+    },
+    {
+      "layer": 35,
+      "offset": 3873979584,
+      "length": 14745600
+    },
+    {
+      "layer": 35,
+      "offset": 3888735424,
+      "length": 14745600
+    },
+    {
+      "layer": 36,
+      "offset": 3910158560,
+      "length": 14745600
+    },
+    {
+      "layer": 36,
+      "offset": 3924904160,
+      "length": 14745600
+    },
+    {
+      "layer": 36,
+      "offset": 3939660000,
+      "length": 14745600
+    },
+    {
+      "layer": 37,
+      "offset": 3961083136,
+      "length": 14745600
+    },
+    {
+      "layer": 37,
+      "offset": 3975828736,
+      "length": 14745600
+    },
+    {
+      "layer": 37,
+      "offset": 3990584576,
+      "length": 14745600
+    },
+    {
+      "layer": 38,
+      "offset": 4012007712,
+      "length": 14745600
+    },
+    {
+      "layer": 38,
+      "offset": 4026753312,
+      "length": 14745600
+    },
+    {
+      "layer": 38,
+      "offset": 4041509152,
+      "length": 14745600
+    },
+    {
+      "layer": 39,
+      "offset": 4062932288,
+      "length": 14745600
+    },
+    {
+      "layer": 39,
+      "offset": 4077677888,
+      "length": 14745600
+    },
+    {
+      "layer": 39,
+      "offset": 4092433728,
+      "length": 14745600
+    },
+    {
+      "layer": 40,
+      "offset": 4113856864,
+      "length": 14745600
+    },
+    {
+      "layer": 40,
+      "offset": 4128602464,
+      "length": 14745600
+    },
+    {
+      "layer": 40,
+      "offset": 4143358304,
+      "length": 14745600
+    },
+    {
+      "layer": 41,
+      "offset": 4170680704,
+      "length": 14745600
+    },
+    {
+      "layer": 41,
+      "offset": 4185426304,
+      "length": 14745600
+    },
+    {
+      "layer": 41,
+      "offset": 4200182144,
+      "length": 14745600
+    }
+  ],
   "mtp": {
     "enabled": true,
     "reason": "the drafter (41.9 MiB) runs on the CPU with the target's output layer and reads its KV cache",

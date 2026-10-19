@@ -97,6 +97,13 @@ type Range struct {
 	Length int64  `json:"length"`
 }
 
+// StreamRange is one file-backed range read by a layer.
+type StreamRange struct {
+	Layer  int   `json:"layer"`
+	Offset int64 `json:"offset"`
+	Length int64 `json:"length"`
+}
+
 // Attempt records one mode the planner considered.
 type Attempt struct {
 	Mode Mode   `json:"mode"`
@@ -144,7 +151,11 @@ type Plan struct {
 	// RandomRanges are the file-backed ranges read at random (the PLE
 	// table): the loader tells the kernel not to read ahead in them.
 	RandomRanges []Range `json:"random_ranges,omitempty"`
-	MTP          MTP     `json:"mtp"`
+	// StreamRanges are the file-backed ranges of the layers, which every
+	// token reads front to back: with them the loader can read ahead and
+	// evict layer by layer (OPT-8).
+	StreamRanges []StreamRange `json:"stream_ranges,omitempty"`
+	MTP          MTP           `json:"mtp"`
 
 	// Groups is bytes per placement group and target; G5 is the KV cache,
 	// G7 the compute and output buffers of both contexts.

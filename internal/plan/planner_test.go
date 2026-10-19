@@ -413,3 +413,46 @@ func TestM7Repacks(t *testing.T) {
 		t.Errorf("planned RAM differs by %d bytes between repack and lock", d)
 	}
 }
+
+// OPT-8: a plan that leaves layer weights in the file names those ranges
+// per layer, and a plan that holds the layers in memory names none.
+func TestStreamRanges(t *testing.T) {
+	model := e4b(t)
+	all := ProvenModes{RAMFull: true, RAMPLEDisk: true, RAMHybrid: true, MMap: true}
+	full := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-8g"), Proven: all})
+	if len(full.StreamRanges) != 0 {
+		t.Errorf("%s keeps the layers in memory but names %d stream ranges", full.ModeID, len(full.StreamRanges))
+	}
+	for _, name := range []string{"ram-2g", "ram-1g"} {
+		p := mustPlan(t, Request{Model: model, Preset: preset(t, name), Proven: all, NoMTP: true})
+		if !p.OK() {
+			t.Fatalf("%s refused: %s", name, p.Refused)
+		}
+		layers := map[int]int64{}
+		for _, r := range p.StreamRanges {
+			if r.Layer < 0 || r.Layer >= model.Target.HParams.BlockCount || r.Length <= 0 {
+				t.Errorf("%s: stream range %+v", name, r)
+			}
+			layers[r.Layer] += r.Length
+		}
+		if len(layers) == 0 {
+			t.Errorf("%s (%s) leaves the layers in the file but names no stream range", name, p.ModeID)
+		}
+		// The ranges are the file-backed weights of the layers: no more
+		// than the plan says is file-backed.
+		var total int64
+		for _, n := range layers {
+			total += n
+		}
+		if fb := p.Memory.FileBacked; total > fb {
+			t.Errorf("%s: %d stream bytes but only %d file-backed", name, total, fb)
+		}
+		spec, err := p.LoadSpec("/m.gguf", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if spec.Stream == nil || len(spec.Stream.Ranges) != len(p.StreamRanges) || spec.Stream.Ahead != 0 || spec.Stream.Evict {
+			t.Errorf("%s: load spec stream %+v, want the ranges and everything off", name, spec.Stream)
+		}
+	}
+}

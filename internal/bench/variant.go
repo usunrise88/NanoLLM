@@ -33,6 +33,9 @@ var variantKeys = map[string]string{
 	"load":          "none, mmap, mlock, mmap+mlock or dio",
 	"lazy":          "off, auto or on",
 	"fa":            "on or off: flash attention",
+	"stream_ahead":  "layers read ahead of the compute in the file-backed modes M8, M9 (OPT-8); 0 is off",
+	"stream_keep":   "leading layers the streamer never evicts",
+	"stream_evict":  "on or off: drop a layer's pages once it is computed",
 	"numa":          "off, interleave or node:N",
 	"env.NAME":      "an environment variable for the worker (OMP_PROC_BIND, GGML_*)",
 }
@@ -98,7 +101,7 @@ func checkValue(key, v string) error {
 		return nil
 	}
 	switch key {
-	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max":
+	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "stream_ahead", "stream_keep":
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
 			return fmt.Errorf("%q is not a non-negative integer", v)
@@ -112,7 +115,7 @@ func checkValue(key, v string) error {
 		if v != "f16" && v != "q8_0" {
 			return fmt.Errorf("%q is not f16 or q8_0", v)
 		}
-	case "mtp", "repack", "fa":
+	case "mtp", "repack", "fa", "stream_evict":
 		if v != "on" && v != "off" {
 			return fmt.Errorf("%q is not on or off", v)
 		}
@@ -234,5 +237,21 @@ func (v Variant) Load(spec *backend.LoadSpec) {
 	}
 	if s, ok := v["lazy"]; ok {
 		spec.LazyMode = backend.LazyMode(s)
+	}
+	if spec.Stream != nil {
+		st := *spec.Stream
+		if n, ok := v.int("stream_ahead"); ok {
+			st.Ahead = n
+		}
+		if n, ok := v.int("stream_keep"); ok {
+			st.Keep = n
+		}
+		switch v["stream_evict"] {
+		case "on":
+			st.Evict = true
+		case "off":
+			st.Evict = false
+		}
+		spec.Stream = &st
 	}
 }

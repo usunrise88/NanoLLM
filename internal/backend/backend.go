@@ -15,7 +15,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -98,6 +100,62 @@ type BufferOverride struct {
 	Device  string `json:"device"`
 }
 
+// StreamRange is a file range one layer reads on every token and that the
+// plan leaves file-backed (M8's cold FFN tensors, M9's weights).
+type StreamRange struct {
+	Layer  int
+	Offset int64
+	Length int64
+}
+
+// StreamSpec is how a backend feeds file-backed layers (OPT-8): after layer
+// L is computed it asks the kernel to read the next Ahead layers, and, with
+// Evict, to drop L's pages unless L is one of the first Keep layers. Without
+// the page cache's LRU in the way, a budget smaller than the layers' total
+// keeps Keep layers resident for good instead of cycling every page through
+// the cache without a hit. Zero Ahead and no Evict leave the loader alone.
+type StreamSpec struct {
+	// Ranges are the plan's file-backed layer ranges, in file offsets.
+	Ranges []StreamRange
+	Ahead  int
+	Keep   int
+	Evict  bool
+	// Probe installs the layer callback and does nothing in it, to measure
+	// what the callback alone costs.
+	Probe bool
+}
+
+// Active is whether the backend has anything to do with the spec.
+func (s *StreamSpec) Active() bool {
+	return s != nil && len(s.Ranges) > 0 && (s.Ahead > 0 || s.Evict || s.Probe)
+}
+
+// WithEnv applies the NANOLLM_STREAM_AHEAD, _KEEP, _EVICT and _PROBE
+// variables over the spec, for the benchmark sweeps and the autotuner: the
+// configuration of a served model sets the fields directly.
+func (s *StreamSpec) WithEnv() *StreamSpec {
+	if s == nil {
+		return nil
+	}
+	o := *s
+	if v, err := strconv.Atoi(os.Getenv("NANOLLM_STREAM_AHEAD")); err == nil && v >= 0 {
+		o.Ahead = v
+	}
+	if v, err := strconv.Atoi(os.Getenv("NANOLLM_STREAM_KEEP")); err == nil && v >= 0 {
+		o.Keep = v
+	}
+	switch os.Getenv("NANOLLM_STREAM_EVICT") {
+	case "1":
+		o.Evict = true
+	case "0":
+		o.Evict = false
+	}
+	if os.Getenv("NANOLLM_STREAM_PROBE") == "1" {
+		o.Probe = true
+	}
+	return &o
+}
+
 // LoadSpec is a resolved load: the planner has already turned a preset into
 // concrete placement, so a backend never sees a budget it has to interpret.
 type LoadSpec struct {
@@ -150,6 +208,9 @@ type LoadSpec struct {
 	// step, stopping when the drafter's top probability drops below DraftPMin.
 	DraftMax  int
 	DraftPMin float64
+	// Stream is the file-backed layers of the plan and how to feed them; nil
+	// when the plan has none (OPT-8).
+	Stream *StreamSpec
 }
 
 // WithDefaultThreads fills a zero thread count with the physical cores this

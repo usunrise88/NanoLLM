@@ -66,6 +66,9 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 	for _, tn := range t.random {
 		p.RandomRanges = append(p.RandomRanges, Range{Role: "model", Offset: tn.Offset, Length: tn.Bytes})
 	}
+	for _, tn := range t.stream {
+		p.StreamRanges = append(p.StreamRanges, StreamRange{Layer: tn.Layer, Offset: tn.Offset, Length: tn.Bytes})
+	}
 	for _, pat := range repackPatterns(t.repacked) {
 		p.Overrides = append(p.Overrides, backend.BufferOverride{Pattern: pat, Device: backend.DeviceCPURepack})
 	}

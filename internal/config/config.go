@@ -148,6 +148,20 @@ type ModelOverride struct {
 	NCtx        Auto        `yaml:"n_ctx"`
 	Slots       Auto        `yaml:"slots"`
 	Speculative Speculative `yaml:"speculative"`
+	// Stream tunes the file-backed layers of the modes that leave weights
+	// in the file (M8, M9); every field zero leaves the loader alone.
+	Stream Stream `yaml:"stream"`
+}
+
+// Stream is OPT-8: the layers a plan leaves file-backed are read ahead of
+// the compute and dropped behind it (docs/STAGE2.md).
+type Stream struct {
+	// Ahead is how many layers after the one just computed are asked for.
+	Ahead int `yaml:"ahead"`
+	// Keep is how many leading layers stay in the page cache.
+	Keep int `yaml:"keep"`
+	// Evict drops a layer's pages once it is computed.
+	Evict bool `yaml:"evict"`
 }
 
 // Speculative decoding types.

@@ -92,6 +92,9 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 			if role == "model" && tn.Group == gguf.G1 {
 				t.random = append(t.random, tn)
 			}
+			if role == "model" && !spec.gpu && tn.Layer >= 0 && tn.Group != gguf.G1 {
+				t.stream = append(t.stream, tn)
+			}
 		}
 		add(g, b)
 

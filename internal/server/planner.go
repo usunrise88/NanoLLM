@@ -74,6 +74,9 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	if p.Device == nil {
 		spec.Device = req.Device.Selector()
 	}
+	if spec.Stream != nil {
+		spec.Stream.Ahead, spec.Stream.Keep, spec.Stream.Evict = ov.Stream.Ahead, ov.Stream.Keep, ov.Stream.Evict
+	}
 	spec.Threads, spec.ThreadsBatch = req.Threads, req.ThreadsBatch
 	spec = spec.WithDefaultThreads()
 	f, _ := req.Manifest.File(registry.RoleModel)

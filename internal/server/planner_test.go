@@ -230,3 +230,29 @@ func TestPlannerPlacerLeavesMTPOffOnTheCPU(t *testing.T) {
 		t.Errorf("speculative.type: mtp: MTP %+v, drafter %q", p.MTP, pl.Spec.DrafterPath)
 	}
 }
+
+// OPT-8: models.overrides.<id>.stream reaches the load spec of a plan that
+// leaves layers in the file, and a plan that does not has no stream spec.
+func TestPlannerPlacerCarriesTheStreamSettings(t *testing.T) {
+	m := defaultModel(t)
+	req := cpuRequest(m)
+	req.Override.Stream = config.Stream{Ahead: 3, Keep: 5, Evict: true}
+
+	req.Override.Preset = "ram-8g"
+	pl, err := PlannerPlacer(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pl.Spec.Stream != nil {
+		t.Errorf("ram-8g holds the layers in memory but has a stream spec: %+v", pl.Spec.Stream)
+	}
+
+	req.Override.Preset = "ram-2g"
+	if pl, err = PlannerPlacer(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	st := pl.Spec.Stream
+	if st == nil || st.Ahead != 3 || st.Keep != 5 || !st.Evict || len(st.Ranges) == 0 {
+		t.Errorf("ram-2g stream spec %+v, want ahead 3, keep 5, evict, with ranges", st)
+	}
+}

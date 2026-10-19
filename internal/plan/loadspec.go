@@ -49,6 +49,13 @@ func (p *Plan) LoadSpec(modelPath, drafterPath string) (backend.LoadSpec, error)
 		s.DraftMax = p.MTP.DraftMax
 		s.DraftPMin = p.MTP.DraftPMin
 	}
+	if len(p.StreamRanges) > 0 {
+		st := &backend.StreamSpec{}
+		for _, r := range p.StreamRanges {
+			st.Ranges = append(st.Ranges, backend.StreamRange{Layer: r.Layer, Offset: r.Offset, Length: r.Length})
+		}
+		s.Stream = st
+	}
 	// lazy loading reads through a mapping; direct I/O has none.
 	if s.LoadMode == backend.LoadDirectIO && s.LazyMode != backend.LazyOff {
 		return s, fmt.Errorf("plan pairs lazy %s with direct I/O", s.LazyMode)

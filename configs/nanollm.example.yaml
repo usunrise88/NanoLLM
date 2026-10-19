@@ -47,6 +47,12 @@ models:
         type: mtp         # mtp | none
         n_max: 2
         p_min: 0.0
+      # OPT-8: only for plans that leave layers in the file (M8, M9 on a disk
+      # that is fast enough: docs/AUTOTUNE.md). All zero leaves the loader alone.
+      stream:
+        ahead: 0          # layers asked of the kernel after the one just computed
+        keep: 0           # leading layers never evicted
+        evict: false      # drop a layer's pages once it is computed
 
 pool:
   max_resident_models: 1
