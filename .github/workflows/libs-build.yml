@@ -1,0 +1,111 @@
+name: libs-build
+
+# NanoLLM's own libllama and libggml-base (docs/STAGE2.md 2.1): the pinned
+# llama.cpp tag plus patches/llama.cpp, built for every target from the same
+# commit (scripts/build-libs.sh --prepare-only applies the series and checks its
+# hash against scripts/llama.cpp.commit). The patches touch only libllama, so
+# the rest of upstream's archives (the CPU variants, Vulkan, CUDA) are used as
+# they are; fetch-libs.sh lays these two libraries over them. ggml_commit()
+# lives in libggml-base, so the commit check sees our commit.
+#
+# Published as a release of this repository, llama-<tag>-n<N> (scripts/libs.release),
+# one nanollm-libs-<target>.tar.gz per target.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: publish the archives as a release
+        type: boolean
+        default: false
+  push:
+    paths:
+      - patches/llama.cpp/**
+      - scripts/llama.cpp.commit
+      - scripts/llama.cpp.base
+      - scripts/build-libs.sh
+      - .github/workflows/libs-build.yml
+
+permissions:
+  contents: write
+
+env:
+  # What libllama and libggml-base need and nothing else: no backends, no tools.
+  CMAKE_FLAGS: >-
+    -DGGML_BACKEND_DL=ON -DGGML_NATIVE=OFF -DGGML_CPU=OFF
+    -DLLAMA_BUILD_COMMON=OFF -DLLAMA_BUILD_TOOLS=OFF -DLLAMA_BUILD_TESTS=OFF
+    -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_SERVER=OFF -DLLAMA_OPENSSL=OFF
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux_amd64, os: ubuntu-22.04, rpath: '$ORIGIN' }
+          - { target: linux_arm64, os: ubuntu-24.04-arm, rpath: '$ORIGIN' }
+          - { target: darwin_arm64, os: macos-15, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3' }
+          - { target: darwin_amd64, os: macos-15-intel, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3' }
+          - { target: windows_amd64, os: windows-2022, win: x64 }
+          - { target: windows_arm64, os: windows-2022, win: arm64 }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The patched source
+        shell: bash
+        run: ./scripts/build-libs.sh --prepare-only
+
+      - name: Build (Unix)
+        if: ${{ !matrix.win }}
+        run: |
+          cmake -S .cache/llama.cpp/src -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_RPATH='${{ matrix.rpath }}' -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
+            ${{ matrix.extra }} $CMAKE_FLAGS
+          cmake --build build --config Release --target llama ggml-base -j 4
+
+      - name: Build (Windows)
+        if: ${{ matrix.win }}
+        shell: cmd
+        run: |
+          choco install ninja -y
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.win == 'x64' && 'x64' || 'amd64_arm64' }}
+          cmake -S .cache/llama.cpp/src -B build -G "Ninja Multi-Config" ^
+            -D CMAKE_TOOLCHAIN_FILE=cmake/${{ matrix.win }}-windows-llvm.cmake ^
+            %CMAKE_FLAGS%
+          cmake --build build --config Release --target llama ggml-base
+
+      - name: Collect
+        shell: bash
+        run: |
+          mkdir -p out
+          find build -type f -o -type l | grep -E '/(lib)?(llama|ggml-base)[.0-9a-z]*\.(so|dylib|dll)[.0-9]*$' | while read -r f; do cp -P "$f" out/; done
+          ls -l out
+          test -n "$(ls out)" || { echo "no libraries were built" >&2; exit 1; }
+          tar -czf "nanollm-libs-${{ matrix.target }}.tar.gz" -C out .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nanollm-libs-${{ matrix.target }}
+          path: nanollm-libs-${{ matrix.target }}.tar.gz
+
+  publish:
+    needs: build
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Release llama-<tag>-n<N>
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rel=$(tr -d '[:space:]' < scripts/libs.release)
+          (cd assets && sha256sum nanollm-libs-*.tar.gz | tee ../libs-own.sha256)
+          gh release view "$rel" >/dev/null 2>&1 || gh release create "$rel" --title "$rel" \
+            --notes "NanoLLM's libllama and libggml-base: llama.cpp $(cat scripts/llama.cpp.tag) plus patches/llama.cpp. Put their sha256 (libs-own.sha256) in scripts/libs.sha256."
+          gh release upload "$rel" assets/nanollm-libs-*.tar.gz libs-own.sha256 --clobber
