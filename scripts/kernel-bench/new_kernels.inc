@@ -108,6 +108,33 @@ static void gemv_ik_mix(int n, float * GGML_RESTRICT s, size_t bs, const void * 
     if (pre != stackbuf) free(pre);
 }
 
+// Timing-only: the same kernel with the activation prepass done once per buffer instead of once per call, to see what the prepass costs.
+static void gemv_u8_noprepass(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
+    const int nb = n / QK8_0;
+    UNUSED(bs);
+    UNUSED(nr);
+    const __m256i unperm = _mm256_setr_epi32(0, 1, 4, 5, 2, 3, 6, 7);
+    static y_pre_t cache[4096];
+    static const void * cached = nullptr;
+    if (cached != vy) { y_prepass((const block_q8_0 *) vy, nb, cache); cached = vy; }
+    const block_q4_0x8 * b_ptr_start = (const block_q4_0x8 *) vx;
+    const block_q8_0   * a_ptr = (const block_q8_0 *) vy;
+    for (int64_t x = 0; x < nc / 8; x++) {
+        const block_q4_0x8 * b_ptr = b_ptr_start + (x * nb);
+        __m256 acc_row = _mm256_setzero_ps();
+        for (int64_t b = 0; b < nb; b++) {
+            int64_t q0, q1, q2, q3;
+            memcpy(&q0, a_ptr[b].qs +  0, 8);
+            memcpy(&q1, a_ptr[b].qs +  8, 8);
+            memcpy(&q2, a_ptr[b].qs + 16, 8);
+            memcpy(&q3, a_ptr[b].qs + 24, 8);
+            acc_row = u8_block<RED_PHADDW, 1>(b_ptr[b], _mm256_set1_epi64x(q0), _mm256_set1_epi64x(q1), _mm256_set1_epi64x(q2), _mm256_set1_epi64x(q3),
+                                              cache[b].bias8, cache[b].d, acc_row);
+        }
+        _mm256_storeu_ps(s + x * 8, _mm256_permutevar8x32_ps(acc_row, unperm));
+    }
+}
+
 // NG: column groups (8 rows each) per pass; PF: prefetch distance in blocks (0 = none)
 template<int RED, int XOR, int NG, int PF>
 static void gemv_u8(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
