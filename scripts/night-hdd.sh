@@ -69,9 +69,9 @@ for step in $STEPS; do
 		{
 			echo "# $(date -Is) $MODEL"
 			echo "## strong: 16 threads, interleave"
-			nice -n 5 numactl --interleave=all $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 16 -fa 1 2>/dev/null | tail -8
+			nice -n 5 numactl --interleave=all $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 16 -fa on 2>/dev/null | tail -8
 			echo "## weak: 4 cores of node 0"
-			nice -n 5 numactl --preferred=0 taskset -c 0,1,2,3 $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 4 -fa 1 2>/dev/null | tail -8
+			nice -n 5 numactl --preferred=0 taskset -c 0,1,2,3 $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 4 -fa on 2>/dev/null | tail -8
 		} | tee "$OUTF"
 		;;
 	stream)
