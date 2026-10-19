@@ -340,3 +340,14 @@ func (s *store) requeueRunning(ctx context.Context) (int64, error) {
 	}
 	return r.RowsAffected()
 }
+
+// purgeFinishedBefore deletes the finished jobs (succeeded, failed or
+// canceled) whose finish time is before cut; their lines go with them.
+func (s *store) purgeFinishedBefore(ctx context.Context, cut time.Time) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM jobs WHERE status IN (?, ?, ?) AND COALESCE(finished_at, created_at) < ?`,
+		StatusSucceeded, StatusFailed, StatusCanceled, ms(cut))
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}

@@ -337,3 +337,66 @@ func TestHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// flakyService refuses the first n calls with a transient error, as a server
+// whose wait queue is full or whose model is loading does.
+type flakyService struct {
+	stubService
+	mu2   sync.Mutex
+	fails int
+	code  core.Code
+}
+
+func (s *flakyService) Chat(ctx context.Context, req core.ChatRequest, sink core.Sink) (*core.ChatResult, error) {
+	s.mu2.Lock()
+	if s.fails > 0 {
+		s.fails--
+		s.mu2.Unlock()
+		return nil, core.Errorf(s.code, "try again")
+	}
+	s.mu2.Unlock()
+	return s.stubService.Chat(ctx, req, sink)
+}
+
+// A line the server could not take for a moment is tried again, not recorded
+// as failed: an overload that passes must not turn queued work into errors.
+func TestTransientErrorsAreRetried(t *testing.T) {
+	for _, code := range []core.Code{core.CodeQueueFull, core.CodeModelUnavailable} {
+		svc := &flakyService{fails: 3, code: code}
+		q := open(t, svc, Options{Concurrency: 1, RetryWait: time.Millisecond})
+		j, _ := q.Submit(context.Background(), batch("a"), "", "", "")
+		j = wait(t, q, j.ID, (*Job).terminal)
+		if j.Status != StatusSucceeded || j.Progress.Failed != 0 || j.Results[0].Result == nil || j.Results[0].Result.Message.Content != "A" {
+			t.Errorf("%s: %+v", code, j)
+		}
+	}
+	// A real error is not retried, and neither is one that never clears.
+	svc := &flakyService{fails: 1 << 20, code: core.CodeQueueFull}
+	q := open(t, svc, Options{Concurrency: 1, RetryWait: time.Millisecond, RetryMax: 2})
+	j, _ := q.Submit(context.Background(), batch("a"), "", "", "")
+	j = wait(t, q, j.ID, (*Job).terminal)
+	if j.Status != StatusFailed || j.Results[0].Error == nil || j.Results[0].Error.Code != string(core.CodeQueueFull) {
+		t.Errorf("a line that never clears: %+v", j)
+	}
+}
+
+// Finished jobs older than the retention are deleted with their lines;
+// newer ones and jobs still queued stay.
+func TestRetentionPurgesOldJobs(t *testing.T) {
+	q := open(t, &stubService{}, Options{})
+	j, _ := q.Submit(context.Background(), batch("a"), "", "", "")
+	j = wait(t, q, j.ID, (*Job).terminal)
+	if n, err := q.st.purgeFinishedBefore(context.Background(), time.Now().Add(-time.Hour)); err != nil || n != 0 {
+		t.Fatalf("a fresh job was purged: %d, %v", n, err)
+	}
+	if n, err := q.st.purgeFinishedBefore(context.Background(), time.Now().Add(time.Hour)); err != nil || n != 1 {
+		t.Fatalf("an old job was kept: %d, %v", n, err)
+	}
+	if _, err := q.Get(context.Background(), j.ID); err == nil {
+		t.Error("the purged job can still be read")
+	}
+	var items int
+	if err := q.st.db.QueryRow(`SELECT COUNT(*) FROM items`).Scan(&items); err != nil || items != 0 {
+		t.Errorf("lines of a purged job remain: %d, %v", items, err)
+	}
+}

@@ -200,6 +200,8 @@ type Queue struct {
 	// sha256=HMAC(secret, "<X-NanoLLM-Timestamp>.<body>"). Empty sends them
 	// unsigned.
 	WebhookSecret string `yaml:"webhook_secret"`
+	// RetentionDays deletes finished jobs after this many days; 0 keeps them.
+	RetentionDays int `yaml:"retention_days"`
 }
 
 type Registry struct {

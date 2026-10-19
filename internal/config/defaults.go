@@ -44,7 +44,7 @@ func Default() Config {
 			MaxTokensCap:    8192,
 			ContextOverflow: OverflowError,
 		},
-		Queue:    Queue{Enabled: true, MaxPending: 1000, Concurrency: 4},
+		Queue:    Queue{Enabled: true, MaxPending: 1000, Concurrency: 4, RetentionDays: 30},
 		Registry: Registry{Mirrors: []string{}},
 		Bench:    Bench{Submit: "ask", SubmitURL: "https://nano.llmto.day"},
 		UI:       UI{Enabled: true},

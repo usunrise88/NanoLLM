@@ -1,0 +1,1098 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "human-ru",
+    "sha256": "81629cd06bcf6f385dc0b3c89d9e6a1950cc51aa207eba3e622439464cbcbbd9",
+    "items": 50
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "ace20f679e30a39c09a7b17bec14199855469633",
+    "device": "cpu",
+    "kv": "f16",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "false",
+    "numa": "auto",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "4"
+  },
+  "date": "2026-10-19",
+  "results": [
+    {
+      "id": "human-01",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Здравствуйте. Для записи вам потребуется указать желаемые даты и время, а также сообщить свои контактные данные.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 53,
+        "cached_tokens": 0,
+        "completion_tokens": 23,
+        "reasoning_tokens": 0
+      },
+      "ms": 63225.317,
+      "ttft_ms": 4109.543
+    },
+    {
+      "id": "human-02",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Пожалуйста, проверьте выписку и обратитесь в банк для уточнения причин двойного списания.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 49,
+        "cached_tokens": 28,
+        "completion_tokens": 24,
+        "reasoning_tokens": 0
+      },
+      "ms": 5656.543,
+      "ttft_ms": 1693.715
+    },
+    {
+      "id": "human-03",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Выйдите из метро «Площадь Революции» и идите по улице Охотного Ряда в сторону Красной площади. Это займет около 5-10 минут.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 57,
+        "cached_tokens": 28,
+        "completion_tokens": 41,
+        "reasoning_tokens": 0
+      },
+      "ms": 8145.109,
+      "ttft_ms": 2446.152
+    },
+    {
+      "id": "human-04",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Дебетовая карта — это ваш личный счёт. Вы тратите только те деньги, которые у вас есть на карте.\n\nКредитная карта — это заём у банка. Вы можете тратить деньги, которых у вас нет, а потом возвращать их банку.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 51,
+        "cached_tokens": 28,
+        "completion_tokens": 56,
+        "reasoning_tokens": 0
+      },
+      "ms": 9706.212,
+      "ttft_ms": 2367.094
+    },
+    {
+      "id": "human-05",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Пожалуйста, укажите номер вашего заказа или название сервиса, чтобы я мог подсказать, как отменить заказ.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 51,
+        "cached_tokens": 28,
+        "completion_tokens": 25,
+        "reasoning_tokens": 0
+      },
+      "ms": 5514.835,
+      "ttft_ms": 2148.045
+    },
+    {
+      "id": "human-06",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Для получения загранпаспорта обычно требуются:\n\n1.  Заявление.\n2.  Паспорт (внутренний).\n3.  Фотографии.\n4.  Квитанция об оплате госпошлины.\n\nТочный список может варьироваться, поэтому лучше уточнить на официальном сайте МВД или в ближайшем отделении.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 44,
+        "cached_tokens": 28,
+        "completion_tokens": 78,
+        "reasoning_tokens": 0
+      },
+      "ms": 11628.349,
+      "ttft_ms": 1259.915
+    },
+    {
+      "id": "human-07",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Вежливо откажитесь, объяснив, что у вас уже есть приоритетные задачи, или что вы не успеете выполнить работу качественно в срок. Предложите альтернативное решение или перераспределите задачи.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 50,
+        "cached_tokens": 28,
+        "completion_tokens": 44,
+        "reasoning_tokens": 0
+      },
+      "ms": 8004.316,
+      "ttft_ms": 1836.21
+    },
+    {
+      "id": "human-08",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Воспользуйтесь функцией \"Забыли пароль\" на странице входа. Вам придет ссылка для сброса на вашу электронную почту.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "cached_tokens": 28,
+        "completion_tokens": 32,
+        "reasoning_tokens": 0
+      },
+      "ms": 5616.719,
+      "ttft_ms": 1498.417
+    },
+    {
+      "id": "human-09",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Ходьба полезна для здоровья, так как укрепляет сердечно-сосудистую систему, помогает контролировать вес, улучшает настроение и укрепляет мышцы.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 48,
+        "cached_tokens": 28,
+        "completion_tokens": 35,
+        "reasoning_tokens": 0
+      },
+      "ms": 6076.443,
+      "ttft_ms": 1585.157
+    },
+    {
+      "id": "human-10",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Проверьте роутер: включен ли, горят ли индикаторы. Перезагрузите роутер и модем. Проверьте кабели.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 48,
+        "cached_tokens": 28,
+        "completion_tokens": 34,
+        "reasoning_tokens": 0
+      },
+      "ms": 6005.533,
+      "ttft_ms": 1561.115
+    },
+    {
+      "id": "human-11",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Храните зелень в воде, как букет, и меняйте воду раз в пару дней. Также можно завернуть в слегка влажное бумажное полотенце и поместить в холодильник.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 49,
+        "cached_tokens": 28,
+        "completion_tokens": 41,
+        "reasoning_tokens": 0
+      },
+      "ms": 7784.896,
+      "ttft_ms": 1691.741
+    },
+    {
+      "id": "human-12",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Возможно, но это зависит от политики магазина. Рекомендую обратиться в службу поддержки или в сам магазин.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 41,
+        "cached_tokens": 28,
+        "completion_tokens": 22,
+        "reasoning_tokens": 0
+      },
+      "ms": 4954.223,
+      "ttft_ms": 1628.003
+    },
+    {
+      "id": "human-13",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Уважаемый клиент, напоминаем, что срок оплаты счёта [Номер счёта] [Сумма] наступил [Дата]. Просим произвести оплату в ближайшее время. Спасибо!",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 52,
+        "cached_tokens": 28,
+        "completion_tokens": 44,
+        "reasoning_tokens": 0
+      },
+      "ms": 9110.943,
+      "ttft_ms": 2421.561
+    },
+    {
+      "id": "human-14",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Ипотечные каникулы — это временная отсрочка платежей по ипотеке.\n\nИми могут воспользоваться заемщики, попавшие в трудную жизненную ситуацию (например, потеря работы, болезнь). Условия предоставления зависят от банка.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "cached_tokens": 28,
+        "completion_tokens": 54,
+        "reasoning_tokens": 0
+      },
+      "ms": 10872.544,
+      "ttft_ms": 1896.433
+    },
+    {
+      "id": "human-15",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "С днем рождения! Желаю успехов, счастья и всего самого наилучшего!",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 49,
+        "cached_tokens": 28,
+        "completion_tokens": 19,
+        "reasoning_tokens": 0
+      },
+      "ms": 5067.767,
+      "ttft_ms": 2101.479
+    },
+    {
+      "id": "human-16",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Объясните, что солнечный свет состоит из разных цветов. Когда он проходит через атмосферу Земли, молекулы воздуха рассеивают синий свет во всех направлениях, из-за чего небо кажется голубым.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 43,
+        "cached_tokens": 28,
+        "completion_tokens": 47,
+        "reasoning_tokens": 0
+      },
+      "ms": 9163.572,
+      "ttft_ms": 1698.811
+    },
+    {
+      "id": "human-17",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Обычно доставка из Москвы в Новосибирск занимает от 3 до 7 дней, в зависимости от выбранного способа (почта, курьерская служба и т.д.).",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 44,
+        "cached_tokens": 28,
+        "completion_tokens": 39,
+        "reasoning_tokens": 0
+      },
+      "ms": 7244.259,
+      "ttft_ms": 1390.312
+    },
+    {
+      "id": "human-18",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Попробуйте поговорить с соседями. Если это не поможет, обратитесь в управляющую компанию или полицию.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 48,
+        "cached_tokens": 28,
+        "completion_tokens": 26,
+        "reasoning_tokens": 0
+      },
+      "ms": 5987.749,
+      "ttft_ms": 1806.833
+    },
+    {
+      "id": "human-19",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Для перевода денег по номеру телефона вам потребуется банковское приложение или сервис онлайн-банкинга. Выберите опцию \"Перевод по номеру телефона\" и введите номер получателя.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 46,
+        "cached_tokens": 28,
+        "completion_tokens": 40,
+        "reasoning_tokens": 0
+      },
+      "ms": 7410.217,
+      "ttft_ms": 1762.585
+    },
+    {
+      "id": "human-20",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Для похода на два дня лучше взять:\n\n*   **Углеводы:** Макароны, крупы (рис, гречка).\n*   **Белки:** Консервы (тунец, фасоль), сублимированные продукты, орехи, сыр.\n*   **Жиры:** Орехи, арахисовая паста.\n*   **Овощи/Фрукты:** Устойчивые к транспортировке (яблоки, бананы, морковь).\n*   **Напитки:** Вода (или средства для ее очистки).\n*   **Дополнительно:** Сублимированный суп, чай/кофе.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 44,
+        "cached_tokens": 28,
+        "completion_tokens": 144,
+        "reasoning_tokens": 0
+      },
+      "ms": 23685.517,
+      "ttft_ms": 1243.033
+    },
+    {
+      "id": "human-21",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Приносим искренние извинения за задержку. Мы понимаем ваше недовольство. Ваш заказ сейчас в приоритете и будет отправлен в ближайшее время.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 54,
+        "cached_tokens": 28,
+        "completion_tokens": 37,
+        "reasoning_tokens": 0
+      },
+      "ms": 9325.169,
+      "ttft_ms": 2852.705
+    },
+    {
+      "id": "human-22",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Подготовьте ответы на типовые вопросы, изучите компанию и её продукты, подготовьте вопросы к интервьюеру, отточите навыки презентации и ведения переговоров.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 50,
+        "cached_tokens": 28,
+        "completion_tokens": 35,
+        "reasoning_tokens": 0
+      },
+      "ms": 8339.527,
+      "ttft_ms": 2345.457
+    },
+    {
+      "id": "human-23",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Немедленно заблокируйте карту через мобильное приложение или по горячей линии банка. Затем обратитесь в банк для оформления новой карты.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 43,
+        "cached_tokens": 28,
+        "completion_tokens": 30,
+        "reasoning_tokens": 0
+      },
+      "ms": 6771.34,
+      "ttft_ms": 1844.52
+    },
+    {
+      "id": "human-24",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Кешбэк — это возврат части потраченных денег покупателю.\n\n**Как работает:**\n1. Вы совершаете покупку в магазине или онлайн.\n2. Вы используете карту или сервис, который предлагает кешбэк.\n3. После транзакции часть суммы (процент) возвращается на ваш счет.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 49,
+        "cached_tokens": 28,
+        "completion_tokens": 70,
+        "reasoning_tokens": 0
+      },
+      "ms": 12156.311,
+      "ttft_ms": 1915.36
+    },
+    {
+      "id": "human-25",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Подумайте о её интересах. Подойдут:\n\n*   **Уют:** плед, ароматические свечи, набор для ванны.\n*   **Красота:** качественная косметика, сертификат в салон.\n*   **Хобби:** книги, гаджеты для увлечений (например, для вязания или садоводства).\n*   **Впечатления:** билеты на концерт или мастер-класс.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 45,
+        "cached_tokens": 28,
+        "completion_tokens": 98,
+        "reasoning_tokens": 0
+      },
+      "ms": 16878.508,
+      "ttft_ms": 1504.639
+    },
+    {
+      "id": "human-26",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Резервные копии защищают данные от потери из-за сбоев оборудования, программ, вирусов или человеческой ошибки.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 43,
+        "cached_tokens": 28,
+        "completion_tokens": 29,
+        "reasoning_tokens": 0
+      },
+      "ms": 5428.469,
+      "ttft_ms": 1408.808
+    },
+    {
+      "id": "human-27",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "\"Здравствуйте. Я хотел(а) бы перенести свой визит с пятницы на понедельник, если это возможно.\"",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 56,
+        "cached_tokens": 28,
+        "completion_tokens": 26,
+        "reasoning_tokens": 0
+      },
+      "ms": 5962.693,
+      "ttft_ms": 2467.895
+    },
+    {
+      "id": "human-28",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Для выращивания базилика на подоконнике:\n\n1. **Выбор горшка:** Используйте горшок с дренажными отверстиями.\n2. **Почва:** Возьмите универсальный грунт.\n3. **Посадка:** Посадите семена или пересадите рассаду.\n4. **Освещение:** Обеспечьте яркое, солнечное место.\n5. **Полив:** Поливайте умеренно, когда верхний слой почвы просохнет.\n6. **Температура:** Поддерживайте умеренную температуру.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "cached_tokens": 28,
+        "completion_tokens": 125,
+        "reasoning_tokens": 0
+      },
+      "ms": 21162.758,
+      "ttft_ms": 1757.466
+    },
+    {
+      "id": "human-29",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Двухфакторная аутентификация (2FA) — это метод проверки личности, требующий предоставления двух разных типов доказательств (например, пароль и код из SMS).\n\nОна нужна для повышения безопасности аккаунта, так как даже при компрометации пароля злоумышленник не сможет получить доступ без второго фактора.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 48,
+        "cached_tokens": 28,
+        "completion_tokens": 73,
+        "reasoning_tokens": 0
+      },
+      "ms": 12578.868,
+      "ttft_ms": 1722.273
+    },
+    {
+      "id": "human-30",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Вот несколько советов:\n\n1. **Замените лампы** на светодиодные (LED).\n2. **Выключайте свет** в комнатах, которыми не пользуетесь.\n3. **Отключайте приборы** из розеток, когда они не используются (режим ожидания потребляет энергию).\n4. **Используйте энергоэффективные бытовые приборы**.\n5. **Оптимизируйте отопление/кондиционирование** (не переусердствуйте с температурой).",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 43,
+        "cached_tokens": 28,
+        "completion_tokens": 114,
+        "reasoning_tokens": 0
+      },
+      "ms": 16353.536,
+      "ttft_ms": 1388.02
+    },
+    {
+      "id": "human-31",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Пожалуйста, предоставьте текст жалобы, чтобы я мог помочь.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "cached_tokens": 28,
+        "completion_tokens": 14,
+        "reasoning_tokens": 0
+      },
+      "ms": 3316.774,
+      "ttft_ms": 1513.684
+    },
+    {
+      "id": "human-32",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "ОСАГО — обязательный полис, покрывающий ущерб, который вы причините другим участникам ДТП. КАСКО — добровольный полис, покрывающий ущерб вашему автомобилю (включая угон и ущерб от стихийных бедствий).",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 43,
+        "cached_tokens": 28,
+        "completion_tokens": 60,
+        "reasoning_tokens": 0
+      },
+      "ms": 9109.043,
+      "ttft_ms": 1360.989
+    },
+    {
+      "id": "human-33",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Регулярный график сна и бодрствования, избегание гаджетов перед сном и создание комфортной обстановки в спальне.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 42,
+        "cached_tokens": 28,
+        "completion_tokens": 31,
+        "reasoning_tokens": 0
+      },
+      "ms": 5529.485,
+      "ttft_ms": 1334.3
+    },
+    {
+      "id": "human-34",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Да, это, скорее всего, мошенники. Не перезванивайте по номеру из СМС.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 58,
+        "cached_tokens": 28,
+        "completion_tokens": 24,
+        "reasoning_tokens": 0
+      },
+      "ms": 5641.13,
+      "ttft_ms": 2541.006
+    },
+    {
+      "id": "human-35",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Пошаговое объяснение, используя простые термины и наглядные примеры.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "cached_tokens": 28,
+        "completion_tokens": 19,
+        "reasoning_tokens": 0
+      },
+      "ms": 3973.021,
+      "ttft_ms": 1503.464
+    },
+    {
+      "id": "human-36",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Вот список ключевых вопросов:\n\n**О пробеге и истории:**\n\n* Какой реальный пробег?\n* Есть ли история обслуживания (сервисная книжка, чеки)?\n* Были ли ДТП? Если да, то какие и в каких частях?\n* Были ли перерегистрации или владельцы?\n\n**О техническом состоянии:**\n\n* Когда последний раз менялись основные жидкости (масло, антифриз)?\n* Есть ли проблемы с ходовой, электрикой или двигателем?\n* Когда проводилось ТО?\n* Есть ли какие-либо неисправности, о которых вы знаете?\n\n**О документах и юридическом статусе:**\n\n* На кого оформлен автомобиль?\n* Есть ли обременения (залоги, аресты)?\n* Готов ли продавец предоставить все документы для проверки?\n\n**Совет:** Всегда проверяйте автомобиль на СТО перед покупкой.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 45,
+        "cached_tokens": 28,
+        "completion_tokens": 197,
+        "reasoning_tokens": 0
+      },
+      "ms": 27644.945,
+      "ttft_ms": 1321.661
+    },
+    {
+      "id": "human-37",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Сфотографируйте повреждения и упаковку. Свяжитесь с продавцом или службой доставки для оформления претензии.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 45,
+        "cached_tokens": 28,
+        "completion_tokens": 26,
+        "reasoning_tokens": 0
+      },
+      "ms": 4682.185,
+      "ttft_ms": 1328.538
+    },
+    {
+      "id": "human-38",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Вот рецепт простого куриного супа:\n\n**Ингредиенты:**\n\n* Куриный бульон (или вода + куриное филе) — 1 литр\n* Куриное филе — 300 г\n* Картофель — 2-3 шт.\n* Морковь — 1 шт.\n* Лук — 1 шт.\n* Соль, перец — по вкусу\n* Зелень — для подачи\n\n**Приготовление:**\n\n1. Отварите куриное филе до готовности, затем нарежьте кубиками.\n2. В бульон добавьте нарезанный кубиками картофель. Варите 15 минут.\n3. Добавьте нарезанный кубиками лук и морковь. Варите еще 10 минут.\n4. Добавьте курицу, посолите и поперчите.\n5. Подавайте, посыпав свежей зеленью.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 46,
+        "cached_tokens": 28,
+        "completion_tokens": 209,
+        "reasoning_tokens": 0
+      },
+      "ms": 29042.945,
+      "ttft_ms": 1401.388
+    },
+    {
+      "id": "human-39",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Для записи на приём через Госуслуги, вам нужно:\n\n1.  Войти в личный кабинет на Госуслугах.\n2.  Найти раздел \"Здоровье\" или \"Запись к врачу\".\n3.  Выбрать нужную медицинскую организацию и специалиста.\n4.  Выбрать удобное время и подтвердить запись.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 48,
+        "cached_tokens": 28,
+        "completion_tokens": 80,
+        "reasoning_tokens": 0
+      },
+      "ms": 11937.411,
+      "ttft_ms": 1561.572
+    },
+    {
+      "id": "human-40",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Вот несколько быстрых способов:\n\n1. **Глубокое дыхание:** Медленно вдыхайте через нос, задерживайте дыхание на пару секунд и медленно выдыхайте через рот.\n2. **Прогрев голоса:** Легкие вокальные упражнения помогут снять напряжение.\n3. **Физическая разрядка:** Несколько приседаний или потягиваний.\n4. **Визуализация:** Представьте успешное выступление.\n5. **Принятие:** Признайте волнение, но не боритесь с ним.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 44,
+        "cached_tokens": 28,
+        "completion_tokens": 128,
+        "reasoning_tokens": 0
+      },
+      "ms": 18680.734,
+      "ttft_ms": 1238.364
+    },
+    {
+      "id": "human-41",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Здравствуйте! Да, мы предлагаем возможность оплаты частями. Пожалуйста, уточните, какой способ оплаты вас интересует, и мы предоставим подробную информацию.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 54,
+        "cached_tokens": 28,
+        "completion_tokens": 34,
+        "reasoning_tokens": 0
+      },
+      "ms": 6536.467,
+      "ttft_ms": 2145.732
+    },
+    {
+      "id": "human-42",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Жалоба должна быть письменной. Укажите свои данные, данные УК, суть проблемы, желаемое решение и срок ответа. Отправьте заказным письмом или вручите лично с отметкой о получении.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 44,
+        "cached_tokens": 28,
+        "completion_tokens": 47,
+        "reasoning_tokens": 0
+      },
+      "ms": 7274.335,
+      "ttft_ms": 1212.666
+    },
+    {
+      "id": "human-43",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Не стоит хранить пароли в заметках, так как они могут быть легко доступны для неавторизованных лиц, если телефон взломан или украден.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 45,
+        "cached_tokens": 28,
+        "completion_tokens": 34,
+        "reasoning_tokens": 0
+      },
+      "ms": 5672.738,
+      "ttft_ms": 1314.829
+    },
+    {
+      "id": "human-44",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Возьмите:\n\n*   **Документы:** Паспорт, полис ОМС, направление, результаты анализов.\n*   **Личные вещи:** Одежда для смены, средства гигиены.\n*   **По назначению врача:** Лекарства, которые вы принимаете постоянно.\n\nУточните у медперсонала список необходимых вещей.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "cached_tokens": 28,
+        "completion_tokens": 78,
+        "reasoning_tokens": 0
+      },
+      "ms": 11699.922,
+      "ttft_ms": 1499.263
+    },
+    {
+      "id": "human-45",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Попробуйте установить четкие правила и предложите альтернативные занятия.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 45,
+        "cached_tokens": 28,
+        "completion_tokens": 14,
+        "reasoning_tokens": 0
+      },
+      "ms": 3246.254,
+      "ttft_ms": 1326.253
+    },
+    {
+      "id": "human-46",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Инфляция — это рост цен на товары и услуги, из-за чего на ту же сумму денег вы можете купить меньше.\n\n**Простой пример:**\n\nПредставьте, что год назад буханка хлеба стоила 50 рублей. Из-за инфляции сегодня она стоит 60 рублей. Ваши 50 рублей теперь покупают меньше хлеба, чем раньше.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 49,
+        "cached_tokens": 28,
+        "completion_tokens": 80,
+        "reasoning_tokens": 0
+      },
+      "ms": 12605.563,
+      "ttft_ms": 1749.133
+    },
+    {
+      "id": "human-47",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Вот несколько вариантов:\n\n*   \"Извините, не могли бы вы говорить немного тише? Мне нужно сосредоточиться.\"\n*   \"Буду благодарен, если вы немного понизите голос, пожалуйста.\"\n*   \"Можешь, пожалуйста, говорить тише? Я пытаюсь работать.\"",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "cached_tokens": 28,
+        "completion_tokens": 64,
+        "reasoning_tokens": 0
+      },
+      "ms": 9869.114,
+      "ttft_ms": 1550.299
+    },
+    {
+      "id": "human-48",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Оцените свои финансовые возможности, изучите условия кредита (процентная ставка, срок, комиссии), сравните предложения разных банков и составьте план погашения.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 43,
+        "cached_tokens": 28,
+        "completion_tokens": 35,
+        "reasoning_tokens": 0
+      },
+      "ms": 5911.831,
+      "ttft_ms": 1369.366
+    },
+    {
+      "id": "human-49",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "Посетите Эрмитаж, прогуляйтесь по Невскому проспекту, посетите Петергоф или совершите экскурсию по Петропавловской крепости.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 48,
+        "cached_tokens": 28,
+        "completion_tokens": 37,
+        "reasoning_tokens": 0
+      },
+      "ms": 6373.592,
+      "ttft_ms": 1573.864
+    },
+    {
+      "id": "human-50",
+      "lang": "ru",
+      "capability": "human",
+      "thinking": false,
+      "detail": "rated by a person",
+      "answer": "\"Я вас слушаю.\"",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 50,
+        "cached_tokens": 28,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2548.687,
+      "ttft_ms": 1770.228
+    }
+  ],
+  "summary": {
+    "human": {
+      "n": 0,
+      "pass": 0,
+      "rate": 0,
+      "human": 50
+    }
+  },
+  "by_lang": {
+    "ru": {
+      "n": 0,
+      "pass": 0,
+      "rate": 0,
+      "human": 50
+    }
+  },
+  "ratings": {
+    "human-01": {
+      "score": 5,
+      "usable": true
+    },
+    "human-02": {
+      "score": 5,
+      "usable": true
+    },
+    "human-03": {
+      "score": 4,
+      "usable": true,
+      "note": "падеж - по улице Охотный ряд"
+    },
+    "human-04": {
+      "score": 5,
+      "usable": true
+    },
+    "human-05": {
+      "score": 5,
+      "usable": true
+    },
+    "human-06": {
+      "score": 5,
+      "usable": true
+    },
+    "human-07": {
+      "score": 5,
+      "usable": true
+    },
+    "human-08": {
+      "score": 5,
+      "usable": true
+    },
+    "human-09": {
+      "score": 5,
+      "usable": true
+    },
+    "human-10": {
+      "score": 5,
+      "usable": true
+    },
+    "human-11": {
+      "score": 5,
+      "usable": true
+    },
+    "human-12": {
+      "score": 5,
+      "usable": true
+    },
+    "human-13": {
+      "score": 5,
+      "usable": true
+    },
+    "human-14": {
+      "score": 5,
+      "usable": true
+    },
+    "human-15": {
+      "score": 5,
+      "usable": true
+    },
+    "human-16": {
+      "score": 5,
+      "usable": true
+    },
+    "human-17": {
+      "score": 5,
+      "usable": true
+    },
+    "human-18": {
+      "score": 5,
+      "usable": true
+    },
+    "human-19": {
+      "score": 5,
+      "usable": true
+    },
+    "human-20": {
+      "score": 5,
+      "usable": true
+    },
+    "human-21": {
+      "score": 5,
+      "usable": true
+    },
+    "human-22": {
+      "score": 5,
+      "usable": true
+    },
+    "human-23": {
+      "score": 5,
+      "usable": true
+    },
+    "human-24": {
+      "score": 5,
+      "usable": true
+    },
+    "human-25": {
+      "score": 5,
+      "usable": true
+    },
+    "human-26": {
+      "score": 5,
+      "usable": true
+    },
+    "human-27": {
+      "score": 5,
+      "usable": true
+    },
+    "human-28": {
+      "score": 5,
+      "usable": true
+    },
+    "human-29": {
+      "score": 5,
+      "usable": true
+    },
+    "human-30": {
+      "score": 5,
+      "usable": true
+    },
+    "human-31": {
+      "score": 5,
+      "usable": false
+    },
+    "human-32": {
+      "score": 5,
+      "usable": true
+    },
+    "human-33": {
+      "score": 5,
+      "usable": true
+    },
+    "human-34": {
+      "score": 5,
+      "usable": true
+    },
+    "human-35": {
+      "score": 4,
+      "usable": false
+    },
+    "human-36": {
+      "score": 5,
+      "usable": true
+    },
+    "human-37": {
+      "score": 5,
+      "usable": true
+    },
+    "human-38": {
+      "score": 5,
+      "usable": true
+    },
+    "human-39": {
+      "score": 5,
+      "usable": true
+    },
+    "human-40": {
+      "score": 5,
+      "usable": true
+    },
+    "human-41": {
+      "score": 5,
+      "usable": true
+    },
+    "human-42": {
+      "score": 5,
+      "usable": true
+    },
+    "human-43": {
+      "score": 5,
+      "usable": true
+    },
+    "human-44": {
+      "score": 5,
+      "usable": true
+    },
+    "human-45": {
+      "score": 5,
+      "usable": true
+    },
+    "human-46": {
+      "score": 5,
+      "usable": true
+    },
+    "human-47": {
+      "score": 5,
+      "usable": true
+    },
+    "human-48": {
+      "score": 5,
+      "usable": true
+    },
+    "human-49": {
+      "score": 5,
+      "usable": true
+    },
+    "human-50": {
+      "score": 5,
+      "usable": true
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 1628.003,
+    "ttft_ms_p95": 2541.006
+  }
+}

@@ -32,7 +32,15 @@ type Options struct {
 	Concurrency int
 	// WebhookSecret signs webhook bodies (X-NanoLLM-Signature: sha256=…).
 	WebhookSecret string
-	Log           *slog.Logger
+	// RetentionDays deletes jobs that finished more than this long ago, with
+	// their lines; zero keeps them for good. A server that runs for months
+	// would otherwise grow its database without bound.
+	RetentionDays int
+	// RetryWait is the first wait before a line that met a transient error
+	// is tried again; it doubles up to RetryMax waits. Zero uses the defaults.
+	RetryWait time.Duration
+	RetryMax  int
+	Log       *slog.Logger
 	// HTTP is the webhook client.
 	HTTP *http.Client
 }
@@ -240,7 +248,13 @@ func (q *Queue) publish(j *Job) {
 
 func (q *Queue) worker() {
 	defer close(q.done)
+	q.purge()
+	lastPurge := time.Now()
 	for {
+		if time.Since(lastPurge) > time.Hour {
+			q.purge()
+			lastPurge = time.Now()
+		}
 		select {
 		case <-q.close:
 			return
@@ -255,7 +269,7 @@ func (q *Queue) worker() {
 			case <-q.wake:
 			case <-q.close:
 				return
-			case <-time.After(30 * time.Second):
+			case <-time.After(time.Minute):
 			}
 			continue
 		}
@@ -310,7 +324,7 @@ func (q *Queue) run(j *Job) {
 			defer func() { <-sem }()
 			var req core.ChatRequest
 			_ = json.Unmarshal(body, &req)
-			res, err := q.svc.Chat(ctx, req, nil)
+			res, err := q.chatWithRetry(ctx, req)
 			if ctx.Err() != nil {
 				return // canceled or shutting down: the line stays pending
 			}
@@ -353,6 +367,55 @@ func (q *Queue) run(j *Job) {
 	if final, err := q.Get(bg, j.ID); err == nil {
 		q.publish(final)
 		q.notifyWebhook(final)
+	}
+}
+
+// transient says whether a line's error is the server's momentary state, not
+// the line's fault: the model is loading or unloading, every slot's wait queue
+// is full. Recording such a line as failed would lose work the server could do
+// a moment later.
+func transient(err error) bool {
+	switch core.AsError(err).Code {
+	case core.CodeQueueFull, core.CodeModelUnavailable:
+		return true
+	}
+	return false
+}
+
+// chatWithRetry runs one line, trying again after a wait when the server was
+// momentarily unable to take it. A canceled job returns at once.
+func (q *Queue) chatWithRetry(ctx context.Context, req core.ChatRequest) (*core.ChatResult, error) {
+	wait, max := q.opts.RetryWait, q.opts.RetryMax
+	if wait <= 0 {
+		wait = time.Second
+	}
+	if max <= 0 {
+		max = 6
+	}
+	for attempt := 0; ; attempt++ {
+		res, err := q.svc.Chat(ctx, req, nil)
+		if err == nil || ctx.Err() != nil || !transient(err) || attempt >= max {
+			return res, err
+		}
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		wait = min(wait*2, 30*time.Second)
+	}
+}
+
+// purge deletes the jobs that finished before the retention cut.
+func (q *Queue) purge() {
+	if q.opts.RetentionDays <= 0 {
+		return
+	}
+	cut := time.Now().AddDate(0, 0, -q.opts.RetentionDays)
+	if n, err := q.st.purgeFinishedBefore(context.Background(), cut); err != nil {
+		q.opts.Log.Error("queue", "purge", err)
+	} else if n > 0 {
+		q.opts.Log.Info("old jobs deleted", "jobs", n, "older_than", cut.Format("2006-01-02"))
 	}
 }
 

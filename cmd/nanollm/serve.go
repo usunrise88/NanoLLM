@@ -241,6 +241,7 @@ func openQueue(cfg config.Config, svc core.Service, log *slog.Logger) (*queue.Qu
 		MaxPending:    cfg.Queue.MaxPending,
 		Concurrency:   cfg.Queue.Concurrency,
 		WebhookSecret: cfg.Queue.WebhookSecret,
+		RetentionDays: cfg.Queue.RetentionDays,
 		Log:           log,
 	})
 }
