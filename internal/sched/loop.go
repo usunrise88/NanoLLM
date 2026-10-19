@@ -286,17 +286,14 @@ func (l *Loop) Close() {
 	<-l.done
 }
 
-// Busy reports the number of requests running or queued.
+// Busy reports the number of requests running or queued. The slots belong to
+// the loop's goroutine, so the running ones are counted from the atomic the
+// loop keeps, not read from the slots.
 func (l *Loop) Busy() int {
 	l.mu.Lock()
-	defer l.mu.Unlock()
 	n := len(l.pending)
-	for _, s := range l.slots {
-		if s.h != nil {
-			n++
-		}
-	}
-	return n
+	l.mu.Unlock()
+	return n + int(l.busy.Load())
 }
 
 func (l *Loop) run() {
@@ -429,6 +426,17 @@ func (l *Loop) assign(seq int, h *Handle) {
 	s.h = h
 	l.busy.Add(1)
 	s.session = h.req.SessionID
+	for i := range l.slots {
+		// A session's label stays on one slot. pickSlot hands a free slot
+		// that holds it to the session, so another slot reaches this point
+		// only while the labelled one is busy: a sibling request runs here
+		// without taking the label, or the session's next turn would go to
+		// whichever labelled slot comes first, not to its conversation.
+		if i != seq && s.session != "" && l.slots[i].session == s.session {
+			s.session = ""
+			break
+		}
+	}
 	h.pos = reuse
 	h.stats = Stats{Slot: seq, PromptTokens: len(h.req.Prompt), CachedTokens: reuse}
 	if err := l.model.SetSampler(seq, h.req.Sampler, h.req.Prompt); err != nil {
