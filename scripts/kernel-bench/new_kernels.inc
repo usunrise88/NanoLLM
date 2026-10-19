@@ -65,6 +65,49 @@ static inline __attribute__((always_inline)) __m256 u8_block(const block_q4_0x8 
     return _mm256_fmadd_ps(_mm256_cvtepi32_ps(iacc), _mm256_mul_ps(col_scale_f32, row_scale_f32), acc_row);
 }
 
+// Timing-only: the instruction mix of ik_llama.cpp's Q4_0_R8 on the same 144-byte blocks (4-byte pieces, lanes = rows, no xor,
+// no horizontal add, one madd). The result is not the dot product of anything: it only shows what a layout change could buy.
+static void gemv_ik_mix(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
+    const int nb = n / QK8_0;
+    UNUSED(bs);
+    const __m256i m4b    = _mm256_set1_epi8(0x0F);
+    const __m256i ones16 = _mm256_set1_epi16(1);
+    y_pre_t   stackbuf[512];
+    y_pre_t * pre = nb <= 512 ? stackbuf : (y_pre_t *) malloc(sizeof(y_pre_t) * nb);
+    const block_q4_0x8 * b_ptr_start = (const block_q4_0x8 *) vx;
+    const block_q8_0   * a_ptr_start = (const block_q8_0 *) vy;
+    for (int64_t y = 0; y < nr; y++) {
+        const block_q8_0 * a_ptr = a_ptr_start + (y * nb);
+        y_prepass(a_ptr, nb, pre);
+        for (int64_t x = 0; x < nc / 8; x++) {
+            const block_q4_0x8 * b_ptr = b_ptr_start + (x * nb);
+            __m256 acc_row = _mm256_setzero_ps();
+            for (int64_t b = 0; b < nb; b++) {
+                const __m256i r0 = _mm256_loadu_si256((const __m256i *) (b_ptr[b].qs));
+                const __m256i r1 = _mm256_loadu_si256((const __m256i *) (b_ptr[b].qs) + 1);
+                const __m256i r2 = _mm256_loadu_si256((const __m256i *) (b_ptr[b].qs) + 2);
+                const __m256i r3 = _mm256_loadu_si256((const __m256i *) (b_ptr[b].qs) + 3);
+                int32_t q[8];
+                memcpy(q, a_ptr[b].qs, 32);
+                __m256i S = _mm256_maddubs_epi16(_mm256_and_si256(r0, m4b), _mm256_set1_epi32(q[0]));
+                S = _mm256_add_epi16(S, _mm256_maddubs_epi16(_mm256_and_si256(r1, m4b), _mm256_set1_epi32(q[1])));
+                S = _mm256_add_epi16(S, _mm256_maddubs_epi16(_mm256_and_si256(r2, m4b), _mm256_set1_epi32(q[2])));
+                S = _mm256_add_epi16(S, _mm256_maddubs_epi16(_mm256_and_si256(r3, m4b), _mm256_set1_epi32(q[3])));
+                S = _mm256_add_epi16(S, _mm256_maddubs_epi16(_mm256_and_si256(_mm256_srli_epi16(r0, 4), m4b), _mm256_set1_epi32(q[4])));
+                S = _mm256_add_epi16(S, _mm256_maddubs_epi16(_mm256_and_si256(_mm256_srli_epi16(r1, 4), m4b), _mm256_set1_epi32(q[5])));
+                S = _mm256_add_epi16(S, _mm256_maddubs_epi16(_mm256_and_si256(_mm256_srli_epi16(r2, 4), m4b), _mm256_set1_epi32(q[6])));
+                S = _mm256_add_epi16(S, _mm256_maddubs_epi16(_mm256_and_si256(_mm256_srli_epi16(r3, 4), m4b), _mm256_set1_epi32(q[7])));
+                __m256i iacc = _mm256_madd_epi16(S, ones16);
+                iacc = _mm256_sub_epi32(iacc, _mm256_set1_epi32(pre[b].bias8));
+                const __m256 col_scale_f32 = _mm256_cvtph_ps(_mm_loadu_si128((const __m128i *) b_ptr[b].d));
+                acc_row = _mm256_fmadd_ps(_mm256_cvtepi32_ps(iacc), _mm256_mul_ps(col_scale_f32, _mm256_set1_ps(pre[b].d)), acc_row);
+            }
+            _mm256_storeu_ps(s + (y * nr + x * 8), acc_row);
+        }
+    }
+    if (pre != stackbuf) free(pre);
+}
+
 // NG: column groups (8 rows each) per pass; PF: prefetch distance in blocks (0 = none)
 template<int RED, int XOR, int NG, int PF>
 static void gemv_u8(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {

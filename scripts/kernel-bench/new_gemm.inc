@@ -29,24 +29,26 @@ static void gemm_u8(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML
     const __m128i scale_order = _mm_set_epi8(15, 14, 13, 12, 7, 6, 5, 4, 11, 10, 9, 8, 3, 2, 1, 0);
     const __m256i lane_to_row = _mm256_setr_epi32(0, 1, 4, 5, 2, 3, 6, 7);
 
-    q8_0x4_pre   pre_stack[2 * 512];
-    q8_0x4_pre * pre = nb <= 512 ? pre_stack : (q8_0x4_pre *) malloc(sizeof(q8_0x4_pre) * nb * 2);
+    q8_0x4_pre   pre_stack[RG * 512];
+    q8_0x4_pre * pre = nb <= 512 ? pre_stack : (q8_0x4_pre *) malloc(sizeof(q8_0x4_pre) * nb * RG);
 
     const block_q4_0x8  * b_ptr_start = (const block_q4_0x8  *) vx;
     const block_q8_0x4  * a_ptr_start = (const block_q8_0x4  *) vy;
 
     int64_t y = 0;
     while (y < nr / 4) {
-        const int rg = (RG == 2 && y + 1 < nr / 4) ? 2 : 1;
-        const block_q8_0x4 * a_ptr[2] = { a_ptr_start + (y * nb), a_ptr_start + ((y + 1) * nb) };
-        q8_0x4_prepare(a_ptr[0], nb, pre);
-        if (rg == 2) q8_0x4_prepare(a_ptr[1], nb, pre + nb);
+        const int rg = (nr / 4 - y) < RG ? (int) (nr / 4 - y) : RG;
+        const block_q8_0x4 * a_ptr[RG];
+        for (int g = 0; g < rg; g++) {
+            a_ptr[g] = a_ptr_start + ((y + g) * nb);
+            q8_0x4_prepare(a_ptr[g], nb, pre + g * nb);
+        }
 
         for (int64_t x = 0; x < nc / 8; x++) {
             const block_q4_0x8 * b_ptr = b_ptr_start + (x * nb);
 
-            __m256 acc_rows[8];
-            for (int i = 0; i < 8; i++) acc_rows[i] = _mm256_setzero_ps();
+            __m256 acc_rows[4 * RG];
+            for (int i = 0; i < 4 * RG; i++) acc_rows[i] = _mm256_setzero_ps();
 
             for (int64_t b = 0; b < nb; b++) {
                 __m256i raw_0123_0 = _mm256_loadu_si256((const __m256i *) (b_ptr[b].qs));
@@ -71,7 +73,7 @@ static void gemm_u8(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML
 
                 const __m256 col_scale_f32 = _mm256_cvtph_ps(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) b_ptr[b].d), scale_order));
 
-                #pragma GCC unroll 8
+                #pragma GCC unroll 16
                 for (int i = 0; i < 4 * RG; i++) {
                     if (i >= 4 * rg) break;
                     const int g = i >> 2, r = i & 3;

@@ -179,7 +179,7 @@ int main(int argc, char ** argv) {
         double rowblocks = (double)c.nc / 8 * (c.n / 32) * c.nr;
         printf("%s (%.0f row-blocks/call)\n", c.name, rowblocks);
         std::vector<double> best(nv, 1e30);
-        for (int round = 0; round < 7; round++) {
+        for (int round = 0; round < (getenv("KB_ROUNDS") ? atoi(getenv("KB_ROUNDS")) : 7); round++) {
             for (int v = 0; v < nv; v++) {
                 double t0 = now();
                 for (int r = 0; r < c.reps; r++) {
