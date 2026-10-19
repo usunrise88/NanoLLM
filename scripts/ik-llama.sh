@@ -23,9 +23,9 @@ build() {
 	mkdir -p "$(dirname "$SRC")" "$OUT"
 	[[ -d $SRC/.git ]] || git clone --depth 1 "$REPO" "$SRC"
 	git -C "$SRC" rev-parse HEAD | tee "$OUT/COMMIT"
-	docker run --rm -u "$(id -u):$(id -g)" -v "$PWD/$SRC:/src" -v "$PWD/$OUT:/out" "$IMAGE" bash -euo pipefail -c '
+	docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -e CCACHE_DISABLE=1 -v "$PWD/$SRC:/src" -v "$PWD/$OUT:/out" "$IMAGE" bash -euo pipefail -c '
 		cmake -S /src -B /tmp/build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=ON -DGGML_CUDA=OFF -DGGML_VULKAN=OFF \
-			-DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_SERVER=ON
+			-DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=ON -DLLAMA_BUILD_SERVER=ON
 		cmake --build /tmp/build -j "$(nproc)" --target llama-bench llama-server
 		cp -P /tmp/build/bin/llama-bench /tmp/build/bin/llama-server /out/
 		find /tmp/build -name "*.so*" -exec cp -P {} /out/ \;
