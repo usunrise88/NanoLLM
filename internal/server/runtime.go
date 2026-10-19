@@ -97,6 +97,13 @@ func New(ctx context.Context, o Options) *Runtime {
 	r.devices = r.probe(ctx)
 	r.Pool = pool.New(r.load, o.Config.Pool.MaxResidentModels)
 	r.Pool.MaxPending = o.Config.Pool.MaxPending
+	// A pin is the model's, whichever load makes the instance: the admin's,
+	// a request's, or a reload's.
+	r.Pool.Pinned = func(k pool.Key) bool {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		return r.pinned[k.Model]
+	}
 	r.Engine = engine.New(engine.Config{
 		DefaultModel:    o.Config.Models.Default,
 		EnableThinking:  o.Config.Generation.EnableThinking,

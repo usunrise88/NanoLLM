@@ -79,6 +79,11 @@ type Pool struct {
 	// MaxPending bounds the requests that may wait for a slot of one model;
 	// set before the first Acquire. Zero is no bound.
 	MaxPending int
+	// Pinned says whether an instance that has just loaded starts pinned: a
+	// pin asked for before its model was resident, or one the operator keeps
+	// across an unload. It runs under the pool's lock, so it must not call
+	// back into the pool; set before the first Acquire. Nil pins nothing.
+	Pinned func(Key) bool
 
 	mu        sync.Mutex
 	instances map[Key]*Instance
@@ -161,6 +166,9 @@ func (p *Pool) Acquire(ctx context.Context, k Key) (*Instance, func(), error) {
 			loop := sched.New(m)
 			loop.SetMaxPending(p.MaxPending)
 			inst := &Instance{Key: k, Model: m, Loop: loop, Info: info, loadedAt: now, lastUse: now}
+			// Asked under the lock that inserts the instance, so a Pin that
+			// races the load either sees the instance or is seen here.
+			inst.pinned = p.Pinned != nil && p.Pinned(k)
 			if p.closed {
 				err = ErrClosed
 				p.mu.Unlock()
