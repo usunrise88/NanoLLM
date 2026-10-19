@@ -99,7 +99,10 @@ func TestStatsEndpointsAreAdminOnly(t *testing.T) {
 }
 
 func TestStatsJSON(t *testing.T) {
-	rt := newRuntime(t, 1, fake.Options{})
+	// Rates give every phase a measurable duration: an instant fake reads as
+	// zero on a coarse clock (Windows), and zero-length latencies are not
+	// counted.
+	rt := newRuntime(t, 1, fake.Options{PrefillRate: 400, DecodeRate: 400})
 	traffic(t, rt)
 	mux := http.NewServeMux()
 	rt.MountStats(mux)
