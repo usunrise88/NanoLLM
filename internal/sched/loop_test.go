@@ -257,3 +257,59 @@ func TestMaxPending(t *testing.T) {
 	}
 	cancel()
 }
+
+func TestAgingPromotesWaitingBatchRequests(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		aging time.Duration
+		first string
+	}{
+		{"interactive jumps the queue", time.Hour, "interactive"},
+		{"an aged batch request keeps its place", 10 * time.Millisecond, "batch"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			l, m := newLoop(t, fake.Options{DecodeRate: 200}, backend.LoadSpec{Slots: 1})
+			l.SetAging(tc.aging)
+			blockCtx, stop := context.WithCancel(context.Background())
+			defer stop()
+			blocker, err := l.Submit(blockCtx, Request{Prompt: prompt(m, "occupies the slot [[fake:loop]]"), Logprobs: -1})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := blocker.Next(context.Background()); err != nil { // it holds the slot now
+				t.Fatal(err)
+			}
+			done := make(chan string, 2)
+			submit := func(name string, interactive bool) {
+				h, err := l.Submit(context.Background(), Request{Prompt: prompt(m, name+" [[fake:echo]]"), Logprobs: -1, Interactive: interactive})
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				go func() {
+					for {
+						ev, err := h.Next(context.Background())
+						if err != nil || ev.Done {
+							done <- name
+							return
+						}
+					}
+				}()
+			}
+			submit("batch", false)
+			time.Sleep(50 * time.Millisecond) // long enough to age
+			submit("interactive", true)
+			time.Sleep(20 * time.Millisecond)
+			stop() // the slot frees; the loop picks who goes next
+			select {
+			case got := <-done:
+				if got != tc.first {
+					t.Fatalf("%s finished first, want %s", got, tc.first)
+				}
+			case <-time.After(10 * time.Second):
+				t.Fatal("nothing finished")
+			}
+			<-done
+		})
+	}
+}

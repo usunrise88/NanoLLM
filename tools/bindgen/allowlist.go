@@ -67,6 +67,7 @@ var allowFuncs = []string{
 	"ggml_backend_dev_type",
 	"ggml_backend_dev_get_props",
 	"ggml_backend_dev_backend_reg",
+	"ggml_backend_reg_get_proc_address", // the CPU backend's extra buffer types (repack) are only reachable through it
 	"ggml_backend_dev_buffer_type",
 	"ggml_backend_cpu_buffer_type",
 	"ggml_backend_buft_name",

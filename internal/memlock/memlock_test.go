@@ -20,9 +20,13 @@ func TestAlign(t *testing.T) {
 	}
 }
 
+// testDir is where test files go; a platform file may pick a directory whose
+// pages the kernel can drop (not tmpfs).
+var testDir = func(t *testing.T) string { return t.TempDir() }
+
 func tempFile(t *testing.T, size int64) string {
 	t.Helper()
-	p := filepath.Join(t.TempDir(), "model.bin")
+	p := filepath.Join(testDir(t), "model.bin")
 	f, err := os.Create(p)
 	if err != nil {
 		t.Fatal(err)

@@ -88,6 +88,9 @@ type Loop struct {
 	wake    chan struct{}
 	// maxPending bounds the requests waiting for a slot; zero is no bound.
 	maxPending int
+	// aging is how long a batch request waits before it competes with the
+	// interactive ones; zero is DefaultAging.
+	aging time.Duration
 
 	slots []slot
 	clock uint64
@@ -155,6 +158,18 @@ func New(m backend.Model) *Loop {
 func (l *Loop) SetMaxPending(n int) {
 	l.mu.Lock()
 	l.maxPending = n
+	l.mu.Unlock()
+}
+
+// DefaultAging is how long a batch request may wait for a slot behind
+// interactive ones before it is treated as interactive itself: without it a
+// steady stream of interactive requests would starve a queued batch job.
+const DefaultAging = 30 * time.Second
+
+// SetAging changes DefaultAging for this loop.
+func (l *Loop) SetAging(d time.Duration) {
+	l.mu.Lock()
+	l.aging = d
 	l.mu.Unlock()
 }
 
@@ -336,9 +351,15 @@ func (l *Loop) admit() {
 	l.mu.Lock()
 	pending := l.pending
 	l.pending = nil
+	aging := l.aging
 	l.mu.Unlock()
+	if aging <= 0 {
+		aging = DefaultAging
+	}
+	now := time.Now()
+	first := func(h *Handle) bool { return h.req.Interactive || now.Sub(h.submitted) >= aging }
 	sort.SliceStable(pending, func(i, j int) bool {
-		return pending[i].req.Interactive && !pending[j].req.Interactive
+		return first(pending[i]) && !first(pending[j])
 	})
 	var waiting []*Handle
 	for _, h := range pending {

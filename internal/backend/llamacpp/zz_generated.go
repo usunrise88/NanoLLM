@@ -365,6 +365,7 @@ var (
 	ggmlBackendDevType                  func(device GgmlBackendDevice) GgmlBackendDevType
 	ggmlBackendDevGetProps              func(device GgmlBackendDevice, props *GgmlBackendDevProps)
 	ggmlBackendDevBackendReg            func(device GgmlBackendDevice) GgmlBackendReg
+	ggmlBackendRegGetProcAddress        func(reg GgmlBackendReg, name string) uintptr
 	ggmlBackendDevBufferType            func(device GgmlBackendDevice) GgmlBackendBufferType
 	ggmlBackendCpuBufferType            func() GgmlBackendBufferType
 	ggmlBackendBuftName                 func(buft GgmlBackendBufferType) string
@@ -495,6 +496,7 @@ var cSymbols = []cSymbol{
 	{"ggml_backend_dev_type", &ggmlBackendDevType},
 	{"ggml_backend_dev_get_props", &ggmlBackendDevGetProps},
 	{"ggml_backend_dev_backend_reg", &ggmlBackendDevBackendReg},
+	{"ggml_backend_reg_get_proc_address", &ggmlBackendRegGetProcAddress},
 	{"ggml_backend_dev_buffer_type", &ggmlBackendDevBufferType},
 	{"ggml_backend_cpu_buffer_type", &ggmlBackendCpuBufferType},
 	{"ggml_backend_buft_name", &ggmlBackendBuftName},

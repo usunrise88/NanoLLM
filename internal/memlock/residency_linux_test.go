@@ -4,10 +4,41 @@ package memlock
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"golang.org/x/sys/unix"
 )
+
+// tmpfsMagic is statfs's f_type of tmpfs and ramfs-like memory filesystems.
+const tmpfsMagic = 0x01021994
+
+// A tmpfs file cannot be evicted (its pages are its storage), which makes the
+// residency test vacuous; the test files then go under the user's cache
+// directory, on a real filesystem.
+func init() {
+	testDir = func(t *testing.T) string {
+		dir := t.TempDir()
+		var st unix.Statfs_t
+		if err := unix.Statfs(dir, &st); err != nil || st.Type != tmpfsMagic {
+			return dir
+		}
+		cache, err := os.UserCacheDir()
+		if err != nil {
+			return dir
+		}
+		base := filepath.Join(cache, "nanollm-test")
+		if err := os.MkdirAll(base, 0o755); err != nil {
+			return dir
+		}
+		d, err := os.MkdirTemp(base, "memlock-")
+		if err != nil {
+			return dir
+		}
+		t.Cleanup(func() { _ = os.RemoveAll(d) })
+		return d
+	}
+}
 
 // TestLockCoversOtherMappings is the claim range-lock rests on: libllama's
 // own mapping of the file stays resident where our mapping is locked. The

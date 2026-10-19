@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -43,6 +44,7 @@ type Recording struct {
 	Tools   string        `json:"tools"`
 	Model   string        `json:"model"`
 	Threads int           `json:"threads"`
+	Extra   string        `json:"extra,omitempty"`
 	Prompts []string      `json:"prompts_sha256"`
 	Top     [][]tokenProb `json:"top"` // per prompt, descending by probability
 }
@@ -76,6 +78,7 @@ func runCmd(args []string) error {
 	chars := fs.Int("chars", 1500, "characters per prompt")
 	threads := fs.Int("threads", 16, "CPU threads")
 	out := fs.String("out", "", "recording file")
+	extra := fs.String("extra", "", "more llama-server arguments, space separated (--no-repack)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -105,9 +108,10 @@ func runCmd(args []string) error {
 	_ = ln.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, filepath.Join(*tools, "llama-server"),
-		"-m", *model, "--host", "127.0.0.1", "--port", strconv.Itoa(port), "-c", "4096", "-np", "1",
-		"-t", strconv.Itoa(*threads), "-tb", strconv.Itoa(*threads), "-fa", "on", "--no-webui")
+	serverArgs := []string{"-m", *model, "--host", "127.0.0.1", "--port", strconv.Itoa(port), "-c", "4096", "-np", "1",
+		"-t", strconv.Itoa(*threads), "-tb", strconv.Itoa(*threads), "-fa", "on", "--no-webui"}
+	serverArgs = append(serverArgs, strings.Fields(*extra)...)
+	cmd := exec.CommandContext(ctx, filepath.Join(*tools, "llama-server"), serverArgs...)
 	cmd.Stdout, cmd.Stderr = io.Discard, io.Discard
 	if err := cmd.Start(); err != nil {
 		return err
@@ -124,7 +128,7 @@ func runCmd(args []string) error {
 		time.Sleep(time.Second)
 	}
 
-	rec := Recording{Tools: *tools, Model: filepath.Base(*model), Threads: *threads}
+	rec := Recording{Tools: *tools, Model: filepath.Base(*model), Threads: *threads, Extra: *extra}
 	for i, p := range prompts {
 		body, _ := json.Marshal(map[string]any{"prompt": p, "n_predict": 1, "n_probs": 100, "temperature": 0, "cache_prompt": false})
 		var data []byte

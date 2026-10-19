@@ -25,16 +25,173 @@
   "load_mode": "mmap",
   "lazy_mode": "on",
   "repack": false,
+  "overrides": [
+    {
+      "pattern": "^blk\\.(0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23)\\.attn_k\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^blk\\.(0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41)\\.attn_output\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^blk\\.(0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41)\\.attn_q\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^blk\\.(0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23)\\.attn_v\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^blk\\.(0|1|2|3|4)\\.ffn_down\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^blk\\.(0|1|2|3|4)\\.ffn_gate\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^blk\\.(0|1|2|3|4)\\.ffn_up\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^blk\\.(0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41)\\.inp_gate\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^blk\\.(0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41)\\.proj\\.weight$",
+      "device": "cpu:repack"
+    },
+    {
+      "pattern": "^per_layer_model_proj\\.weight$",
+      "device": "cpu:repack"
+    }
+  ],
   "lock_ranges": [
     {
       "role": "model",
       "offset": 15822944,
-      "length": 15494144
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 31316064,
+      "length": 1024
     },
     {
       "role": "model",
       "offset": 1616764000,
-      "length": 654249120
+      "length": 377488384
+    },
+    {
+      "role": "model",
+      "offset": 1994989664,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2000899168,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2031128672,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2046253152,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2047389824,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2053299328,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2083528832,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2098653312,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2099789984,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2105699488,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2135928992,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2151053472,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2152190144,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2158099648,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2188329152,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2203453632,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2204590304,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2210499808,
+      "length": 1024
+    },
+    {
+      "role": "model",
+      "offset": 2240729312,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 2255853792,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2257727744,
+      "length": 12288
+    },
+    {
+      "role": "model",
+      "offset": 2269536512,
+      "length": 2048
     },
     {
       "role": "model",
@@ -43,8 +200,18 @@
     },
     {
       "role": "model",
-      "offset": 2315260160,
-      "length": 8153120
+      "offset": 2315628800,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2316765472,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2322674976,
+      "length": 1024
     },
     {
       "role": "model",
@@ -53,8 +220,18 @@
     },
     {
       "role": "model",
-      "offset": 2367660320,
-      "length": 8153120
+      "offset": 2368028960,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2369165632,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2375075136,
+      "length": 1024
     },
     {
       "role": "model",
@@ -63,8 +240,18 @@
     },
     {
       "role": "model",
-      "offset": 2420060480,
-      "length": 8153120
+      "offset": 2420429120,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2421565792,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2427475296,
+      "length": 1024
     },
     {
       "role": "model",
@@ -73,8 +260,18 @@
     },
     {
       "role": "model",
-      "offset": 2472460640,
-      "length": 8153120
+      "offset": 2472829280,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2473965952,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2479875456,
+      "length": 1024
     },
     {
       "role": "model",
@@ -83,8 +280,18 @@
     },
     {
       "role": "model",
-      "offset": 2524860800,
-      "length": 8153120
+      "offset": 2525229440,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2526366112,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2532275616,
+      "length": 1024
     },
     {
       "role": "model",
@@ -93,8 +300,18 @@
     },
     {
       "role": "model",
-      "offset": 2577260960,
-      "length": 15527968
+      "offset": 2577629600,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2579503552,
+      "length": 12288
+    },
+    {
+      "role": "model",
+      "offset": 2591312320,
+      "length": 2048
     },
     {
       "role": "model",
@@ -103,8 +320,18 @@
     },
     {
       "role": "model",
-      "offset": 2637035968,
-      "length": 8153120
+      "offset": 2637404608,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2638541280,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2644450784,
+      "length": 1024
     },
     {
       "role": "model",
@@ -113,8 +340,18 @@
     },
     {
       "role": "model",
-      "offset": 2689436128,
-      "length": 8153120
+      "offset": 2689804768,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2690941440,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2696850944,
+      "length": 1024
     },
     {
       "role": "model",
@@ -123,8 +360,18 @@
     },
     {
       "role": "model",
-      "offset": 2741836288,
-      "length": 8153120
+      "offset": 2742204928,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2743341600,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2749251104,
+      "length": 1024
     },
     {
       "role": "model",
@@ -133,8 +380,18 @@
     },
     {
       "role": "model",
-      "offset": 2794236448,
-      "length": 8153120
+      "offset": 2794605088,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2795741760,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2801651264,
+      "length": 1024
     },
     {
       "role": "model",
@@ -143,8 +400,18 @@
     },
     {
       "role": "model",
-      "offset": 2846636608,
-      "length": 8153120
+      "offset": 2847005248,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2848141920,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2854051424,
+      "length": 1024
     },
     {
       "role": "model",
@@ -153,8 +420,18 @@
     },
     {
       "role": "model",
-      "offset": 2899036768,
-      "length": 15527968
+      "offset": 2899405408,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2901279360,
+      "length": 12288
+    },
+    {
+      "role": "model",
+      "offset": 2913088128,
+      "length": 2048
     },
     {
       "role": "model",
@@ -163,8 +440,18 @@
     },
     {
       "role": "model",
-      "offset": 2958811776,
-      "length": 8153120
+      "offset": 2959180416,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 2960317088,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 2966226592,
+      "length": 1024
     },
     {
       "role": "model",
@@ -173,8 +460,18 @@
     },
     {
       "role": "model",
-      "offset": 3011211936,
-      "length": 8153120
+      "offset": 3011580576,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3012717248,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 3018626752,
+      "length": 1024
     },
     {
       "role": "model",
@@ -183,8 +480,18 @@
     },
     {
       "role": "model",
-      "offset": 3063612096,
-      "length": 8153120
+      "offset": 3063980736,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3065117408,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 3071026912,
+      "length": 1024
     },
     {
       "role": "model",
@@ -193,8 +500,18 @@
     },
     {
       "role": "model",
-      "offset": 3116012256,
-      "length": 8153120
+      "offset": 3116380896,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3117517568,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 3123427072,
+      "length": 1024
     },
     {
       "role": "model",
@@ -203,8 +520,18 @@
     },
     {
       "role": "model",
-      "offset": 3168412416,
-      "length": 8153120
+      "offset": 3168781056,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3169917728,
+      "length": 11264
+    },
+    {
+      "role": "model",
+      "offset": 3175827232,
+      "length": 1024
     },
     {
       "role": "model",
@@ -213,8 +540,18 @@
     },
     {
       "role": "model",
-      "offset": 3220812576,
-      "length": 15527968
+      "offset": 3221181216,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3223055168,
+      "length": 12288
+    },
+    {
+      "role": "model",
+      "offset": 3234863936,
+      "length": 2048
     },
     {
       "role": "model",
@@ -223,8 +560,18 @@
     },
     {
       "role": "model",
-      "offset": 3280587584,
-      "length": 6677536
+      "offset": 3280956224,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3281355616,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3287264096,
+      "length": 1024
     },
     {
       "role": "model",
@@ -233,8 +580,18 @@
     },
     {
       "role": "model",
-      "offset": 3331512160,
-      "length": 6677536
+      "offset": 3331880800,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3332280192,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3338188672,
+      "length": 1024
     },
     {
       "role": "model",
@@ -243,8 +600,18 @@
     },
     {
       "role": "model",
-      "offset": 3382436736,
-      "length": 6677536
+      "offset": 3382805376,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3383204768,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3389113248,
+      "length": 1024
     },
     {
       "role": "model",
@@ -253,8 +620,18 @@
     },
     {
       "role": "model",
-      "offset": 3433361312,
-      "length": 6677536
+      "offset": 3433729952,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3434129344,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3440037824,
+      "length": 1024
     },
     {
       "role": "model",
@@ -263,8 +640,18 @@
     },
     {
       "role": "model",
-      "offset": 3484285888,
-      "length": 6677536
+      "offset": 3484654528,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3485053920,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3490962400,
+      "length": 1024
     },
     {
       "role": "model",
@@ -273,8 +660,18 @@
     },
     {
       "role": "model",
-      "offset": 3535210464,
-      "length": 12576800
+      "offset": 3535579104,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3535978496,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3547785216,
+      "length": 2048
     },
     {
       "role": "model",
@@ -283,8 +680,18 @@
     },
     {
       "role": "model",
-      "offset": 3592034304,
-      "length": 6677536
+      "offset": 3592402944,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3592802336,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3598710816,
+      "length": 1024
     },
     {
       "role": "model",
@@ -293,8 +700,18 @@
     },
     {
       "role": "model",
-      "offset": 3642958880,
-      "length": 6677536
+      "offset": 3643327520,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3643726912,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3649635392,
+      "length": 1024
     },
     {
       "role": "model",
@@ -303,8 +720,18 @@
     },
     {
       "role": "model",
-      "offset": 3693883456,
-      "length": 6677536
+      "offset": 3694252096,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3694651488,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3700559968,
+      "length": 1024
     },
     {
       "role": "model",
@@ -313,8 +740,18 @@
     },
     {
       "role": "model",
-      "offset": 3744808032,
-      "length": 6677536
+      "offset": 3745176672,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3745576064,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3751484544,
+      "length": 1024
     },
     {
       "role": "model",
@@ -323,8 +760,18 @@
     },
     {
       "role": "model",
-      "offset": 3795732608,
-      "length": 6677536
+      "offset": 3796101248,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3796500640,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3802409120,
+      "length": 1024
     },
     {
       "role": "model",
@@ -333,8 +780,18 @@
     },
     {
       "role": "model",
-      "offset": 3846657184,
-      "length": 12576800
+      "offset": 3847025824,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3847425216,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3859231936,
+      "length": 2048
     },
     {
       "role": "model",
@@ -343,8 +800,18 @@
     },
     {
       "role": "model",
-      "offset": 3903481024,
-      "length": 6677536
+      "offset": 3903849664,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3904249056,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3910157536,
+      "length": 1024
     },
     {
       "role": "model",
@@ -353,8 +820,18 @@
     },
     {
       "role": "model",
-      "offset": 3954405600,
-      "length": 6677536
+      "offset": 3954774240,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 3955173632,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 3961082112,
+      "length": 1024
     },
     {
       "role": "model",
@@ -363,8 +840,18 @@
     },
     {
       "role": "model",
-      "offset": 4005330176,
-      "length": 6677536
+      "offset": 4005698816,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 4006098208,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4012006688,
+      "length": 1024
     },
     {
       "role": "model",
@@ -373,8 +860,18 @@
     },
     {
       "role": "model",
-      "offset": 4056254752,
-      "length": 6677536
+      "offset": 4056623392,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 4057022784,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4062931264,
+      "length": 1024
     },
     {
       "role": "model",
@@ -383,8 +880,18 @@
     },
     {
       "role": "model",
-      "offset": 4107179328,
-      "length": 6677536
+      "offset": 4107547968,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 4107947360,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4113855840,
+      "length": 1024
     },
     {
       "role": "model",
@@ -393,8 +900,18 @@
     },
     {
       "role": "model",
-      "offset": 4158103904,
-      "length": 12576800
+      "offset": 4158472544,
+      "length": 30752
+    },
+    {
+      "role": "model",
+      "offset": 4158871936,
+      "length": 10240
+    },
+    {
+      "role": "model",
+      "offset": 4170678656,
+      "length": 2048
     },
     {
       "role": "model",
@@ -403,8 +920,8 @@
     },
     {
       "role": "model",
-      "offset": 4214927744,
-      "length": 768032
+      "offset": 4215296384,
+      "length": 30752
     },
     {
       "role": "drafter",
@@ -523,7 +1040,7 @@
       "id": "M7",
       "fits": false,
       "shortfall": {
-        "ram": 1507609169
+        "ram": 1543116201
       }
     },
     {

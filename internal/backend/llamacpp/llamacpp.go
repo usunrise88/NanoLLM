@@ -19,9 +19,13 @@ package llamacpp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
+	"unsafe"
+
+	"github.com/ebitengine/purego"
 
 	"github.com/usunrise88/nanollm/internal/backend"
 )
@@ -151,3 +155,38 @@ func (b *llamaBackend) device(sel string) (GgmlBackendDevice, bool, error) {
 }
 
 func (b *llamaBackend) Close() error { return nil }
+
+// cpuRepackBuft finds the CPU backend's repacked buffer type among its extra
+// buffer types, which only the CPU backend library exports
+// (ggml_backend_dev_get_extra_bufts, through the registry's proc address). A
+// tensor overridden to it is repacked even with use_extra_bufts off, which is
+// how a mode repacks the tensors it keeps hot and leaves the rest in the file's
+// mapping (docs/STAGE2.md OPT-1).
+func (b *llamaBackend) cpuRepackBuft() (GgmlBackendBufferType, error) {
+	for i := uintptr(0); i < ggmlBackendDevCount(); i++ {
+		dev := ggmlBackendDevGet(i)
+		if ggmlBackendDevType(dev) != GgmlBackendDeviceTypeCpu {
+			continue
+		}
+		p := ggmlBackendRegGetProcAddress(ggmlBackendDevBackendReg(dev), "ggml_backend_dev_get_extra_bufts")
+		if p == 0 {
+			return 0, errors.New("this CPU backend has no extra buffer types (no repacked weights)")
+		}
+		var extra func(GgmlBackendDevice) *GgmlBackendBufferType
+		purego.RegisterFunc(&extra, p)
+		arr := extra(dev)
+		if arr == nil {
+			break
+		}
+		for k := 0; k < 16; k++ {
+			bt := *(*GgmlBackendBufferType)(unsafe.Add(unsafe.Pointer(arr), uintptr(k)*unsafe.Sizeof(*arr)))
+			if bt == 0 {
+				break
+			}
+			if strings.Contains(strings.ToUpper(ggmlBackendBuftName(bt)), "REPACK") {
+				return bt, nil
+			}
+		}
+	}
+	return 0, errors.New("no repacked buffer type on this CPU")
+}

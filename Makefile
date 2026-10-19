@@ -21,7 +21,7 @@ export CGO_ENABLED := 0
 # The five release platforms; darwin is built per architecture and merged.
 TARGETS     := linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/arm64 darwin/amd64
 
-.PHONY: all web web-check e2e build build-noui cross dist dist-all docker docker-cuda libs tools bindgen layout test-native lint test test-race conformance run run-fake tidy clean help
+.PHONY: all web web-check e2e build build-race build-noui cross dist dist-all docker docker-cuda libs tools bindgen layout test-native lint test test-race conformance run run-fake tidy clean help
 
 all: web build
 
@@ -45,6 +45,10 @@ e2e: web build
 ## build: the server binary for this machine (run `make web` first, or it starts without a UI)
 build:
 	$(GO) build -ldflags "$(LDFLAGS)" -o $(DIST)/nanollm ./cmd/nanollm
+
+## build-race: the server under the race detector, for a soak run on the real library (needs cgo)
+build-race:
+	CGO_ENABLED=1 $(GO) build -race -ldflags "$(LDFLAGS)" -o $(DIST)/nanollm-race ./cmd/nanollm
 
 ## build-noui: the same without the SPA
 build-noui:

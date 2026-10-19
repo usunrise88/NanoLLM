@@ -178,7 +178,7 @@ func hasWarning(p *Plan, sub string) bool {
 func TestRangeLockModes(t *testing.T) {
 	model := e4b(t)
 	all := ProvenModes{RAMPLEDisk: true, RAMHybrid: true}
-	m7 := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-4g"), Proven: all, Mode: RAMPLEDisk})
+	m7 := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-4g"), Proven: all, Mode: RAMPLEDisk, NoRepack: true})
 	if !m7.OK() {
 		t.Fatalf("M7 on ram-4g refused: %s", m7.Refused)
 	}
@@ -371,5 +371,36 @@ func TestPlanAgainstTinyModel(t *testing.T) {
 		if p.Mode != want || p.MTP.Enabled {
 			t.Errorf("%s: %s, MTP %v", name, p.Mode, p.MTP.Enabled)
 		}
+	}
+}
+
+// OPT-1: M7 repacks its core, which copies it into anonymous memory, so it
+// range-locks nothing, and the planned RAM is the same as with the lock.
+func TestM7Repacks(t *testing.T) {
+	model := e4b(t)
+	all := ProvenModes{RAMPLEDisk: true, RAMHybrid: true}
+	rp := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-4g"), Proven: all, Mode: RAMPLEDisk})
+	lk := mustPlan(t, Request{Model: model, Preset: preset(t, "ram-4g"), Proven: all, Mode: RAMPLEDisk, NoRepack: true})
+	if !rp.OK() || !lk.OK() {
+		t.Fatalf("refused: %q %q", rp.Refused, lk.Refused)
+	}
+	if !rp.Repack || len(rp.LockRanges) != 0 || rp.LoadMode != backend.LoadMMap || rp.LazyMode != backend.LazyOn {
+		t.Errorf("repacked M7: repack %v, %d ranges, load %s lazy %s", rp.Repack, len(rp.LockRanges), rp.LoadMode, rp.LazyMode)
+	}
+	if lk.Repack || len(lk.LockRanges) == 0 {
+		t.Errorf("M7 without repack: repack %v, %d ranges", lk.Repack, len(lk.LockRanges))
+	}
+	if rp.Groups[gguf.G1].FileBacked != model.Target.Groups[gguf.G1] {
+		t.Errorf("the PLE table is not file-backed: %+v", rp.Groups[gguf.G1])
+	}
+	for _, g := range []gguf.Group{gguf.G2, gguf.G3} {
+		if rp.Groups[g].RAMLocked != model.Target.Groups[g] || rp.Groups[g].FileBacked != 0 {
+			t.Errorf("%s: %+v, want %d of anonymous memory", g, rp.Groups[g], model.Target.Groups[g])
+		}
+	}
+	// Both plans fit the same budget, and the repacked one needs the tied
+	// head's copy as well, which the locked one aliased: no more than 1% apart.
+	if d := rp.Memory.RAM.Used - lk.Memory.RAM.Used; d < -(1<<26) || d > 1<<26 {
+		t.Errorf("planned RAM differs by %d bytes between repack and lock", d)
 	}
 }
