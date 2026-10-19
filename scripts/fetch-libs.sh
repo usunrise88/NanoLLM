@@ -19,6 +19,16 @@
 # the MTP reference run take their reference output from the tools of the same
 # tag (STAGE1 1.5, 1.10); the release does not ship them.
 #
+# Our own libllama and libggml-base (docs/STAGE2.md 2.1). When
+# scripts/llama.cpp.commit differs from scripts/llama.cpp.base the pinned build
+# carries patches (patches/llama.cpp), and the libraries built from them in CI
+# (the release named in scripts/libs.release, nanollm-libs-<target>.tar.gz) are
+# laid over upstream's: the patches touch libllama only, so the CPU variants
+# and the GPU backends come from upstream's archive as they are. The overlay
+# lands in dist/<target>/lib and, with --tools, in tools/ too, so the
+# reference tools run the same libllama. NANOLLM_LIBS_URL replaces the
+# release's download URL (a mirror, or file:// for a local build).
+#
 # NanoLLM compiles no C code. If an upstream archive layout changes, this
 # script fails on the layout check below rather than shipping a lib/ that is
 # missing a backend (SPEC §14, risks).
@@ -89,6 +99,15 @@ sha256() {
 CACHE=.cache/llama.cpp/$TAG
 mkdir -p "$CACHE"
 
+# PATCHED: the pinned build is not upstream's.
+PATCHED=0
+if [[ -f scripts/llama.cpp.base ]] \
+   && [[ "$(tr -d '[:space:]' < scripts/llama.cpp.commit)" != "$(tr -d '[:space:]' < scripts/llama.cpp.base)" ]]; then
+  PATCHED=1
+  OWN_REL=$(tr -d '[:space:]' < scripts/libs.release)
+  OWN_URL=${NANOLLM_LIBS_URL:-https://github.com/usunrise88/nanollm/releases/download/$OWN_REL}
+fi
+
 # Scratch directories, removed however the script exits.
 STAGES=()
 trap 'for d in ${STAGES[@]+"${STAGES[@]}"}; do rm -rf "$d"; done' EXIT
@@ -113,6 +132,49 @@ download() {
     rm -f "$CACHE/$asset"
     exit 1
   fi
+}
+
+# download_own TARGET: our verified libs archive for TARGET, its path on stdout.
+download_own() {
+  local asset=nanollm-libs-$1.tar.gz want got file=$CACHE/own-$OWN_REL-nanollm-libs-$1.tar.gz
+  want=$(awk -v f="$asset" '$2 == f { print $1 }' scripts/libs.sha256)
+  if [[ -z "$want" ]]; then
+    echo "fetch-libs: $asset is not listed in scripts/libs.sha256; add its hash from release $OWN_REL" >&2
+    exit 1
+  fi
+  if [[ ! -f "$file" ]]; then
+    echo "fetching $asset ($OWN_REL)" >&2
+    curl -fL --retry 3 --retry-all-errors -o "$file.part" "$OWN_URL/$asset" >&2
+    mv "$file.part" "$file"
+  fi
+  got=$(sha256 "$file")
+  if [[ "$got" != "$want" ]]; then
+    echo "fetch-libs: $asset has sha256 $got, expected $want" >&2
+    rm -f "$file"
+    exit 1
+  fi
+  echo "$file"
+}
+
+# overlay_own TARGET DIR...: replace libllama and libggml-base in each DIR with
+# ours. Upstream's copies go first: a library's version suffix differs, and two
+# of them side by side would leave libllama.so.0 pointing at whichever came last.
+overlay_own() {
+  local target=$1 archive stage dir
+  shift
+  archive=$(download_own "$target")
+  stage=$(mktemp -d)
+  STAGES+=("$stage")
+  unpack "$archive" "$stage"
+  if ! compgen -G "$stage/*llama*" >/dev/null || ! compgen -G "$stage/*ggml-base*" >/dev/null; then
+    echo "fetch-libs: $archive lacks libllama or libggml-base" >&2
+    exit 1
+  fi
+  for dir in "$@"; do
+    find "$dir" \( -type f -o -type l \) \( -name 'libllama.*' -o -name 'llama.dll' -o -name 'libggml-base.*' -o -name 'ggml-base.dll' \) -delete
+    find "$stage" \( -type f -o -type l \) -exec cp -P {} "$dir/" \;
+  done
+  echo "$target: libllama and libggml-base from $OWN_REL"
 }
 
 unpack() {
@@ -181,6 +243,10 @@ fetch() {
       exit 1
     fi
     echo "$target: $(ls "$tools" | wc -l | tr -d ' ') files in $tools"
+  fi
+
+  if (( PATCHED )); then
+    if (( TOOLS )); then overlay_own "$target" "$out" "dist/$target/tools"; else overlay_own "$target" "$out"; fi
   fi
 
   # Layout check: no libllama, or no CPU backend, means the archive changed
