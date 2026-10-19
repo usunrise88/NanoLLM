@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <x86intrin.h>
 
+#define GGML_REPACK_Q4_0_GEMV_U8 // repack.h defines it for AVX2 builds without VNNI
 #define GGML_RESTRICT __restrict
 #define UNUSED(x) (void)(x)
 #define GGML_CPU_FP16_TO_FP32(x) _cvtsh_ss(x)
@@ -132,7 +133,61 @@ int main(int argc, char ** argv) {
         }
     }
     printf("correctness: %s\n", fails ? "FAILED" : "all variants bit-identical to old");
+    // several rows of the activation in one call (bs floats between the rows of dst) against one call of the old kernel per row
+    int mfails = 0;
+    for (int trial = 0; trial < 60; trial++) {
+        int mode = trial < 40 ? 0 : trial % 4;
+        int n = 32 * (1 + (int)(rnd() % 90));
+        if (trial == 7) n = 32 * (380 + (int)(rnd() % 12)); // around the stack buffer of 384 blocks
+        int nc = 8 * (1 + (int)(rnd() % 40));
+        int nr = 1 + (int)(rnd() % 8);
+        const int nb = n / 32;
+        std::vector<block_q4_0x8> W, W2; std::vector<block_q8_0> Y, Yall;
+        gen(n, nc, mode, W, Y);
+        for (int r = 0; r < nr; r++) { gen(n, 8, mode, W2, Y); Yall.insert(Yall.end(), Y.begin(), Y.end()); }
+        std::vector<float> ref((size_t) nr * nc), got((size_t) nr * nc, -1.f);
+        for (int r = 0; r < nr; r++) old_fn(n, ref.data() + (size_t) r * nc, 1, W.data(), Yall.data() + (size_t) r * nb, 1, nc);
+        real::gemv_q4_0_8x8_q8_0_u8_avx<block_q4_0x8>(n, got.data(), nc, W.data(), Yall.data(), nr, nc);
+        if (memcmp(ref.data(), got.data(), ref.size() * sizeof(float)) != 0) {
+            printf("MISMATCH multi-row nr %d n %d nc %d mode %d\n", nr, n, nc, mode);
+            mfails++;
+        }
+    }
+    printf("multi-row correctness: %s\n", mfails ? "FAILED" : "bit-identical to the old kernel called per row");
+    fails += mfails;
     if (argc > 1 && !strcmp(argv[1], "check")) return fails != 0;
+    if (argc > 1 && !strcmp(argv[1], "multi")) {
+        // 1 to 7 rows of the activation: the old kernel once per row, the patch's per row, the patch in one call
+        struct Cfg { const char * name; int n, nc; } cfgs[] = {{"L2  n=2560 nc=160 (weights in L2)", 2560, 160}, {"n=10240 nc=64", 10240, 64}};
+        for (auto & c : cfgs) {
+            printf("%s\n", c.name);
+            std::vector<block_q4_0x8> W, W2; std::vector<block_q8_0> Y, Yall;
+            gen(c.n, c.nc, 0, W, Y);
+            for (int r = 0; r < 8; r++) { gen(c.n, 8, 0, W2, Y); Yall.insert(Yall.end(), Y.begin(), Y.end()); }
+            std::vector<float> out(8 * (size_t) c.nc);
+            const int nb = c.n / 32, rounds = getenv("KB_ROUNDS") ? atoi(getenv("KB_ROUNDS")) : 7;
+            double blocks = (double) c.nc / 8 * nb;
+            for (int nr = 1; nr <= 7; nr++) {
+                double best[3] = {1e30, 1e30, 1e30};
+                int reps = std::max(1, 400 / nr);
+                for (int round = 0; round < rounds; round++) {
+                    for (int v = 0; v < 3; v++) {
+                        double t0 = now();
+                        for (int i = 0; i < reps; i++) {
+                            if (v == 0) for (int r = 0; r < nr; r++) old_fn(c.n, out.data() + (size_t) r * c.nc, 1, W.data(), Yall.data() + (size_t) r * nb, 1, c.nc);
+                            else if (v == 1) for (int r = 0; r < nr; r++) real::gemv_q4_0_8x8_q8_0_u8_avx<block_q4_0x8>(c.n, out.data() + (size_t) r * c.nc, c.nc, W.data(), Yall.data() + (size_t) r * nb, 1, c.nc);
+                            else real::gemv_q4_0_8x8_q8_0_u8_avx<block_q4_0x8>(c.n, out.data(), c.nc, W.data(), Yall.data(), nr, c.nc);
+                            __asm__ volatile("" ::: "memory");
+                        }
+                        best[v] = std::min(best[v], (now() - t0) / reps);
+                    }
+                }
+                printf("  nr=%d  old per row %7.2f   patch per row %7.2f   patch one call %7.2f  ns per row-block   (%.2fx old, %.2fx patch per row)\n", nr,
+                       best[0] * 1e9 / blocks / nr, best[1] * 1e9 / blocks / nr, best[2] * 1e9 / blocks / nr, best[0] / best[2], best[1] / best[2]);
+            }
+        }
+        return 0;
+    }
     if (argc > 3 && !strcmp(argv[1], "run")) {
         // kb run VARIANT N NC SECONDS : one variant only, for perf stat
         int v = -1; for (int i = 0; i < nv; i++) if (!strcmp(variants[i].name, argv[2])) v = i;

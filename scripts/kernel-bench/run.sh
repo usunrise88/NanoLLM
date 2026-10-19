@@ -3,6 +3,7 @@
 #
 #   scripts/kernel-bench/run.sh gemv [CPU]     # GEMV (decode): old kernel against the candidates, one thread
 #   scripts/kernel-bench/run.sh gemm [CPU]     # GEMM (prefill)
+#   scripts/kernel-bench/run.sh multi [CPU]    # GEMV with 1 to 7 rows of the activation in one call
 #   scripts/kernel-bench/run.sh check          # only the bit-exactness checks (random and extreme data)
 #   scripts/kernel-bench/run.sh uops [NAME...] # cycles and FP-pipe uops of single instructions (needs perf)
 #
@@ -29,7 +30,7 @@ awk '/^\/\/ add int16_t pairwise and return as 256 bit int vector/{p=1} p{print}
 sed -n '/^\/\/ GEMV for 8x blocks of 32 4-bit quants with a single scale factor per block/,/^\/\/ GEMM for 8x blocks of 32 4-bit quants/p' "$GEN/orig.cpp" | sed '$d' > "$GEN/old_kernel.inc"
 sed -n '/^\/\/ GEMM for 8x blocks of 32 4-bit quants with a single scale factor per block/,/^#endif \/\/ defined(__AVX2__) || defined(__AVX512F__)/p' "$GEN/orig.cpp" | sed '$d' > "$GEN/old_gemm.inc"
 # the kernels of the patched tree, in a namespace
-{ echo 'namespace real {'; sed -n '/^#if defined(__AVX2__) && !defined(__AVXVNNI__)/,/^#endif \/\/ AVX2 without VNNI/p' "$SRC/$FILE"; echo '}'; } > "$GEN/real.inc"
+{ echo 'namespace real {'; sed -n '/^#if defined(GGML_REPACK_Q4_0_GEMV_U8)/,/^#endif \/\/ AVX2 without VNNI/{p;/^#endif \/\/ AVX2 without VNNI/q}' "$SRC/$FILE"; echo '}'; } > "$GEN/real.inc"
 
 build() { # build SOURCE OUT [flags]
   local srcf=$1 out=$2
@@ -41,6 +42,7 @@ build() { # build SOURCE OUT [flags]
 
 case ${1:-} in
 gemv)  build kb.cpp kb; taskset -c "${2:-3}" "$GEN/kb" ;;
+multi) build kb.cpp kb; taskset -c "${2:-3}" "$GEN/kb" multi ;;
 gemm)  build kg.cpp kg; taskset -c "${2:-3}" "$GEN/kg" ;;
 check) build kb.cpp kb; build kg.cpp kg; "$GEN/kb" check; "$GEN/kg" check ;;
 uops)  shift; build uops.cpp uops

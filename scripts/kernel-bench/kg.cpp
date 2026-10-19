@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <x86intrin.h>
 
+#define GGML_REPACK_Q4_0_GEMV_U8 // repack.h defines it for AVX2 builds without VNNI
 #define GGML_RESTRICT __restrict
 #define UNUSED(x) (void)(x)
 #define GGML_CPU_FP16_TO_FP32(x) _cvtsh_ss(x)
