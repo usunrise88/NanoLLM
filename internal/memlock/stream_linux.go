@@ -5,7 +5,10 @@ package memlock
 import (
 	"cmp"
 	"fmt"
+	"os"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -33,6 +36,11 @@ type StreamOptions struct {
 // through the room that is left, so the hit rate is Keep over the total
 // instead of zero, and the disk reads in layer order, queued ahead of the
 // compute.
+//
+// One WILLNEED call reads no more than the device's readahead limit
+// (ReadaheadLimit) and drops the rest without an error, so the streamer cuts
+// a layer into calls of that size; a single call for a 40 MiB layer would
+// read its first 8 MiB on a disk with an 8 MiB window, 128 KiB on most.
 //
 // Layer(i) is called when layer i has been computed. It never blocks: the
 // madvise calls run on a goroutine of the streamer's own, and a call that
@@ -83,12 +91,14 @@ func NewStreamer(path string, layers map[int][]Range, opt StreamOptions) (*Strea
 			}
 		}
 	}
+	limit := uintptr(ReadaheadLimit(path))
 	for l := range s.read {
 		// A layer is a dozen tensors that lie next to each other; one
 		// madvise per tensor is a dozen system calls where one will do. The
-		// read bridges the small gaps (norms, a few KiB); the eviction does
-		// not, it takes only what the ranges say.
-		s.read[l] = mergeSpans(s.read[l], 256<<10)
+		// read bridges the small gaps (norms, a few KiB) and is then cut to
+		// what one call reads; the eviction does not bridge, it takes only
+		// what the ranges say.
+		s.read[l] = splitSpans(mergeSpans(s.read[l], 256<<10), limit)
 		s.drop[l] = mergeSpans(s.drop[l], 0)
 	}
 	if total == 0 {
@@ -117,6 +127,49 @@ func mergeSpans(sp []span, maxGap uintptr) []span {
 		out = append(out, c)
 	}
 	return out
+}
+
+// splitSpans cuts spans into pieces of at most limit bytes, rounded down to
+// whole pages so every piece starts on one.
+func splitSpans(sp []span, limit uintptr) []span {
+	page := uintptr(os.Getpagesize())
+	limit = max(limit&^(page-1), page)
+	var out []span
+	for _, c := range sp {
+		for c.n > limit {
+			out = append(out, span{addr: c.addr, n: limit})
+			c.addr += limit
+			c.n -= limit
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+// ReadaheadLimit is the most one MADV_WILLNEED (or POSIX_FADV_WILLNEED) call
+// reads from the block device that holds path: the kernel clamps the request
+// to the larger of the device's readahead window and its largest request
+// (force_page_cache_ra), and the rest of the range is not read. It falls back
+// to 128 KiB, the usual window, when sysfs does not say.
+func ReadaheadLimit(path string) int64 {
+	var st unix.Stat_t
+	if unix.Stat(path, &st) != nil {
+		return 128 << 10
+	}
+	dir := fmt.Sprintf("/sys/dev/block/%d:%d", unix.Major(st.Dev), unix.Minor(st.Dev))
+	q := dir + "/queue"
+	if _, err := os.Stat(q); err != nil {
+		q = dir + "/../queue" // a partition: the queue is its disk's
+	}
+	kb := int64(128)
+	for _, name := range []string{"read_ahead_kb", "max_sectors_kb"} {
+		if b, err := os.ReadFile(q + "/" + name); err == nil {
+			if v, err := strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64); err == nil {
+				kb = max(kb, v)
+			}
+		}
+	}
+	return kb << 10
 }
 
 // Layers is the number of layers the streamer knows.
@@ -154,12 +207,14 @@ func (s *Streamer) run() {
 }
 
 func (s *Streamer) handle(il int) {
+	// The eviction first: it is quick and frees the room the reads fill,
+	// while a WILLNEED call waits for the device's queue when it is full.
+	if s.opt.Evict && il >= s.opt.Keep {
+		s.advise(s.drop[il], unix.MADV_PAGEOUT)
+	}
 	n := len(s.read)
 	for d := 1; d <= s.opt.Ahead && d < n; d++ {
 		s.advise(s.read[(il+d)%n], unix.MADV_WILLNEED)
-	}
-	if s.opt.Evict && il >= s.opt.Keep {
-		s.advise(s.drop[il], unix.MADV_PAGEOUT)
 	}
 }
 

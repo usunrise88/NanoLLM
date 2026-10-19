@@ -26,7 +26,9 @@ func eventually(t *testing.T, what string, cond func() bool) {
 }
 
 func TestStreamerReadsAheadAndEvictsBehind(t *testing.T) {
-	const layer = 8 << 20
+	// Several times what one WILLNEED call reads on most disks (128 KiB to
+	// 8 MiB): the streamer has to cut a layer into calls to read it whole.
+	const layer = 32 << 20
 	path := tempFile(t, 4*layer)
 	f, err := os.Open(path)
 	if err != nil {
@@ -72,9 +74,13 @@ func TestStreamerReadsAheadAndEvictsBehind(t *testing.T) {
 	t.Run("ahead", func(t *testing.T) {
 		reset()
 		// Some filesystems and sandboxes ignore MADV_WILLNEED; then there is
-		// nothing for the streamer to be tested against.
-		if err := unix.Madvise(view(3), unix.MADV_WILLNEED); err != nil {
-			t.Skipf("madvise(WILLNEED): %v", err)
+		// nothing for the streamer to be tested against. One call reads no
+		// more than the device's readahead limit, so the probe asks in pieces.
+		lim := max(int(ReadaheadLimit(path))&^(int(PageSize)-1), int(PageSize))
+		for o := 0; o < layer; o += lim {
+			if err := unix.Madvise(view(3)[o:min(o+lim, layer)], unix.MADV_WILLNEED); err != nil {
+				t.Skipf("madvise(WILLNEED): %v", err)
+			}
 		}
 		honoured := false
 		for i := 0; i < 500 && !honoured; i++ {
@@ -164,6 +170,26 @@ func TestLayerNotificationNeverBlocks(t *testing.T) {
 	}
 	if s.Stats().Dropped == 0 {
 		t.Error("nothing was dropped from a full queue")
+	}
+}
+
+func TestSplitSpans(t *testing.T) {
+	p := uintptr(PageSize)
+	in := []span{{0, 10 * p}, {20 * p, 3 * p}, {40 * p, 100}}
+	// The limit is rounded down to whole pages.
+	got := splitSpans(in, 4*p+5)
+	want := []span{{0, 4 * p}, {4 * p, 4 * p}, {8 * p, 2 * p}, {20 * p, 3 * p}, {40 * p, 100}}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestReadaheadLimit(t *testing.T) {
+	if n := ReadaheadLimit(tempFile(t, 1)); n < 128<<10 {
+		t.Errorf("ReadaheadLimit = %d, want at least the 128 KiB fallback", n)
+	}
+	if n := ReadaheadLimit("/does/not/exist"); n != 128<<10 {
+		t.Errorf("missing file: %d, want 128 KiB", n)
 	}
 }
 

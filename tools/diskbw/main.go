@@ -3,8 +3,9 @@
 // Command diskbw measures how fast a file can be read from the disk by the
 // ways a model's weights reach memory: one sequential O_DIRECT stream,
 // several parallel O_DIRECT streams (queue depth), page faults through an
-// mmap with the kernel's readahead, and an madvise(WILLNEED) of the whole
-// region. The ratio between them decides whether the layer streamer's
+// mmap with the kernel's readahead, and madvise(WILLNEED) of the region, in
+// one call and in calls of the device's readahead limit (one call reads no
+// more than that limit; the rest of the region stays on the disk). The ratio between them decides whether the layer streamer's
 // madvise path (OPT-8) already reads at the device's speed or an explicit
 // io_uring ring (OPT-9) has room to gain (docs/AUTOTUNE.md).
 //
@@ -26,6 +27,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/usunrise88/nanollm/internal/memlock"
 )
 
 var (
@@ -64,8 +67,20 @@ func main() {
 		evict(f, off, size)
 		report(fmt.Sprintf("mmap page faults, %d thread(s)", t), faults(f, off, size, t))
 	}
-	evict(f, off, size)
-	report("madvise(WILLNEED) then wait", willneed(f, off, size))
+	lim := memlock.ReadaheadLimit(*file)
+	for _, c := range []int64{0, lim} {
+		evict(f, off, size)
+		d, got := willneed(f, off, size, c)
+		name := "madvise(WILLNEED), one call"
+		if c > 0 {
+			name = fmt.Sprintf("madvise(WILLNEED), %d KiB calls", c>>10)
+		}
+		if got < size/int64(os.Getpagesize())*int64(os.Getpagesize()) {
+			fmt.Printf("%-34s %7.0f MB/s  (%.2f s, only %d of %d MiB read)\n", name, float64(got)/1e6/d.Seconds(), d.Seconds(), got>>20, size>>20)
+			continue
+		}
+		report(name, d)
+	}
 }
 
 func check(err error) {
@@ -152,16 +167,25 @@ func faults(f *os.File, off, size int64, t int) time.Duration {
 	return d
 }
 
-// willneed asks the kernel to read the whole region and waits until it is
-// resident.
-func willneed(f *os.File, off, size int64) time.Duration {
+// willneed asks the kernel to read the region, chunk bytes per call (0: one
+// call for all of it), and waits until the region is resident or has stopped
+// growing for two seconds. It returns the time to the last growth and the
+// bytes resident.
+func willneed(f *os.File, off, size, chunk int64) (time.Duration, int64) {
 	m, err := unix.Mmap(int(f.Fd()), 0, int(off+size), unix.PROT_READ, unix.MAP_PRIVATE)
 	check(err)
 	defer unix.Munmap(m)
 	region := m[off : off+size]
 	start := time.Now()
-	check(unix.Madvise(region, unix.MADV_WILLNEED))
-	vec := make([]byte, size/int64(os.Getpagesize()))
+	if chunk <= 0 {
+		chunk = size
+	}
+	for o := int64(0); o < size; o += chunk {
+		check(unix.Madvise(region[o:min(o+chunk, size)], unix.MADV_WILLNEED))
+	}
+	page := int64(os.Getpagesize())
+	vec := make([]byte, size/page)
+	last, lastAt := -1, start
 	for {
 		_, _, e := unix.Syscall(unix.SYS_MINCORE, uintptr(unsafe.Pointer(&region[0])), uintptr(len(region)), uintptr(unsafe.Pointer(&vec[0])))
 		if e != 0 {
@@ -173,8 +197,12 @@ func willneed(f *os.File, off, size int64) time.Duration {
 				missing++
 			}
 		}
-		if missing == 0 {
-			return time.Since(start)
+		now := time.Now()
+		if missing != last {
+			last, lastAt = missing, now
+		}
+		if missing == 0 || now.Sub(lastAt) > 2*time.Second {
+			return lastAt.Sub(start), (int64(len(vec)) - int64(missing)) * page
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
