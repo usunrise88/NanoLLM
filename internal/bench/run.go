@@ -158,6 +158,7 @@ func Run(ctx context.Context, o Options) (*benchfmt.Result, error) {
 		Machine: hwinfo.Collect(ctx, gpus),
 		Date:    time.Now().UTC().Format("2006-01-02"),
 	}
+	res.Machine.Extra = append(res.Machine.Extra, hwinfo.FileDisk(o.ModelPath)...)
 	if f, ok := o.Manifest.File(registry.RoleModel); ok {
 		res.Model = benchfmt.Model{ID: o.Manifest.ID, Revision: f.Revision, SHA256: f.SHA256}
 	}
