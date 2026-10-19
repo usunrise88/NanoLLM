@@ -24,24 +24,7 @@
   },
   "load_mode": "mmap",
   "lazy_mode": "on",
-  "repack": false,
-  "lock_ranges": [
-    {
-      "role": "model",
-      "offset": 15822944,
-      "length": 15494144
-    },
-    {
-      "role": "model",
-      "offset": 1616764000,
-      "length": 2598931776
-    },
-    {
-      "role": "drafter",
-      "offset": 15786176,
-      "length": 43891840
-    }
-  ],
+  "repack": true,
   "mtp": {
     "enabled": true,
     "reason": "the drafter (41.9 MiB) runs on the CPU with the target's output layer and reads its KV cache",
@@ -51,7 +34,7 @@
     "G0": {
       "vram": 0,
       "ram_locked": 377487360,
-      "file_backed": 0,
+      "file_backed": 377487360,
       "disk": 0
     },
     "G1": {
@@ -74,8 +57,8 @@
     },
     "G4": {
       "vram": 0,
-      "ram_locked": 2241704,
-      "file_backed": 0,
+      "ram_locked": 0,
+      "file_backed": 2241704,
       "disk": 0
     },
     "G5": {
@@ -86,7 +69,7 @@
     },
     "G6": {
       "vram": 0,
-      "ram_locked": 43891728,
+      "ram_locked": 81640464,
       "file_backed": 0,
       "disk": 0
     },
@@ -100,10 +83,10 @@
   "memory": {
     "ram": {
       "budget": 3221225472,
-      "used": 3118221905,
+      "used": 3153728937,
       "budgeted": true
     },
-    "file_backed": 1585446912,
+    "file_backed": 1965175976,
     "overhead_ram": 201326592
   },
   "compute_calibrated": true,
@@ -112,7 +95,7 @@
     "slots": 1
   },
   "warnings": [
-    "1512.0 MiB stays file-backed: outside every budget, and cold pages fault in from disk"
+    "1874.1 MiB stays file-backed: outside every budget, and cold pages fault in from disk"
   ],
   "tried": [
     {

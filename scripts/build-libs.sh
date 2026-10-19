@@ -27,7 +27,7 @@ cd "$(dirname "$0")/.."
 ROOT=$PWD
 
 VULKAN=1
-JOBS=$(nproc)
+JOBS=$(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
 CPUS=""
 SRC=$ROOT/.cache/llama.cpp/src
 PREPARE_ONLY=0

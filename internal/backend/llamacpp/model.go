@@ -232,14 +232,22 @@ func (b *llamaBackend) modelParams(spec backend.LoadSpec) (LlamaModelParams, []a
 				return p, nil, err
 			}
 			var buft GgmlBackendBufferType
-			odev, cpu, err := b.device(o.Device)
-			if err != nil {
-				return p, nil, fmt.Errorf("llamacpp: override %q: %w", o.Pattern, err)
-			}
-			if cpu {
-				buft = ggmlBackendCpuBufferType()
+			if o.Device == backend.DeviceCPURepack {
+				rb, err := b.cpuRepackBuft()
+				if err != nil {
+					return p, nil, fmt.Errorf("llamacpp: override %q: %w", o.Pattern, err)
+				}
+				buft = rb
 			} else {
-				buft = ggmlBackendDevBufferType(odev)
+				odev, cpu, err := b.device(o.Device)
+				if err != nil {
+					return p, nil, fmt.Errorf("llamacpp: override %q: %w", o.Pattern, err)
+				}
+				if cpu {
+					buft = ggmlBackendCpuBufferType()
+				} else {
+					buft = ggmlBackendDevBufferType(odev)
+				}
 			}
 			pat := append([]byte(o.Pattern), 0)
 			keep = append(keep, pat)

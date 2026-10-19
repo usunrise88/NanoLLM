@@ -1,6 +1,8 @@
 package plan
 
 import (
+	"strings"
+
 	"github.com/usunrise88/nanollm/internal/gguf"
 )
 
@@ -60,12 +62,20 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 			b.FileBacked = tn.Bytes
 		case dev:
 			b.VRAM = tn.Bytes
+		case lock && pl.repackHot(spec, role, g, tn):
+			// OPT-1: a hot tensor of the hybrid mode is repacked at load,
+			// which copies it into anonymous memory; it needs no lock.
+			b.RAMLocked = tn.Bytes
+			t.repacked = append(t.repacked, tn.Name)
 		case lock:
 			b.RAMLocked = tn.Bytes
 			t.locks = append(t.locks, lockedTensor{role: role, t: tn, pad: align})
 		case tn.Group == gguf.G1 && spec.pleFile:
 			b.FileBacked = tn.Bytes
 		case spec.hostAnon:
+			b.RAMLocked = tn.Bytes
+		case spec.repack && !spec.gpu && repackable(g):
+			// Copied into a repacked buffer at load: anonymous memory.
 			b.RAMLocked = tn.Bytes
 		default:
 			b.FileBacked = tn.Bytes
@@ -196,6 +206,10 @@ func (pl *planner) lockG3(t *trial) {
 		free -= tn.Bytes
 		g3.FileBacked -= tn.Bytes
 		g3.RAMLocked += tn.Bytes
+		if pl.repackHot(t.spec, "model", gguf.G3, tn) {
+			t.repacked = append(t.repacked, tn.Name)
+			continue
+		}
 		t.locks = append(t.locks, lockedTensor{role: "model", t: tn, pad: target.Alignment})
 	}
 	t.groups[gguf.G3] = g3
@@ -236,4 +250,25 @@ func (pl *planner) budget(t *trial) {
 		t.mem.RAM = r
 		t.short.RAM = r.Short()
 	}
+}
+
+// repackable says whether the tensors of a group are matrix weights the CPU
+// backend repacks (G2 attention, G3 FFN, G6 the drafter): norms, the embedding
+// tables and the PLE table are read in place.
+func repackable(g gguf.Group) bool { return g == gguf.G2 || g == gguf.G3 || g == gguf.G6 }
+
+// repackHot says whether a hot tensor of the hybrid mode (M8) is repacked
+// instead of range-locked: the target's matrices, unless the request turns
+// repacking off. The drafter and the embedding table stay range-locked: the
+// former is small and loaded as a model of its own, the latter is read by row
+// and is not a matrix to multiply.
+func (pl *planner) repackHot(spec modeSpec, role string, g gguf.Group, tn gguf.Tensor) bool {
+	return spec.lockHot && !spec.gpu && !pl.req.NoRepack && role == "model" && (g == gguf.G2 || g == gguf.G3) && repackEligible(tn)
+}
+
+// repackEligible is what the CPU backend's repack needs of a tensor: a Q4_0
+// matrix whose row count is a multiple of 8 (the x86 and ARM kernels pack eight
+// rows together). Overriding anything else to the repacked buffer is not safe.
+func repackEligible(tn gguf.Tensor) bool {
+	return strings.EqualFold(tn.Type, "q4_0") && len(tn.Shape) == 2 && tn.Shape[1]%8 == 0
 }

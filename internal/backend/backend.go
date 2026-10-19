@@ -84,6 +84,12 @@ const (
 	LazyOn   LazyMode = "on"
 )
 
+// DeviceCPURepack is the BufferOverride device that puts tensors in the CPU
+// backend's repacked buffer: the weights are copied into the layout its
+// kernels read fastest (anonymous memory), for those tensors alone, with
+// LoadSpec.Repack off for the rest.
+const DeviceCPURepack = "cpu:repack"
+
 // BufferOverride places tensors whose name matches Pattern (a regular
 // expression, first match wins) on Device instead of where their layer goes.
 // Device is a selector, or "cpu" for host memory.

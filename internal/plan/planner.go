@@ -59,6 +59,10 @@ type Request struct {
 	DraftPMin float64
 	// NoFlashAttention plans for a device without it.
 	NoFlashAttention bool
+	// NoRepack plans without the CPU's repacked weights where a mode would
+	// use them: M7 then range-locks the file mapping of its core (its
+	// behaviour before OPT-1), several times slower to decode.
+	NoRepack bool
 	// Proven is the table of modes the planner may pick; nil is DefaultProven.
 	Proven ProvenModes
 	// NBatch and NUBatch default to DefaultNBatch and DefaultNUBatch.
@@ -322,6 +326,7 @@ type trial struct {
 	cells       KVCells
 	kvBytes     int64
 	locks       []lockedTensor
+	repacked    []string // target tensors overridden to the repacked buffer (M8)
 	nOutputsMax int
 	mem         Memory
 	short       Shortfall
@@ -369,7 +374,16 @@ func (pl *planner) spec(m Mode, n int) modeSpec {
 	case RAMFull:
 		return modeSpec{hostAnon: true, repack: true, load: backend.LoadDirectIO, lazy: backend.LazyOff}
 	case RAMPLEDisk:
-		return modeSpec{pleFile: true, lockAll: true, load: backend.LoadMMap, lazy: backend.LazyOn}
+		if pl.req.NoRepack {
+			return modeSpec{pleFile: true, lockAll: true, load: backend.LoadMMap, lazy: backend.LazyOn}
+		}
+		// OPT-1: the core is repacked (the kernels of the CPU backend need
+		// the weights in their own layout, 4x faster to decode than the
+		// file's), which copies it into anonymous memory at load. Nothing is
+		// range-locked then: the copy is not file-backed, and the pages of
+		// the mapping it was read from are free to go. The PLE table stays
+		// file-backed.
+		return modeSpec{pleFile: true, repack: true, load: backend.LoadMMap, lazy: backend.LazyOn}
 	case RAMHybrid:
 		return modeSpec{pleFile: true, lockHot: true, load: backend.LoadMMap, lazy: backend.LazyOn}
 	default: // MMap

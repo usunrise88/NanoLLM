@@ -193,6 +193,9 @@ func (v Variant) Plan(req *plan.Request) {
 	if v["fa"] == "off" {
 		req.NoFlashAttention = true
 	}
+	if v["repack"] == "off" {
+		req.NoRepack = true
+	}
 	if s, ok := v["mode"]; ok {
 		req.Mode, _ = plan.ParseMode(s)
 	}

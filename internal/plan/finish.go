@@ -62,6 +62,9 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 		}
 	}
 	p.LockRanges = lockRanges(t.locks)
+	for _, pat := range repackPatterns(t.repacked) {
+		p.Overrides = append(p.Overrides, backend.BufferOverride{Pattern: pat, Device: backend.DeviceCPURepack})
+	}
 
 	switch {
 	case pl.req.Model.Drafter == nil:
@@ -155,4 +158,59 @@ func pad(n, align int64) int64 {
 
 func mibStr(b int64) string {
 	return fmt.Sprintf("%.1f MiB", float64(b)/(1<<20))
+}
+
+// repackPatterns turns tensor names into a few anchored patterns for the
+// buffer overrides: blk.N.<kind>.weight names are grouped by kind with their
+// layer numbers alternated, so 200 tensors are a handful of patterns (the loader
+// tries every pattern on every tensor), and any other name is exact.
+func repackPatterns(names []string) []string {
+	byKind := map[string][]int{}
+	var kinds, exact []string
+	for _, n := range names {
+		var layer int
+		var rest string
+		if _, err := fmt.Sscanf(n, "blk.%d.", &layer); err == nil {
+			rest = n[len(fmt.Sprintf("blk.%d.", layer)):]
+			if _, ok := byKind[rest]; !ok {
+				kinds = append(kinds, rest)
+			}
+			byKind[rest] = append(byKind[rest], layer)
+			continue
+		}
+		exact = append(exact, n)
+	}
+	sort.Strings(kinds)
+	var out []string
+	for _, k := range kinds {
+		layers := byKind[k]
+		sort.Ints(layers)
+		alt := ""
+		for i, l := range layers {
+			if i > 0 {
+				alt += "|"
+			}
+			alt += fmt.Sprint(l)
+		}
+		out = append(out, `^blk\.(`+alt+`)\.`+regexpQuote(k)+`$`)
+	}
+	sort.Strings(exact)
+	for _, n := range exact {
+		out = append(out, `^`+regexpQuote(n)+`$`)
+	}
+	return out
+}
+
+// regexpQuote escapes the dots of a tensor name; names carry no other
+// metacharacter.
+func regexpQuote(s string) string {
+	out := ""
+	for _, r := range s {
+		if r == '.' {
+			out += `\.`
+			continue
+		}
+		out += string(r)
+	}
+	return out
 }
