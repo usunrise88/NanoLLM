@@ -20,7 +20,7 @@ NEXT=${NEXT:-./dist/nanollm-next}
 CONFIG=${CONFIG:-$HOME/nanollm-data/base.yaml}
 NEXT_CONFIG=${NEXT_CONFIG:-$HOME/nanollm-data/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
-STEPS=${STEPS:-"stream ngram repack"}
+STEPS=${STEPS-"stream ngram repack"}
 
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
