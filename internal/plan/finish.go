@@ -89,6 +89,15 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 				mibStr(pl.req.Model.Drafter.Total()), where),
 		}
 	}
+	switch {
+	case pl.ngram > 0:
+		p.NGram = &NGram{
+			Enabled: true, N: pl.ngram, DraftMax: pl.draftMax,
+			Reason: fmt.Sprintf("drafts of up to %d tokens come from a %d-token match in the sequence itself; no drafter is loaded", pl.draftMax, pl.ngram),
+		}
+	case pl.req.NGram > 0:
+		p.NGram = &NGram{Reason: "the MTP drafter takes precedence over prompt lookup"}
+	}
 	p.Warnings = pl.warnings(t, p)
 	return p
 }

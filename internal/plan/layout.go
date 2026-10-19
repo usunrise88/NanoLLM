@@ -152,7 +152,7 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 	// G7: the target's and the drafter's compute buffers, and the host-side
 	// buffers around them.
 	t.nOutputsMax = s.slots
-	if pl.mtp {
+	if pl.mtp || pl.ngram > 0 {
 		t.nOutputsMax = s.slots * (1 + pl.draftMax)
 	}
 	t.nOutputsMax = min(t.nOutputsMax, pl.nBatch)

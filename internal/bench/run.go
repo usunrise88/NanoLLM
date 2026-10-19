@@ -358,6 +358,7 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 // Windows Job Objects arrive with stage 3.
 func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (WorkerResult, string, error) {
 	ws.Backend, ws.LibDir, ws.Reps, ws.Quick = o.Backend.Name(), o.LibDir, o.Reps, !o.Full
+	ws.Echo = o.Suite == SuiteDev
 	enforcement := "advisory"
 	strict := runtime.GOOS == "linux" && budget.RAM > 0 && !o.Advisory && userScopes()
 	if strict {

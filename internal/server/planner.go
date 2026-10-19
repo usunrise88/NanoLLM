@@ -1,6 +1,7 @@
 package server
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"runtime"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/config"
+	"github.com/usunrise88/nanollm/internal/ngram"
 	"github.com/usunrise88/nanollm/internal/plan"
 	"github.com/usunrise88/nanollm/internal/registry"
 )
@@ -18,6 +20,11 @@ import (
 // installation uses the machine it is on without being told its size.
 // CPUMTPOffReason is the plan's reason for the default of MTP on the CPU.
 const CPUMTPOffReason = "off by default on the CPU: the measured speed-up is at best 1.04x on a 16-core EPYC 7351P (threshold 1.2x, docs/STAGE2.md 2.7); models.<id>.speculative.type: mtp turns it on"
+
+// DefaultNGramDraftMax is how many tokens a prompt-lookup draft carries when
+// the configuration does not say: provisional until the sweep of docs/STAGE2.md
+// 2.7 sets it.
+const DefaultNGramDraftMax = 4
 
 func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	if req.Backend == config.BackendFake {
@@ -50,6 +57,11 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	// costs memory. speculative.type: mtp turns it on.
 	if ov.Speculative.Type == "" && req.Device.Type == backend.CPU {
 		r.NoMTP, r.NoMTPReason = true, CPUMTPOffReason
+	}
+	if ov.Speculative.Type == config.SpecNGram {
+		r.NoMTP, r.NoMTPReason = true, "prompt lookup (speculative.type: ngram) drafts instead"
+		r.NGram = cmp.Or(ov.Speculative.Match, ngram.DefaultN)
+		r.DraftMax = cmp.Or(ov.Speculative.NMax, DefaultNGramDraftMax)
 	}
 	if req.Device.Type != backend.CPU {
 		r.Device = &plan.Device{

@@ -265,6 +265,24 @@
               "chat_tok_s": {
                 "type": "number"
               },
+              "echo": {
+                "properties": {
+                  "acceptance": {
+                    "type": "number"
+                  },
+                  "speedup": {
+                    "type": "number"
+                  },
+                  "tok_s": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "acceptance",
+                  "speedup"
+                ],
+                "type": "object"
+              },
               "load_ms": {
                 "type": "number"
               },

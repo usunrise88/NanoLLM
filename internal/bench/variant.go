@@ -28,6 +28,7 @@ var variantKeys = map[string]string{
 	"draft_max":     "MTP tokens drafted per step",
 	"draft_p_min":   "MTP: stop drafting below this probability",
 	"mtp":           "on or off",
+	"ngram":         "prompt-lookup drafting: the match length (2 or more), 0 is off; replaces the MTP drafter",
 	"repack":        "on or off: CPU repacked weights (use_extra_bufts)",
 	"mode":          "memory mode: auto, M1…M10 or a name",
 	"load":          "none, mmap, mlock, mmap+mlock or dio",
@@ -101,7 +102,7 @@ func checkValue(key, v string) error {
 		return nil
 	}
 	switch key {
-	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "stream_ahead", "stream_keep":
+	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "stream_ahead", "stream_keep", "ngram":
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
 			return fmt.Errorf("%q is not a non-negative integer", v)
@@ -192,6 +193,12 @@ func (v Variant) Plan(req *plan.Request) {
 	}
 	if v["mtp"] == "off" {
 		req.NoMTP = true
+	}
+	if n, ok := v.int("ngram"); ok && n > 0 {
+		req.NGram, req.NoMTP = n, true
+		if req.DraftMax == 0 {
+			req.DraftMax = 4
+		}
 	}
 	if v["fa"] == "off" {
 		req.NoFlashAttention = true

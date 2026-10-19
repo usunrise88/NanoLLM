@@ -56,6 +56,10 @@ func (p *Plan) LoadSpec(modelPath, drafterPath string) (backend.LoadSpec, error)
 		}
 		s.Stream = st
 	}
+	if p.NGram != nil && p.NGram.Enabled {
+		s.NGram = p.NGram.N
+		s.DraftMax = p.NGram.DraftMax
+	}
 	// lazy loading reads through a mapping; direct I/O has none.
 	if s.LoadMode == backend.LoadDirectIO && s.LazyMode != backend.LazyOff {
 		return s, fmt.Errorf("plan pairs lazy %s with direct I/O", s.LazyMode)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/gguf"
+	"github.com/usunrise88/nanollm/internal/ngram"
 )
 
 // Model is what gets planned: the measured inventory of the target and of
@@ -58,6 +59,9 @@ type Request struct {
 	// DraftMax bounds MTP drafts per step; 0 is DefaultDraftMax.
 	DraftMax  int
 	DraftPMin float64
+	// NGram turns on prompt-lookup drafting with this match length (OPT-5);
+	// an MTP drafter, when the plan runs one, takes precedence.
+	NGram int
 	// NoFlashAttention plans for a device without it.
 	NoFlashAttention bool
 	// NoRepack plans without the CPU's repacked weights where a mode would
@@ -142,6 +146,9 @@ func Make(req Request) (*Plan, error) {
 		pl.draftMax = DefaultDraftMax
 	}
 	pl.mtp = req.Model.Drafter != nil && !req.NoMTP
+	if req.NGram > 0 && !pl.mtp {
+		pl.ngram = max(req.NGram, ngram.MinN)
+	}
 	return pl.run(), nil
 }
 
@@ -156,6 +163,7 @@ type planner struct {
 	nUBatch  int
 	draftMax int
 	mtp      bool
+	ngram    int // prompt-lookup match length; 0 when off or MTP runs
 }
 
 // shape is what the planner grows: context per slot, slots, and the

@@ -168,6 +168,9 @@ type Stream struct {
 const (
 	SpecMTP  = "mtp"
 	SpecNone = "none"
+	// SpecNGram drafts by lookup in the sequence itself (OPT-5): no
+	// drafter model, nothing to load, and exact output.
+	SpecNGram = "ngram"
 )
 
 type Speculative struct {
@@ -176,6 +179,10 @@ type Speculative struct {
 	NMax int `yaml:"n_max"`
 	// PMin is the drafter probability below which a draft stops early.
 	PMin float64 `yaml:"p_min"`
+	// Match is the number of trailing tokens that must occur earlier in the
+	// sequence for type ngram to draft the tokens that followed them
+	// (default 3).
+	Match int `yaml:"match"`
 }
 
 type Pool struct {

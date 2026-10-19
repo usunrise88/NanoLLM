@@ -112,8 +112,9 @@ NanoLLM прогоняет на железе пользователя пресе
   - `{preset, plan_hash, plan{mode, gpu_layers, n_ctx, slots, kv, fa,
     swa_full, mtp, threads, enforcement}}`;
   - `metrics{load_ms, pp_tok_s, tg_tok_s{d0, dN}, ttft_ms, chat_tok_s,
-    mtp{acceptance, speedup}, peak_rss, peak_vram, peak_locked,
-    peak_page_cache}`;
+    mtp{acceptance, speedup}, echo{acceptance, speedup, tok_s} (набор `dev`:
+    модель переписывает данный текст, лучший случай для драфта по подстроке),
+    peak_rss, peak_vram, peak_locked, peak_page_cache}`;
   - `reps`, `stddev`;
   - `output{sha256, tokens, prefixes[]?}` — `prefixes` (необязательно):
     sha256 первых N токенов на нескольких отметках, чтобы сервис видел длину

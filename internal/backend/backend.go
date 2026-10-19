@@ -208,6 +208,10 @@ type LoadSpec struct {
 	// step, stopping when the drafter's top probability drops below DraftPMin.
 	DraftMax  int
 	DraftPMin float64
+	// NGram is the match length of prompt-lookup drafting (internal/ngram),
+	// which drafts up to DraftMax tokens from the sequence itself; zero is
+	// off. It is used when no MTP drafter is loaded.
+	NGram int
 	// Stream is the file-backed layers of the plan and how to feed them; nil
 	// when the plan has none (OPT-8).
 	Stream *StreamSpec

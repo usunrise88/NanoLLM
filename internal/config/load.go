@@ -342,9 +342,12 @@ func (o ModelOverride) validate() error {
 		return fmt.Errorf("kv_type must be %s or %s, got %q", KVF16, KVQ8_0, o.KVType)
 	}
 	switch o.Speculative.Type {
-	case "", SpecMTP, SpecNone:
+	case "", SpecMTP, SpecNone, SpecNGram:
 	default:
-		return fmt.Errorf("speculative.type must be %s or %s, got %q", SpecMTP, SpecNone, o.Speculative.Type)
+		return fmt.Errorf("speculative.type must be %s, %s or %s, got %q", SpecMTP, SpecNone, SpecNGram, o.Speculative.Type)
+	}
+	if o.Speculative.Match < 0 || o.Speculative.Match == 1 {
+		return fmt.Errorf("speculative.match must be 0 (default) or at least 2, got %d", o.Speculative.Match)
 	}
 	if o.Speculative.NMax < 0 {
 		return fmt.Errorf("speculative.n_max must not be negative, got %d", o.Speculative.NMax)

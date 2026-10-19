@@ -15,6 +15,7 @@ import (
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/memlock"
+	"github.com/usunrise88/nanollm/internal/ngram"
 )
 
 // loadMu serializes model loads, so the log lines a load produces (buffer
@@ -55,6 +56,9 @@ type model struct {
 
 	// dft is the MTP drafter, nil without one.
 	dft *drafter
+	// ngN is the match length of prompt-lookup drafting (internal/ngram), 0
+	// when off; it drafts only where no MTP drafter does.
+	ngN int
 
 	// stream feeds the file-backed layers (OPT-8); streamID is the key of
 	// the eval callback's user_data. Both are zero without streaming.
@@ -80,6 +84,14 @@ type slot struct {
 	// while it computes a fresh state.
 	pendingH   []float32
 	pendingPos int
+
+	// hist is the token at every position of the slot's KV cache, kept for
+	// prompt-lookup drafting; histBad says it can no longer be trusted (a
+	// restored state, a gap), until the slot is cleared. ng throttles a slot
+	// whose drafts keep missing.
+	hist    []backend.Token
+	histBad bool
+	ng      ngram.Backoff
 }
 
 func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend.Model, error) {
@@ -160,6 +172,9 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 		}
 		m.dft = d
 		m.caps.MaxDraft = d.maxDraft
+	} else if spec.NGram > 0 && spec.DraftMax > 0 {
+		m.ngN = spec.NGram
+		m.caps.MaxDraft = min(spec.DraftMax, max(m.nOutputsMax/max(spec.Slots, 1)-1, 0))
 	}
 	m.meta = m.readMetadata()
 	m.memory = memoryFromLog(m.loadLog, b)

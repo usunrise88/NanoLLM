@@ -11,6 +11,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -42,6 +43,9 @@ type WorkerSpec struct {
 	Random []memlock.Range `json:"random,omitempty"`
 	// Quick skips the depth-N decode, the slowest scenario.
 	Quick bool `json:"quick"`
+	// Echo adds the echo scenario (dev suite): the model copies a given
+	// text, which is where prompt lookup drafts pay.
+	Echo bool `json:"echo,omitempty"`
 	// Place is the worker's NUMA policy and pinned CPUs. numactl applies
 	// it; it is here so two placements never share a plan hash.
 	Place Placement `json:"place,omitempty"`
@@ -225,10 +229,10 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 	if err != nil {
 		return res, err
 	}
-	run := func(noDraft bool) (ttft, tps float64, acc *float64, out []backend.Token, err error) {
+	runOn := func(promptToks []backend.Token, plainKey, draftKey string, noDraft bool) (ttft, tps float64, acc *float64, out []backend.Token, err error) {
 		var ttfts, rates, accs []float64
 		for range reps {
-			st, toks, err := gen(chatToks, ChatTokens, true, noDraft)
+			st, toks, err := gen(promptToks, ChatTokens, true, noDraft)
 			if err != nil {
 				return 0, 0, nil, nil, err
 			}
@@ -242,9 +246,9 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 		var ttftSD, tpsSD float64
 		ttft, ttftSD = medianStd(ttfts)
 		tps, tpsSD = medianStd(rates)
-		key := "chat_tok_s"
+		key := plainKey
 		if !noDraft {
-			key = "mtp_tok_s"
+			key = draftKey
 		}
 		std[key] = tpsSD
 		if noDraft {
@@ -255,6 +259,9 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 			acc = &a
 		}
 		return ttft, tps, acc, out, nil
+	}
+	run := func(noDraft bool) (ttft, tps float64, acc *float64, out []backend.Token, err error) {
+		return runOn(chatToks, "chat_tok_s", "mtp_tok_s", noDraft)
 	}
 	ttft, plain, _, out, err := run(true)
 	if err != nil {
@@ -276,6 +283,32 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 			mtp.Speedup = drafted / plain
 		}
 		res.Metrics.MTP = mtp
+	}
+	if spec.Echo && caps.MaxDraft > 0 {
+		echoToks, err := m.Tokenize(chat.PromptGemma4([]core.Message{{Role: core.RoleUser, Content: echoPrompt + echoText}}, nil, chat.Options{AddGenerationPrompt: true}), false, true)
+		if err != nil {
+			return res, err
+		}
+		_, plainEcho, _, plainOut, err := runOn(echoToks, "echo_tok_s", "echo_draft_tok_s", true)
+		if err != nil {
+			return res, fmt.Errorf("echo: %w", err)
+		}
+		_, draftEcho, acc, draftOut, err := runOn(echoToks, "echo_tok_s", "echo_draft_tok_s", false)
+		if err != nil {
+			return res, fmt.Errorf("echo with drafting: %w", err)
+		}
+		e := &benchfmt.MTP{TokS: draftEcho}
+		if acc != nil {
+			e.Acceptance = *acc
+		}
+		if plainEcho > 0 {
+			e.Speedup = draftEcho / plainEcho
+		}
+		res.Metrics.Echo = e
+		// Greedy decoding: drafting must not change a token.
+		if !slices.Equal(plainOut, draftOut) {
+			return res, fmt.Errorf("echo: drafting changed the output (%d tokens plain, %d drafted)", len(plainOut), len(draftOut))
+		}
 	}
 	res.Metrics.StdDev = std
 	return withMemory(m, res), nil

@@ -224,16 +224,19 @@ type Plan struct {
 
 // Metrics are medians over Reps; StdDev holds the spread of the main ones.
 type Metrics struct {
-	LoadMS        float64 `json:"load_ms,omitempty"`
-	PPTokS        float64 `json:"pp_tok_s,omitempty"`
-	TGTokS        TG      `json:"tg_tok_s"`
-	TTFTMS        float64 `json:"ttft_ms,omitempty"`
-	ChatTokS      float64 `json:"chat_tok_s,omitempty"`
-	MTP           *MTP    `json:"mtp,omitempty"`
-	PeakRSS       int64   `json:"peak_rss,omitempty"`
-	PeakVRAM      int64   `json:"peak_vram,omitempty"`
-	PeakLocked    int64   `json:"peak_locked,omitempty"`
-	PeakPageCache int64   `json:"peak_page_cache,omitempty"`
+	LoadMS   float64 `json:"load_ms,omitempty"`
+	PPTokS   float64 `json:"pp_tok_s,omitempty"`
+	TGTokS   TG      `json:"tg_tok_s"`
+	TTFTMS   float64 `json:"ttft_ms,omitempty"`
+	ChatTokS float64 `json:"chat_tok_s,omitempty"`
+	MTP      *MTP    `json:"mtp,omitempty"`
+	// Echo is drafting on a task that repeats its input (dev suite): the
+	// best case of prompt lookup, next to the chat-ru worst case.
+	Echo          *MTP  `json:"echo,omitempty"`
+	PeakRSS       int64 `json:"peak_rss,omitempty"`
+	PeakVRAM      int64 `json:"peak_vram,omitempty"`
+	PeakLocked    int64 `json:"peak_locked,omitempty"`
+	PeakPageCache int64 `json:"peak_page_cache,omitempty"`
 	// PeakCgroup is the memory.peak of the worker's strict cgroup: resident
 	// pages plus the page cache charged to it, which is what the budget
 	// limits.

@@ -44,9 +44,10 @@ models:
       n_ctx: auto         # auto = what the preset leaves, floor 4096
       slots: auto
       speculative:
-        type: mtp         # mtp | none
+        type: mtp         # mtp | none | ngram (prompt lookup: no drafter model, exact output)
         n_max: 2
         p_min: 0.0
+        match: 0          # ngram: trailing tokens that must repeat earlier (0 = 3)
       # OPT-8: only for plans that leave layers in the file (M8, M9 on a disk
       # that is fast enough: docs/AUTOTUNE.md). All zero leaves the loader alone.
       stream:

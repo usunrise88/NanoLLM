@@ -42,6 +42,10 @@ func (m *model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.Se
 		if limits := m.draftLimits(steps); limits != nil {
 			drafts = m.draft(steps, limits)
 		}
+	} else if m.ngN > 0 {
+		if limits := m.draftLimits(steps); limits != nil {
+			drafts = m.lookup(steps, limits)
+		}
 	}
 
 	llamaBatchExtClear(m.batch)
@@ -95,6 +99,7 @@ func (m *model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.Se
 			// A prefill chunk: the carried state no longer precedes the
 			// next token.
 			sl.pendingPos = -1
+			m.noteTokens(s, nil, 0)
 			continue
 		}
 		var dr []backend.Token
@@ -103,7 +108,14 @@ func (m *model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.Se
 		}
 		out, err := m.verify(s, outIdx[i], dr)
 		if err != nil {
+			for _, s := range steps {
+				m.slots[s.Seq].histBad = true
+			}
 			return nil, err
+		}
+		m.noteTokens(s, dr, out.Accepted)
+		if m.ngN > 0 {
+			sl.ng.Result(len(dr), out.Accepted)
 		}
 		outs = append(outs, out)
 	}
@@ -188,10 +200,12 @@ func (m *model) draftLimits(steps []backend.SeqStep) []int {
 			continue
 		}
 		sl := &m.slots[s.Seq]
-		if sl.pendingPos < 0 || sl.pendingPos != s.Pos-1 {
+		// The MTP drafter needs the hidden state that sits right before the
+		// step; prompt lookup needs only the slot's token history.
+		if m.dft != nil && (sl.pendingPos < 0 || sl.pendingPos != s.Pos-1) {
 			continue
 		}
-		n := min(s.MaxDraft, m.dft.maxDraft, tokens, outputs, m.caps.NCtx-s.Pos-1)
+		n := min(s.MaxDraft, m.caps.MaxDraft, tokens, outputs, m.caps.NCtx-s.Pos-1)
 		if n <= 0 {
 			continue
 		}
@@ -345,6 +359,7 @@ func (m *model) TrimSeq(seq int, pos int) bool {
 	m.slots[seq].pendingPos = -1
 	if pos == 0 {
 		llamaMemorySeqRm(m.mem, int32(seq), -1, -1)
+		m.resetHistory(seq)
 		return true
 	}
 	if m.recurrent {
@@ -356,7 +371,13 @@ func (m *model) TrimSeq(seq int, pos int) bool {
 			return false
 		}
 	}
-	return llamaMemorySeqRm(m.mem, int32(seq), int32(pos), -1)
+	if !llamaMemorySeqRm(m.mem, int32(seq), int32(pos), -1) {
+		return false
+	}
+	if sl := &m.slots[seq]; len(sl.hist) > pos {
+		sl.hist = sl.hist[:pos]
+	}
+	return true
 }
 
 // ClearSeq empties a slot's cache. Removing a whole sequence never fails.
@@ -368,6 +389,7 @@ func (m *model) ClearSeq(seq int) {
 	}
 	m.slots[seq].pendingPos = -1
 	llamaMemorySeqRm(m.mem, int32(seq), -1, -1)
+	m.resetHistory(seq)
 }
 
 // Saved slot state: a header of ours, then llama.cpp's own sequence state.
@@ -432,6 +454,8 @@ func (m *model) RestoreSeq(seq int, state []byte) error {
 	// The MTP carry-over is not part of llama.cpp's sequence state: the
 	// first step after a restore runs without drafts.
 	m.slots[seq].pendingPos = -1
+	// The tokens behind a restored state are not in it.
+	m.slots[seq].hist, m.slots[seq].histBad = nil, true
 	if want := bindingCommit[:16]; string(state[8:24]) != want {
 		return fmt.Errorf("llamacpp: slot state was saved by llama.cpp %q, this is %q", state[8:24], want)
 	}

@@ -89,6 +89,15 @@ type MTP struct {
 	DraftPMin float64 `json:"draft_p_min,omitempty"`
 }
 
+// NGram is prompt-lookup drafting (OPT-5): drafts come from the sequence
+// itself, no drafter model is loaded.
+type NGram struct {
+	Enabled  bool   `json:"enabled"`
+	N        int    `json:"n,omitempty"`
+	DraftMax int    `json:"draft_max,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+}
+
 // Range is a byte range of one file to pin with range-lock (M7, M8). Offsets
 // are absolute in the file; page alignment is the locker's job.
 type Range struct {
@@ -156,6 +165,8 @@ type Plan struct {
 	// evict layer by layer (OPT-8).
 	StreamRanges []StreamRange `json:"stream_ranges,omitempty"`
 	MTP          MTP           `json:"mtp"`
+	// NGram is set only when the request asked for it.
+	NGram *NGram `json:"ngram,omitempty"`
 
 	// Groups is bytes per placement group and target; G5 is the KV cache,
 	// G7 the compute and output buffers of both contexts.
