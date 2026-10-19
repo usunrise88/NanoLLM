@@ -251,6 +251,15 @@ func (c *Config) Validate() error {
 	if c.Cache.MaxSnapshots < 0 {
 		return fmt.Errorf("cache.max_snapshots must not be negative, got %d", c.Cache.MaxSnapshots)
 	}
+	if c.Cache.PromptMaxBytes < 0 {
+		return fmt.Errorf("cache.prompt_max_bytes must not be negative, got %d", c.Cache.PromptMaxBytes)
+	}
+	if c.Cache.PromptMinTokens < 0 {
+		return fmt.Errorf("cache.prompt_min_tokens must not be negative, got %d", c.Cache.PromptMinTokens)
+	}
+	if c.Cache.PromptDisk && c.Cache.PromptMaxBytes == 0 {
+		return fmt.Errorf("cache.prompt_disk is on but cache.prompt_max_bytes is 0: nothing could be kept")
+	}
 	if c.Generation.MaxTokensCap <= 0 {
 		return fmt.Errorf("generation.max_tokens_cap must be positive, got %d", c.Generation.MaxTokensCap)
 	}

@@ -9,6 +9,13 @@ import (
 // DefaultModel is the catalog entry a fresh installation runs (SPEC §7).
 const DefaultModel = "gemma-4-e4b-qat"
 
+// Defaults of the prompt cache on disk (cache.prompt_max_bytes and
+// cache.prompt_min_tokens).
+const (
+	DefaultPromptMaxBytes  = 2 << 30
+	DefaultPromptMinTokens = 256
+)
+
 // Default is the configuration with no file at all: loopback only, no
 // authentication, the primary model and both v1 dialects. It is what a
 // developer gets from `nanollm serve` in a fresh checkout, and it validates on
@@ -35,8 +42,11 @@ func Default() Config {
 			Default: DefaultModel,
 			Preload: []string{DefaultModel},
 		},
-		Pool:  Pool{MaxResidentModels: 1, MaxPending: 64},
-		Cache: Cache{Prompt: true, MaxSnapshots: 8},
+		Pool: Pool{MaxResidentModels: 1, MaxPending: 64},
+		Cache: Cache{
+			Prompt: true, MaxSnapshots: 8,
+			PromptMaxBytes: DefaultPromptMaxBytes, PromptMinTokens: DefaultPromptMinTokens,
+		},
 		Generation: Generation{
 			// Off by default: the user waits for every token of thinking
 			// before the answer starts.

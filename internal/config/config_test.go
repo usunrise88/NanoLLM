@@ -35,6 +35,11 @@ func TestExampleConfigLoads(t *testing.T) {
 	if len(cfg.Auth.Keys) != 2 || !cfg.Auth.Keys[0].Admin || cfg.Auth.Keys[1].RPS != 10 {
 		t.Errorf("keys not decoded: %+v", cfg.Auth.Keys)
 	}
+	// The prompt cache on disk is documented there, and off.
+	if d := Default().Cache; cfg.Cache.PromptDisk || cfg.Cache.PromptDir != "" ||
+		cfg.Cache.PromptMaxBytes != d.PromptMaxBytes || cfg.Cache.PromptMinTokens != d.PromptMinTokens {
+		t.Errorf("example cache section differs from the defaults: %+v", cfg.Cache)
+	}
 }
 
 func TestUnknownKeyIsRefused(t *testing.T) {
@@ -124,6 +129,61 @@ func TestEnvOverrides(t *testing.T) {
 	}
 	if len(c.Auth.Keys) != 2 || c.Auth.Keys[1].Secret != "sk-b" || c.Auth.Keys[0].Admin {
 		t.Errorf("keys not applied: %+v", c.Auth.Keys)
+	}
+}
+
+func TestPromptDiskKeys(t *testing.T) {
+	c := Default()
+	if c.Cache.PromptDisk || c.Cache.PromptDir != "" || c.Cache.PromptMaxBytes != 2<<30 || c.Cache.PromptMinTokens != 256 {
+		t.Fatalf("defaults %+v", c.Cache)
+	}
+	c.Server.DataDir = filepath.Join("data", "dir")
+	if got, want := c.PromptCachePath(), filepath.Join("data", "dir", "promptcache"); got != want {
+		t.Errorf("default directory %q, want %q", got, want)
+	}
+	c.Cache.PromptDir = "/fast/states"
+	if got := c.PromptCachePath(); got != "/fast/states" {
+		t.Errorf("configured directory %q", got)
+	}
+
+	c = Default()
+	err := applyEnv(&c, envOf(map[string]string{
+		"NANOLLM_CACHE_PROMPT_DISK":       "true",
+		"NANOLLM_CACHE_PROMPT_DIR":        "/mnt/nvme/states",
+		"NANOLLM_CACHE_PROMPT_MAX_BYTES":  "1073741824",
+		"NANOLLM_CACHE_PROMPT_MIN_TOKENS": "128",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !c.Cache.PromptDisk || c.Cache.PromptDir != "/mnt/nvme/states" || c.Cache.PromptMaxBytes != 1<<30 || c.Cache.PromptMinTokens != 128 {
+		t.Errorf("env not applied: %+v", c.Cache)
+	}
+	if !c.Cache.Prompt {
+		t.Error("cache.prompt was changed by the disk keys")
+	}
+	if err := c.Validate(); err != nil {
+		t.Fatal(err)
+	}
+
+	y := Default()
+	if err := decode([]byte("cache:\n  prompt_disk: true\n  prompt_min_tokens: 64\n"), &y); err != nil {
+		t.Fatal(err)
+	}
+	if !y.Cache.PromptDisk || y.Cache.PromptMinTokens != 64 || y.Cache.PromptMaxBytes != 2<<30 {
+		t.Errorf("yaml not applied: %+v", y.Cache)
+	}
+
+	for name, mutate := range map[string]func(*Config){
+		"negative size":        func(c *Config) { c.Cache.PromptMaxBytes = -1 },
+		"negative min tokens":  func(c *Config) { c.Cache.PromptMinTokens = -1 },
+		"enabled with no room": func(c *Config) { c.Cache.PromptDisk, c.Cache.PromptMaxBytes = true, 0 },
+	} {
+		c := Default()
+		mutate(&c)
+		if err := c.Validate(); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
 	}
 }
 

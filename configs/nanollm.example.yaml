@@ -55,6 +55,16 @@ pool:
 cache:
   prompt: true
   max_snapshots: 8        # Qwen3.5 fallback only
+  # Prompt cache on disk (OPT-13). The state of a prompt that has just been
+  # prefilled is saved, and a request that starts with that prompt gets it
+  # back after a restart or after its slot was reused, instead of a prefill.
+  # Off by default; when off, no directory is created. It needs prompt: true.
+  # A state is ~16 KiB per token with the KV cache in f16 (E4B), plus the
+  # sliding-window layers: up to ~40 KiB per token more with swa_full.
+  prompt_disk: false
+  prompt_dir: ""          # empty = <data_dir>/promptcache
+  prompt_max_bytes: 2147483648   # 2 GiB; the least recently used states go first
+  prompt_min_tokens: 256  # shorter prompts are not saved; a restore must gain half of it
 
 generation:
   enable_thinking: false

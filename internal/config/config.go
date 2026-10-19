@@ -176,6 +176,23 @@ type Cache struct {
 	// MaxSnapshots bounds state snapshots per slot. Only the Qwen3.5 fallback
 	// takes them: its recurrent state cannot be trimmed to a prefix.
 	MaxSnapshots int `yaml:"max_snapshots"`
+
+	// PromptDisk saves a slot's state (the KV cache of a prompt that has just
+	// been prefilled) to PromptDir and restores it when a request starts with
+	// that prompt as its prefix and no slot holds it: after a restart, or
+	// after the slot was reused for something else (OPT-13). Off by default;
+	// when off nothing is created or read. It needs Prompt: a request that
+	// opts out of the prompt cache opts out of the disk too.
+	PromptDisk bool `yaml:"prompt_disk"`
+	// PromptDir is where the states go; empty means <data_dir>/promptcache
+	// (PromptCachePath).
+	PromptDir string `yaml:"prompt_dir"`
+	// PromptMaxBytes caps the directory. The least recently used states are
+	// deleted past it.
+	PromptMaxBytes int64 `yaml:"prompt_max_bytes"`
+	// PromptMinTokens is the shortest prompt worth a state on disk, and a
+	// restore must save at least half of it over what a slot already holds.
+	PromptMinTokens int `yaml:"prompt_min_tokens"`
 }
 
 // Context overflow policies.
@@ -223,6 +240,14 @@ func (c Config) ModelsPath() string {
 		return c.Registry.ModelsDir
 	}
 	return filepath.Join(c.Server.DataDir, "models")
+}
+
+// PromptCachePath is where the prompt cache on disk keeps its states.
+func (c Config) PromptCachePath() string {
+	if c.Cache.PromptDir != "" {
+		return c.Cache.PromptDir
+	}
+	return filepath.Join(c.Server.DataDir, "promptcache")
 }
 
 // Bench is the public benchmark client (docs/BENCHMARKS.md). Nothing is
