@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/rand/v2"
 	"slices"
 	"strings"
 	"sync"
@@ -456,5 +457,116 @@ func TestFailureClearsTheSlot(t *testing.T) {
 			}
 			mirrored(t, l, m, 0)
 		})
+	}
+}
+
+// A step is one batch for the backend, and its error cannot be pinned on one
+// sequence: every request in it fails and every slot it touched is emptied on
+// both sides. A slot the batch did not reach keeps its cache.
+func TestStepErrorFailsTheWholeBatch(t *testing.T) {
+	l, m := newLoop(t, fake.Options{DecodeRate: 500}, backend.LoadSpec{Slots: 3})
+	// Slot 0 caches a finished request; slot 1 decodes a long one.
+	_, kept := run(t, l, m, Request{Prompt: prompt(m, "a finished request worth keeping [[fake:echo]]"), Logprobs: -1})
+	if kept.Stats.Slot != 0 {
+		t.Fatalf("setup used slot %d", kept.Stats.Slot)
+	}
+	// NoCache keeps both away from the cached slot: with no prefix to share,
+	// the least recently used free slot is taken.
+	neighbour, _ := start(t, l, Request{Prompt: prompt(m, "keeps decoding [[fake:loop]]"), NoCache: true, Logprobs: -1})
+	_, ev := run(t, l, m, Request{Prompt: prompt(m, "[[fake:error]]"), NoCache: true, Logprobs: -1})
+	if ev.Err == nil {
+		t.Fatal("the scripted failure did not fail")
+	}
+	// Its prefill shared the step with the neighbour's decode.
+	if _, nev := drain(t, neighbour); nev.Err == nil || errors.Is(nev.Err, context.Canceled) {
+		t.Fatalf("the neighbour in the failed batch ended with %v", nev.Err)
+	}
+	for seq := 1; seq < 3; seq++ {
+		if cached := mirrored(t, l, m, seq); len(cached) != 0 {
+			t.Errorf("slot %d holds %d tokens after the failed batch", seq, len(cached))
+		}
+	}
+	if cached := mirrored(t, l, m, 0); len(cached) == 0 {
+		t.Error("the slot the batch never reached lost its cache")
+	}
+	text, _ := run(t, l, m, Request{Prompt: prompt(m, "recovered [[fake:echo]]"), Logprobs: -1})
+	if text != "recovered" {
+		t.Fatalf("after the failed batch: %q", text)
+	}
+}
+
+// Many requests of every kind at once (shared prefixes, sessions, drafting,
+// cancels at arbitrary moments, length limits) on slots that are fewer than
+// the requests: when it all settles, every slot's record is what its model
+// holds, and nothing is left running or queued.
+func TestChurnKeepsTheMirror(t *testing.T) {
+	const slots = 3
+	l, m := newLoop(t, fake.Options{DecodeRate: 4000, PrefillRate: 20000, MaxDraft: 3},
+		// A small context ends the answers that nothing else would.
+		backend.LoadSpec{Slots: slots, NBatch: 24, NCtx: 320, DrafterPath: "drafter"})
+	bases := []string{
+		"the first shared conversation prefix, long enough to span several prefill chunks of the batch",
+		"the second shared conversation prefix, which also takes a few chunks of the batch to read in",
+		"short",
+	}
+	var wg sync.WaitGroup
+	var results sync.Map // index → Event
+	for w := range 6 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			rng := rand.New(rand.NewPCG(uint64(w), 7))
+			for i := range 8 {
+				base := bases[rng.IntN(len(bases))]
+				tail := strings.Repeat("t", rng.IntN(40))
+				directive := []string{"[[fake:long 60]]", "[[fake:loop]]", "[[fake:echo]]", "[[fake:long 5]]"}[rng.IntN(4)]
+				req := Request{
+					Prompt: prompt(m, base+tail+" "+directive), Logprobs: -1,
+					NoCache: rng.IntN(8) == 0, NoDraft: rng.IntN(4) == 0, Interactive: rng.IntN(2) == 0,
+				}
+				if rng.IntN(3) == 0 {
+					req.SessionID = "session-" + string(rune('a'+rng.IntN(3)))
+				}
+				if rng.IntN(3) == 0 {
+					req.MaxTokens = 1 + rng.IntN(30)
+				}
+				ctx, cancel := context.WithCancel(context.Background())
+				if rng.IntN(3) == 0 {
+					time.AfterFunc(time.Duration(rng.IntN(15))*time.Millisecond, cancel)
+				}
+				h, err := l.Submit(ctx, req)
+				if err != nil {
+					t.Error(err)
+					cancel()
+					return
+				}
+				_, ev := drain(t, h)
+				cancel()
+				results.Store(w*100+i, ev)
+			}
+		}()
+	}
+	wg.Wait()
+	var finished, cancelled int
+	results.Range(func(_, v any) bool {
+		ev := v.(Event)
+		switch {
+		case ev.Err == nil:
+			finished++
+		case errors.Is(ev.Err, context.Canceled):
+			cancelled++
+		default:
+			t.Errorf("a request failed: %v", ev.Err)
+		}
+		return true
+	})
+	if finished == 0 || cancelled == 0 {
+		t.Errorf("%d finished, %d cancelled: the churn did not mix", finished, cancelled)
+	}
+	if got := l.Snapshot(); got.Busy != 0 || got.Pending != 0 {
+		t.Fatalf("the loop is left with %+v", got)
+	}
+	for seq := range slots {
+		mirrored(t, l, m, seq)
 	}
 }
