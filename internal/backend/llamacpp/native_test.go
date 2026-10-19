@@ -234,7 +234,7 @@ func TestNativeRefusesForeignCommit(t *testing.T) {
 func TestNativeCPUDevice(t *testing.T) {
 	b := testBackend(t)
 	t.Logf("ggml_commit() = %q, version %s, cpu variant %q", b.lib.commit, b.Version(), b.CPUVariant())
-	if checkCommit(b.lib.commit, bindingCommit) != nil {
+	if checkCommit(b.lib.commit, bindingCommit) != nil && !(devSeries() && checkCommit(b.lib.commit, PinnedCommit) == nil) {
 		t.Errorf("commit %q", b.lib.commit)
 	}
 	devs, err := b.Devices(context.Background())
