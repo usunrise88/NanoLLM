@@ -63,9 +63,9 @@ func TestParsePlain(t *testing.T) {
 		"<|turn>model\nHi":   {content: "Hi"},
 		"<|channel>thought\n  Let me think.<channel|>Answer.": {content: "Answer.", reasoning: "Let me think."},
 		"<|channel><|channel>thought x<channel|>A":            {content: "A", reasoning: "x"},
-		"Answer.<channel|>":                                   {content: "Answer."},
-		"A<|channel>thought\n<channel|>":                      {content: "A"},
-		"<|tool_call>call:f{}<tool_call|>":                    {content: "<|tool_call>call:f{}<tool_call|>"},
+		"Answer.<channel|>":                {content: "Answer."},
+		"A<|channel>thought\n<channel|>":   {content: "A"},
+		"<|tool_call>call:f{}<tool_call|>": {content: "<|tool_call>call:f{}<tool_call|>"},
 	} {
 		if got := every(t, ParseOptions{}, in); !reflect.DeepEqual(got, want) {
 			t.Errorf("%q: got %+v want %+v", in, got, want)
