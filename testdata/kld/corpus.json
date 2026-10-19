@@ -1,0 +1,315 @@
+{
+  "note": "Articles for the KL-divergence gate corpus (tools/kldcorpus). Run `go run ./tools/kldcorpus -update` to pin revisions and hashes.",
+  "license": "Wikipedia text, CC BY-SA 4.0; https://creativecommons.org/licenses/by-sa/4.0/",
+  "max_bytes": 8000,
+  "articles": [
+    {
+      "lang": "ru",
+      "title": "Волга",
+      "revid": 154948182,
+      "sha256": "e706b974844032f2e473c13d223489a454c43602daebf9b6fb84272faf1d4d83",
+      "bytes": 7708
+    },
+    {
+      "lang": "ru",
+      "title": "Байкал",
+      "revid": 155591149,
+      "sha256": "1bc7dc9af219343cfac06a61a057b268eee4bce5d6afce38cc7dfe9a8545caf8",
+      "bytes": 7652
+    },
+    {
+      "lang": "ru",
+      "title": "Солнечная система",
+      "revid": 155485493,
+      "sha256": "e292ce34153c2d293c7156f767b1d81f53a0aecf9c34e6edac8a33de082972c6",
+      "bytes": 7646
+    },
+    {
+      "lang": "ru",
+      "title": "Фотосинтез",
+      "revid": 154852829,
+      "sha256": "2288ce0a97748c00bec1102abe6d89aba95bcb85994445bd8cd6bd243973da9a",
+      "bytes": 7688
+    },
+    {
+      "lang": "ru",
+      "title": "Периодическая система химических элементов",
+      "revid": 155645015,
+      "sha256": "7af2a326832715a2d00981b03138616d38591e6f6dae756d7c28cae663eea196",
+      "bytes": 7607
+    },
+    {
+      "lang": "ru",
+      "title": "Бородинское сражение",
+      "revid": 154895038,
+      "sha256": "9fa29ddd2ea6ba3ca88694a0401c3301fc4df38cc2a9b38ba0132646ee1b2a83",
+      "bytes": 7570
+    },
+    {
+      "lang": "ru",
+      "title": "Лев Толстой",
+      "revid": 155345642,
+      "sha256": "989b4fa3d1c34aa029c32342ef5c9e407b7e56b5849efa22d4d5f371700bd0b5",
+      "bytes": 5668
+    },
+    {
+      "lang": "ru",
+      "title": "Пушкин, Александр Сергеевич",
+      "revid": 155534286,
+      "sha256": "bc06a2fb4b31e2599e53f2c9c8e3fff29b7180c1d07cef88b97ec442827d2118",
+      "bytes": 7120
+    },
+    {
+      "lang": "ru",
+      "title": "Московский метрополитен",
+      "revid": 155682332,
+      "sha256": "a35615e86c694d9765115fd58718905c5793b3f0719f8860d3c07b8acf274b6d",
+      "bytes": 7354
+    },
+    {
+      "lang": "ru",
+      "title": "Электричество",
+      "revid": 155471741,
+      "sha256": "11c32efd7df236250301172cf4cac9000fb5098f4dfdc44553e98d7f875ea00c",
+      "bytes": 7730
+    },
+    {
+      "lang": "ru",
+      "title": "Интернет",
+      "revid": 155335410,
+      "sha256": "5d2cb4858970312061eafc2b56377c080bc5f102580a40877cd5012e43dbd6a2",
+      "bytes": 6376
+    },
+    {
+      "lang": "ru",
+      "title": "Компьютер",
+      "revid": 154892626,
+      "sha256": "5e73bd002a1ca24b27da64fad82f5f747e4285b50300b4c392d08644997df4eb",
+      "bytes": 7709
+    },
+    {
+      "lang": "ru",
+      "title": "Русский язык",
+      "revid": 155410575,
+      "sha256": "6068f37cb107c51301712d3c4e17edd04fc67c3257df64d298ded92d258e67d6",
+      "bytes": 6560
+    },
+    {
+      "lang": "ru",
+      "title": "Эволюция",
+      "revid": 154470130,
+      "sha256": "eb8c3bdd0fb4b95d166a4eb0e9be0f389f5df0a6b90468cb206568709b10e215",
+      "bytes": 7918
+    },
+    {
+      "lang": "ru",
+      "title": "Атом",
+      "revid": 155247562,
+      "sha256": "022c953aa2dac054bed298f802f314a6b15847ac80c4744b2f7902d83583762d",
+      "bytes": 6216
+    },
+    {
+      "lang": "ru",
+      "title": "Шахматы",
+      "revid": 155698122,
+      "sha256": "cc5534e8ee7d2187275d0421d4cea47fc9b578c1adfbc40d5b6dd973cdfde7fb",
+      "bytes": 7380
+    },
+    {
+      "lang": "ru",
+      "title": "Футбол",
+      "revid": 155375115,
+      "sha256": "2a67ff53b25f3b93956b05ae1150e4986ce7c79dc41fec0ec438f9b93fcb76c6",
+      "bytes": 7860
+    },
+    {
+      "lang": "ru",
+      "title": "Кофе",
+      "revid": 155537490,
+      "sha256": "8fd7bae5692f2a897212e58c365e93f2aad1601e330a55819d4d31dca27fadf9",
+      "bytes": 7766
+    },
+    {
+      "lang": "ru",
+      "title": "Чай",
+      "revid": 155372752,
+      "sha256": "07a2e81ce57b2c73cce3fe8897c27336c7e685b172e29dacc0357cac6bae8c7c",
+      "bytes": 7293
+    },
+    {
+      "lang": "ru",
+      "title": "Московский Кремль",
+      "revid": 155363547,
+      "sha256": "8c45ab2f122843be4642f41c39149a30ad5d3cf33c3aac31d24f9f3619cc7f8c",
+      "bytes": 7879
+    },
+    {
+      "lang": "ru",
+      "title": "Климат России",
+      "revid": 154679407,
+      "sha256": "b19034cb1304ea580ed364943bf6feb538ad7fc24e87d7c3a21370f32556d7c6",
+      "bytes": 7817
+    },
+    {
+      "lang": "ru",
+      "title": "Гравитация",
+      "revid": 155672820,
+      "sha256": "c815d3bb4e6d312ca121b4abb4d530bb840cf185607acca56f21a2920bcc8d98",
+      "bytes": 7559
+    },
+    {
+      "lang": "ru",
+      "title": "Вулкан",
+      "revid": 152848546,
+      "sha256": "7ce166fa7ae9cef86b2e5f906d5211ef7e0740d007c3b45dfe2cc9c9407fe99d",
+      "bytes": 7448
+    },
+    {
+      "lang": "ru",
+      "title": "Велосипед",
+      "revid": 155606069,
+      "sha256": "90ea446acc45583f1037c0379d3b3d0ec2d12a9db0ac9eb448e6214a6d4d2fff",
+      "bytes": 7359
+    },
+    {
+      "lang": "en",
+      "title": "Photosynthesis",
+      "revid": 1379238357,
+      "sha256": "340f9c4c6ae4e71995bc1dbbb345f7313db889c12b75625feaacb94ab5b5c885",
+      "bytes": 7764
+    },
+    {
+      "lang": "en",
+      "title": "Solar System",
+      "revid": 1379807231,
+      "sha256": "9b48d25172e5ee8f2d7ae9b98e266ecf62b27db071c9bebffbdd2ae7140ad695",
+      "bytes": 7781
+    },
+    {
+      "lang": "en",
+      "title": "Danube",
+      "revid": 1380548640,
+      "sha256": "0d70c1ff3123873db4e5f98474536b7554cc7fed3539af2c06e997761b966981",
+      "bytes": 7979
+    },
+    {
+      "lang": "en",
+      "title": "Internet",
+      "revid": 1379179209,
+      "sha256": "c526afe4f6ff74aff1f1f39b45e8a95c22e34996e7d6804626079fb60d80188f",
+      "bytes": 7632
+    },
+    {
+      "lang": "en",
+      "title": "Chess",
+      "revid": 1380500760,
+      "sha256": "e2c99687f73753c3525b4e07ab2f7b948188868b88f614c4d27ccc08e13c7ec3",
+      "bytes": 7864
+    },
+    {
+      "lang": "en",
+      "title": "Coffee",
+      "revid": 1380969708,
+      "sha256": "02879227a4a3eaed6aba8e91f3128aa7888b5c9e13005a33e8a5d7d4af5fdc40",
+      "bytes": 7676
+    },
+    {
+      "lang": "en",
+      "title": "Leo Tolstoy",
+      "revid": 1375171072,
+      "sha256": "2b1b4496de0f023eb233c1d8c302856a134bbc1c1640cf6dc48ce1077ea14ae7",
+      "bytes": 7946
+    },
+    {
+      "lang": "en",
+      "title": "Moscow",
+      "revid": 1379158176,
+      "sha256": "bd02d47cc41d13ad528af311fa1847fe363d663458bd13c131225e60a2994bb5",
+      "bytes": 7544
+    },
+    {
+      "lang": "en",
+      "title": "Printing press",
+      "revid": 1379445153,
+      "sha256": "92922c7ad8657151d1f4217002e46dd593e97a926fa70448748a6fbc770c035b",
+      "bytes": 7878
+    },
+    {
+      "lang": "en",
+      "title": "Volcano",
+      "revid": 1380352685,
+      "sha256": "5dc60761c728bad9246a668ba60299185087df5c1cf9629931758f5134ec363f",
+      "bytes": 7510
+    },
+    {
+      "lang": "en",
+      "title": "Bicycle",
+      "revid": 1375091239,
+      "sha256": "5057013b4ffad4fa423e7909024448a6b8913cc7b58dc3fd5dec66095c0717d1",
+      "bytes": 7879
+    },
+    {
+      "lang": "en",
+      "title": "Honey bee",
+      "revid": 1380684740,
+      "sha256": "808082f74c0d51ee24e72c841fe80b4ba54eabcb6399edab8af2bc891e86b2b7",
+      "bytes": 7695
+    },
+    {
+      "lang": "en",
+      "title": "Mount Everest",
+      "revid": 1380626482,
+      "sha256": "d3af9cf08769607cd8ff1e7f1668cbc8f178d122d7b377231b0a57993dc1ce26",
+      "bytes": 7771
+    },
+    {
+      "lang": "en",
+      "title": "Renaissance",
+      "revid": 1380943089,
+      "sha256": "b62a3fe998bc745e3ce0e705ce64aeaa9ee1ed22c946dedf279bb32abc26c797",
+      "bytes": 7974
+    },
+    {
+      "lang": "en",
+      "title": "Electricity",
+      "revid": 1379297547,
+      "sha256": "81f21422c5b2eccaa04395250cef0b8c7f2e315e2dc2f55fc1686245d134514b",
+      "bytes": 7875
+    },
+    {
+      "lang": "en",
+      "title": "Gravity",
+      "revid": 1374741444,
+      "sha256": "169f0ba124e1476883e0b2d123f9d76c08a4e580ffa335da0bd5a179229beefe",
+      "bytes": 7958
+    },
+    {
+      "lang": "en",
+      "title": "Tea",
+      "revid": 1380902067,
+      "sha256": "10f9f943ec637d51624f129d975b080ffedda8064078e67c53b40ad82d5a4975",
+      "bytes": 7578
+    },
+    {
+      "lang": "en",
+      "title": "Atom",
+      "revid": 1377869405,
+      "sha256": "989f4fe98ecbb7204431394450d6deba46faa95f43b9dcfd67307009c8d2fe99",
+      "bytes": 7953
+    },
+    {
+      "lang": "en",
+      "title": "Evolution",
+      "revid": 1379899421,
+      "sha256": "95862719e363390d4f7d465b5379a20b9aad26e433e0beaa691f5a7659c3ba63",
+      "bytes": 7581
+    },
+    {
+      "lang": "en",
+      "title": "Computer",
+      "revid": 1380829594,
+      "sha256": "3b36ea97eea794f9dfe9d6bf11164b31a1e4cd45b8f61614aa7411b24be3217f",
+      "bytes": 7635
+    }
+  ]
+}
