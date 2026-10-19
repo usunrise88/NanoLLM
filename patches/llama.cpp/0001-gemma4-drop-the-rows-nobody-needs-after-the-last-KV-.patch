@@ -1,0 +1,106 @@
+From 14677a5a3911444e3d4c78414c9fe6a8c6ed2598 Mon Sep 17 00:00:00 2001
+From: NanoLLM <nanollm@localhost>
+Date: Mon, 19 Oct 2026 12:00:00 +0000
+Subject: [PATCH] gemma4: drop the rows nobody needs after the last KV-owning
+ layer
+
+The layers after the last one that owns a KV cache (18 of the 42 in the E4B)
+have no K or V of their own: they only read the cache. So from the first of
+them on, only the rows whose output is wanted need to be carried. Crop the
+residual stream, the positions, the attention masks and the per-layer-embedding
+inputs there, instead of only at the last layer (the TODO in the loop).
+
+For a prompt processed in chunks this removes the whole upper stack from every
+chunk whose logits nobody asks for, and from the last chunk all but one row:
+about 43% of the layers' work. The result for a kept row is the same.
+
+Not done when the hidden state of every row is wanted (unmasked nextn
+embeddings) or when the batch is split into KV streams.
+---
+ src/models/gemma4.cpp | 38 ++++++++++++++++++++++++++++++++++----
+ 1 file changed, 34 insertions(+), 4 deletions(-)
+
+diff --git a/src/models/gemma4.cpp b/src/models/gemma4.cpp
+index f4f80d3..083904f 100644
+--- a/src/models/gemma4.cpp
++++ b/src/models/gemma4.cpp
+@@ -179,6 +179,20 @@ llama_model_gemma4::graph::graph(const llama_model & model, const llm_graph_para
+ 
+     ggml_tensor * inp_out_ids = build_inp_out_ids();
+ 
++    // The layers after the last one that owns a KV cache (the "KV-shared" ones) only read the cache:
++    // they have no K or V of their own to compute for the other rows of the batch. So from the first
++    // of them on, only the rows whose output is wanted (inp_out_ids) need to be carried: the queries,
++    // the attention masks, the positions and the per-layer inputs are narrowed to those rows, and the
++    // FFN and per-layer-embedding work of every later layer is done for them alone. In a prompt that is
++    // one row of a thousand. The result for a kept row is unchanged.
++    // Not done when the hidden state of every row is wanted (unmasked MTP), or when the batch is split
++    // into KV streams (the rows kept per stream would have to be equal).
++    int il_crop = n_layer;
++    if (inp_out_ids && crop_before_nextn(inp_out_ids) && hparams.n_layer_kv_from_start > 0 &&
++            hparams.n_layer_kv_from_start < (int32_t) n_layer && inp_attn->self_kq_mask->ne[3] == 1) {
++        il_crop = hparams.n_layer_kv_from_start;
++    }
++
+     if (model.per_layer_tok_embd) {
+         const float tok_embd_scale = sqrtf((float) n_embd_per_layer);
+ 
+@@ -189,7 +203,23 @@ llama_model_gemma4::graph::graph(const llama_model & model, const llm_graph_para
+         inp_per_layer = project_per_layer_inputs(inpL, inp_per_layer);
+     }
+ 
++    int64_t n_rows = n_tokens; // rows carried by the residual stream: all, then only the kept ones
+     for (int il = 0; il < n_layer; ++il) {
++        if (il == il_crop) {
++            n_rows  = n_outputs;
++            inpL    = ggml_get_rows(ctx0, inpL, inp_out_ids);
++            inp_pos = ggml_reshape_1d(ctx0, ggml_get_rows(ctx0, ggml_reshape_2d(ctx0, inp_pos, 1, inp_pos->ne[0]), inp_out_ids), n_outputs);
++
++            // the mask rows of the kept tokens
++            auto crop_mask = [&](ggml_tensor * mask) {
++                ggml_tensor * m = ggml_get_rows(ctx0, mask, inp_out_ids);
++                return m->type == mask->type ? m : ggml_cast(ctx0, m, mask->type);
++            };
++            // set_input() fills the original tensors; only the ones the attention reads are replaced
++            inp_attn->self_kq_mask_cnv     = crop_mask(inp_attn->self_kq_mask_cnv);
++            inp_attn->self_kq_mask_swa_cnv = crop_mask(inp_attn->self_kq_mask_swa_cnv);
++        }
++
+         const int64_t n_embd_head = hparams.n_embd_head_k(il);
+         GGML_ASSERT(n_embd_head == hparams.n_embd_head_v(il));
+ 
+@@ -220,14 +250,14 @@ llama_model_gemma4::graph::graph(const llama_model & model, const llm_graph_para
+             qkv_fused = build_lora_mm(model.layers[il].wqkv, cur, model.layers[il].wqkv_s);
+             cb(qkv_fused, "wqkv", il);
+             const int64_t q_dim = n_embd_head * n_head;
+-            Qcur = ggml_cont(ctx0, ggml_view_2d(ctx0, qkv_fused, q_dim, n_tokens, qkv_fused->nb[1], 0));
++            Qcur = ggml_cont(ctx0, ggml_view_2d(ctx0, qkv_fused, q_dim, n_rows, qkv_fused->nb[1], 0));
+         } else {
+             Qcur = build_lora_mm(model.layers[il].wq, cur, model.layers[il].wq_s);
+         }
+         {
+             cb(Qcur, "Qcur", il);
+ 
+-            Qcur = ggml_reshape_3d(ctx0, Qcur, n_embd_head, n_head, n_tokens);
++            Qcur = ggml_reshape_3d(ctx0, Qcur, n_embd_head, n_head, n_rows);
+ 
+             Qcur = build_norm(Qcur, model.layers[il].attn_q_norm, nullptr, LLM_NORM_RMS, il);
+             cb(Qcur, "Qcur_normed", il);
+@@ -283,7 +313,7 @@ llama_model_gemma4::graph::graph(const llama_model & model, const llm_graph_para
+ 
+         // TODO @ngxson : strip unused token right after the last KV layer to speed up prompt processing
+         // keep all rows when extracting unmasked nextn embeddings (MTP target needs the hidden state for every token)
+-        if (il == n_layer - 1 && crop_before_nextn(inp_out_ids)) {
++        if (il == n_layer - 1 && il_crop == n_layer && crop_before_nextn(inp_out_ids)) {
+             cur  = ggml_get_rows(ctx0,  cur, inp_out_ids);
+             inpL = ggml_get_rows(ctx0, inpL, inp_out_ids);
+         }
+@@ -383,7 +413,7 @@ llama_model_gemma4::graph::graph(const llama_model & model, const llm_graph_para
+             ggml_tensor * inp_this_layer = gemma4_view_2d_slice(ctx0, inp_per_layer, il); // [n_embd_per_layer, n_tokens]
+ 
+             // TODO @ngxson : improve this
+-            if (il == n_layer - 1 && crop_before_nextn(inp_out_ids)) {
++            if (il >= il_crop || (il == n_layer - 1 && crop_before_nextn(inp_out_ids))) {
+                 inp_this_layer = ggml_get_rows(ctx0, inp_this_layer, inp_out_ids);
+             }
+ 
