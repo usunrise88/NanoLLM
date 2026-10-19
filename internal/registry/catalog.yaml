@@ -37,5 +37,9 @@
     arch: gemma4-assistant
   reasoning:
     thinking_default: false
+  # Passed the golden tests (token for token against the pinned llama-server,
+  # MTP equivalence, state round-trip) on the ggml CPU variant haswell
+  # (docs/STAGE2.md 2.2); sapphirerapids was verified in stage 1.
+  verified: [llamacpp:cpu]
   license: Apache-2.0
   commercial: permitted
