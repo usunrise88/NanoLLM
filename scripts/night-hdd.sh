@@ -4,10 +4,12 @@
 # parallel repack. Every result is a file under bench/results/<host>/; a step
 # that fails is logged and the queue goes on.
 #
-#   scripts/hyper-exclusive.sh -- scripts/night-hdd.sh [LABEL]
+#   scripts/night-hdd.sh [LABEL]
 #
-# Run it under hyper-exclusive.sh, which waits for the host to be quiet and
-# keeps the other benchmark jobs out for the whole queue. The disk here is a
+# Every measurement takes the host lock (scripts/hyper-exclusive.sh: it waits
+# for the host to be quiet) for itself only, so other benchmark jobs, such as
+# the kernel A/B of another agent, interleave between the queue's runs instead
+# of waiting for the whole night. The disk here is a
 # hard disk (RAID1, ~110 MB/s sequential); the same queue is meant to be run
 # again on an SSD (SSD=1 changes the labels, DATA points at the copy on it).
 set -uo pipefail
@@ -25,11 +27,13 @@ NEXT_CONFIG=${NEXT_CONFIG:-$DATA/next.yaml}
 SLOW_TIMEOUT=${SLOW_TIMEOUT:-14m}
 STEPS=${STEPS-"diskbw numa batch stream ngram evalngram repack thp tune standard"}
 
+x() { scripts/hyper-exclusive.sh --max-load 6 -- "$@"; }
+
 bench() { # bench BIN CONFIG NAME ARGS...
 	local bin=$1 cfg=$2 name=$3
 	shift 3
 	echo "=== $(date +%T) $name"
-	nice -n 5 "$bin" bench --config "$cfg" --suite dev --label "$LABEL-$name" "$@" || echo "!!! $name failed (rc=$?)"
+	x nice -n 5 "$bin" bench --config "$cfg" --suite dev --label "$LABEL-$name" "$@" || echo "!!! $name failed (rc=$?)"
 }
 slow() { local name=$1; shift; bench "$NANOLLM" "$CONFIG" "$name" --slow --reps 1 --timeout "$SLOW_TIMEOUT" "$@"; }
 full() { local name=$1; shift; bench "$NANOLLM" "$CONFIG" "$name" --reps "${REPS:-3}" --timeout 20m "$@"; }
@@ -43,7 +47,7 @@ for step in $STEPS; do
 		OUTF=bench/results/$(hostname -s)/$(date +%F)-diskbw$([[ ${SSD:-0} == 1 ]] && echo -ssd).txt
 		{
 			echo "# $(date -Is) $(findmnt -T "$MODEL" -no SOURCE,FSTYPE)"
-			./dist/diskbw -file "$MODEL" -offset-mib 2100 -size-mib 1024 -threads 1,4,16
+			x ./dist/diskbw -file "$MODEL" -offset-mib 2100 -size-mib 1024 -threads 1,4,16
 		} | tee "$OUTF"
 		;;
 	numa)
@@ -60,13 +64,13 @@ for step in $STEPS; do
 			for round in 1 2 3; do
 				for th in 8 16 24 32; do
 					echo "## round $round threads $th: interleave, repack 1 thread (the current default)"
-					GGML_REPACK_THREADS=1 nice -n 5 numactl --interleave=all $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 -o md 2>/dev/null
+					x env GGML_REPACK_THREADS=1 nice -n 5 numactl --interleave=all $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 -o md 2>/dev/null
 					echo "## round $round threads $th: interleave, parallel repack"
-					GGML_REPACK_THREADS=$th nice -n 5 numactl --interleave=all $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 -o md 2>/dev/null
+					x env GGML_REPACK_THREADS=$th nice -n 5 numactl --interleave=all $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 -o md 2>/dev/null
 					echo "## round $round threads $th: distribute, repack threads = decode threads (node-local weights)"
-					GGML_REPACK_THREADS=$th nice -n 5 $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 --numa distribute -o md 2>/dev/null
+					x env GGML_REPACK_THREADS=$th nice -n 5 $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 --numa distribute -o md 2>/dev/null
 					echo "## round $round threads $th: distribute, serial repack (all weights on one node)"
-					GGML_REPACK_THREADS=1 nice -n 5 $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 --numa distribute -o md 2>/dev/null
+					x env GGML_REPACK_THREADS=1 nice -n 5 $T/llama-bench -m "$MODEL" -t $th -p 512 -n 128 -fa 1 -r 2 --numa distribute -o md 2>/dev/null
 				done
 			done
 		} | tee "$OUTF"
@@ -82,9 +86,9 @@ for step in $STEPS; do
 		{
 			echo "# $(date -Is) $MODEL"
 			echo "## strong: 16 threads, interleave"
-			nice -n 5 numactl --interleave=all $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 16 -fa on 2>/dev/null | tail -8
+			x nice -n 5 numactl --interleave=all $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 16 -fa on 2>/dev/null | tail -8
 			echo "## weak: 4 cores of node 0"
-			nice -n 5 numactl --preferred=0 taskset -c 0,1,2,3 $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 4 -fa on 2>/dev/null | tail -8
+			x nice -n 5 numactl --preferred=0 taskset -c 0,1,2,3 $T/llama-batched-bench -m "$MODEL" -c 6144 -b 2048 -ub 512 -npp 128 -ntg 64 -npl 1,2,4,8 -t 4 -fa on 2>/dev/null | tail -8
 		} | tee "$OUTF"
 		;;
 	stream)
@@ -118,7 +122,7 @@ for step in $STEPS; do
 		for suite in ru-instruct json-tools; do
 			for cfg in ref ref-ngram; do
 				echo "=== $(date +%T) eval $suite $cfg"
-				nice -n 5 "$NANOLLM" eval --config "$DATA/$cfg.yaml" --suite "$suite" --thinking off \
+				x nice -n 5 "$NANOLLM" eval --config "$DATA/$cfg.yaml" --suite "$suite" --thinking off \
 					--out "$EV/$(date +%F)-eval-$suite-$cfg-timed.json" || echo "!!! eval $suite $cfg failed"
 			done
 		done
@@ -146,14 +150,14 @@ for step in $STEPS; do
 		# with -mtune=znver1, with LTO, with both; llama-bench interleaved.
 		if [[ -d dist/tune-both/tools ]]; then
 			echo "=== $(date +%T) tune A/B"
-			scripts/tools-ab.sh tune dist/linux_amd64-next/tools dist/tune-znver1/tools dist/tune-lto/tools dist/tune-both/tools -- 2 || echo "!!! tune failed"
+			x scripts/tools-ab.sh tune dist/linux_amd64-next/tools dist/tune-znver1/tools dist/tune-lto/tools dist/tune-both/tools -- 2 || echo "!!! tune failed"
 		fi
 		;;
 	standard)
 		# 2.9: the standard suite as a user runs it (auto and two presets,
 		# strict budgets, three repetitions), not submitted anywhere.
 		echo "=== $(date +%T) standard quick"
-		nice -n 5 "$NANOLLM" bench --config "$CONFIG" --suite standard --label "$LABEL-standard" || echo "!!! standard failed (rc=$?)"
+		x nice -n 5 "$NANOLLM" bench --config "$CONFIG" --suite standard --label "$LABEL-standard" || echo "!!! standard failed (rc=$?)"
 		;;
 	esac
 done
