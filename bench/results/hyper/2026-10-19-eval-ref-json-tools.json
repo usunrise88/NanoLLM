@@ -1,0 +1,466 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "json-tools",
+    "sha256": "cb809e42cc6a5f10f8a703c4a4f716e52752354e6b8c9437c0012f774a435137",
+    "items": 10
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "14677a5a3911444e3d4c78414c9fe6a8c6ed2598",
+    "device": "cpu",
+    "kv": "f16",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "false",
+    "numa": "auto",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "16"
+  },
+  "date": "2026-10-19",
+  "results": [
+    {
+      "id": "tool-weather-ru",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "answer": "",
+      "tool_calls": [
+        {
+          "id": "call_37dc2f871d83e0d3b8e85869",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Казань\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 82,
+        "cached_tokens": 0,
+        "completion_tokens": 16,
+        "reasoning_tokens": 0
+      },
+      "ms": 63772.851,
+      "ttft_ms": 3681.402
+    },
+    {
+      "id": "tool-weather-ru",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": true,
+      "pass": true,
+      "answer": "",
+      "reasoning": "The user is asking for the current weather in Kazan.\nI have a tool `get_weather` that can provide weather information.\nThe `get_weather` tool requires a `city` argument.\nThe user specified \"Казани\" (Kazan).\nI should call `get_weather` with `city=\"Казань\"`.",
+      "tool_calls": [
+        {
+          "id": "call_6469642f38f1f65fe6d795cb",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Казань\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 84,
+        "cached_tokens": 4,
+        "completion_tokens": 93,
+        "reasoning_tokens": 75
+      },
+      "ms": 29815.303,
+      "ttft_ms": 1924.976
+    },
+    {
+      "id": "tool-weather-en",
+      "lang": "en",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "answer": "",
+      "tool_calls": [
+        {
+          "id": "call_bec3948d1546fc06c3b3f080",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Paris\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 83,
+        "cached_tokens": 4,
+        "completion_tokens": 14,
+        "reasoning_tokens": 0
+      },
+      "ms": 6986.861,
+      "ttft_ms": 1960.085
+    },
+    {
+      "id": "tool-weather-en",
+      "lang": "en",
+      "capability": "tools",
+      "thinking": true,
+      "pass": true,
+      "answer": "",
+      "reasoning": "1. **Analyze the user's request:** The user is asking for the current weather in \"Paris\".\n\n2. **Examine available tools:** The only available tool is `get_weather`.\n\n3. **Analyze the `get_weather` tool signature:**\n   - `get_weather(city: STRING, unit: STRING)`\n   - `city` is a required parameter (STRING).\n   - `unit` is an optional parameter (enum: 'c', 'f').\n\n4. **Map the user's request to the tool:**\n   - The user specified the city: \"Paris\".\n   - The user did not specify a unit (Celsius or Fahrenheit).\n\n5. **Determine the necessary arguments:**\n   - `city`: \"Paris\"\n   - `unit`: Not provided, so it can be omitted or a default can be assumed (though the tool definition doesn't specify a default, it's best to call it with the required parameters).\n\n6. **Construct the tool call:**\n   - `get_weather(city=\"Paris\")`\n\n7. **Format the output:** The output must be a JSON object containing the tool call.",
+      "tool_calls": [
+        {
+          "id": "call_1e677a38375ab06f41a5e399",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Paris\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 85,
+        "cached_tokens": 4,
+        "completion_tokens": 266,
+        "reasoning_tokens": 250
+      },
+      "ms": 55655.671,
+      "ttft_ms": 1984.744
+    },
+    {
+      "id": "tool-book",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "answer": "",
+      "tool_calls": [
+        {
+          "id": "call_8b9cb555125e436d7565605a",
+          "name": "book_appointment",
+          "arguments": "{\"date\":\"2026-11-03\",\"name\":\"Иван Петров\",\"time\":\"14:30\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 187,
+        "cached_tokens": 4,
+        "completion_tokens": 42,
+        "reasoning_tokens": 0
+      },
+      "ms": 28297.394,
+      "ttft_ms": 4140.232
+    },
+    {
+      "id": "tool-book",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": true,
+      "pass": true,
+      "answer": "",
+      "reasoning": "1. **Analyze the user's request:** The user wants to book an appointment. They provide their name (\"Иван Петров\"), the date (\"2026-11-03\"), and the time (\"14:30\").\n\n2. **Examine available tools:**\n    * `get_weather`: Used for weather information. Not relevant.\n    * `book_appointment`: Used for booking appointments. This is the relevant tool.\n\n3. **Check the `book_appointment` tool signature:**\n    * `name`: Required (string)\n    * `date`: Required (string, format YYYY-MM-DD)\n    * `time`: Required (string, format HH:MM)\n\n4. **Map user input to tool parameters:**\n    * `name`: \"Иван Петров\"\n    * `date`: \"2026-11-03\"\n    * `time`: \"14:30\"\n\n5. **Construct the tool call:**\n    ```json\n    {\n      \"toolSpec\": {\n        \"name\": \"book_appointment\",\n        \"args\": {\n          \"name\": \"Иван Петров\",\n          \"date\": \"2026-11-03\",\n          \"time\": \"14:30\"\n        }\n      }\n    }\n    ```\n\n6. **Final Output Generation:** Present the constructed tool call in the required format.",
+      "tool_calls": [
+        {
+          "id": "call_551ebd6d70bfbe45afa8c865",
+          "name": "book_appointment",
+          "arguments": "{\"date\":\"2026-11-03\",\"name\":\"Иван Петров\",\"time\":\"14:30\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 189,
+        "cached_tokens": 4,
+        "completion_tokens": 363,
+        "reasoning_tokens": 319
+      },
+      "ms": 113173.622,
+      "ttft_ms": 4399.196
+    },
+    {
+      "id": "tool-reminder",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "answer": "",
+      "tool_calls": [
+        {
+          "id": "call_99874da1f5e142f7d434de5a",
+          "name": "set_reminder",
+          "arguments": "{\"date\":\"2026-11-05\",\"text\":\"оплатить интернет\",\"time\":\"09:00\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 208,
+        "cached_tokens": 4,
+        "completion_tokens": 42,
+        "reasoning_tokens": 0
+      },
+      "ms": 30156.533,
+      "ttft_ms": 5322.284
+    },
+    {
+      "id": "tool-reminder",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": true,
+      "pass": true,
+      "answer": "",
+      "reasoning": "1. **Analyze the user's request:** The user wants to be reminded to \"pay for the internet\" on \"2026-11-05\" at \"09:00\".\n\n2. **Examine available tools:**\n    * `book_appointment`: Used for scheduling appointments (requires `name`, `date`, `time`).\n    * `set_reminder`: Used for setting reminders (requires `text`, `date`, `time`).\n\n3. **Determine the appropriate tool:** The request is clearly about setting a reminder, so `set_reminder` is the correct tool.\n\n4. **Extract parameters for `set_reminder`:**\n    * `text`: \"оплатить интернет\" (pay for the internet)\n    * `date`: \"2026-11-05\"\n    * `time`: \"09:00\"\n\n5. **Construct the tool call:**\n    ```json\n    {\n      \"toolSpec\": {\n        \"name\": \"set_reminder\",\n        \"args\": {\n          \"text\": \"оплатить интернет\",\n          \"date\": \"2026-11-05\",\n          \"time\": \"09:00\"\n        }\n      }\n    }\n    ```\n\n6. **Final Output Generation:** Format the tool call into the required JSON structure.",
+      "tool_calls": [
+        {
+          "id": "call_69def1c7d1d2b87e8b9829c8",
+          "name": "set_reminder",
+          "arguments": "{\"date\":\"2026-11-05\",\"text\":\"оплатить интернет\",\"time\":\"09:00\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 210,
+        "cached_tokens": 4,
+        "completion_tokens": 345,
+        "reasoning_tokens": 301
+      },
+      "ms": 110058.333,
+      "ttft_ms": 5397.729
+    },
+    {
+      "id": "tool-none-needed",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"четыре\"",
+      "answer": "Два плюс два будет четыре.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 80,
+        "cached_tokens": 4,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 3416.239,
+      "ttft_ms": 1922.655
+    },
+    {
+      "id": "tool-none-needed",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"четыре\"",
+      "answer": "Четыре.",
+      "reasoning": "The user is asking a simple arithmetic question: \"Сколько будет два плюс два?\" (What is two plus two?).\nThis is a general knowledge question that does not require any external tools or function calls.\nThe answer is 4.\nI should respond directly with the answer in Russian.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 82,
+        "cached_tokens": 4,
+        "completion_tokens": 68,
+        "reasoning_tokens": 62
+      },
+      "ms": 17344.589,
+      "ttft_ms": 1937.992
+    },
+    {
+      "id": "json-person-ru",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n  \"name\": \"Иван\",\n  \"age\": 34,\n  \"city\": \"Самара\"\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 36,
+        "cached_tokens": 2,
+        "completion_tokens": 35,
+        "reasoning_tokens": 0
+      },
+      "ms": 46727.268,
+      "ttft_ms": 2256.605
+    },
+    {
+      "id": "json-person-ru",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": true,
+      "pass": true,
+      "answer": "{\n  \"name\": \"Иван\",\n  \"age\": 34,\n  \"city\": \"Самара\"\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 43,
+        "cached_tokens": 2,
+        "completion_tokens": 35,
+        "reasoning_tokens": 0
+      },
+      "ms": 22097.435,
+      "ttft_ms": 1375.781
+    },
+    {
+      "id": "json-person-en",
+      "lang": "en",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n  \"name\": \"Maria\",\n  \"age\": 28,\n  \"city\": \"Lisbon\"\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 28,
+        "cached_tokens": 2,
+        "completion_tokens": 34,
+        "reasoning_tokens": 0
+      },
+      "ms": 23682.299,
+      "ttft_ms": 1744.117
+    },
+    {
+      "id": "json-person-en",
+      "lang": "en",
+      "capability": "json",
+      "thinking": true,
+      "pass": true,
+      "answer": "{\n  \"name\": \"Maria\",\n  \"age\": 28,\n  \"city\": \"Lisbon\"\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 35,
+        "cached_tokens": 2,
+        "completion_tokens": 34,
+        "reasoning_tokens": 0
+      },
+      "ms": 18160.024,
+      "ttft_ms": 872.012
+    },
+    {
+      "id": "json-list",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n  \"fruits\": [\n    \"яблоко\",\n    \"банан\",\n    \"апельсин\"\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 26,
+        "cached_tokens": 2,
+        "completion_tokens": 37,
+        "reasoning_tokens": 0
+      },
+      "ms": 22219.595,
+      "ttft_ms": 1508.717
+    },
+    {
+      "id": "json-list",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": true,
+      "pass": true,
+      "answer": "{\n  \"fruits\": [\n    \"яблоко\",\n    \"банан\",\n    \"апельсин\"\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 33,
+        "cached_tokens": 2,
+        "completion_tokens": 37,
+        "reasoning_tokens": 0
+      },
+      "ms": 36857.999,
+      "ttft_ms": 2768.434
+    },
+    {
+      "id": "json-sentiment",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\"sentiment\": \"negative\"}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 44,
+        "cached_tokens": 2,
+        "completion_tokens": 11,
+        "reasoning_tokens": 0
+      },
+      "ms": 6437.43,
+      "ttft_ms": 1715.516
+    },
+    {
+      "id": "json-sentiment",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": true,
+      "pass": true,
+      "answer": "{\"sentiment\": \"negative\"}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 51,
+        "cached_tokens": 2,
+        "completion_tokens": 11,
+        "reasoning_tokens": 0
+      },
+      "ms": 6569.519,
+      "ttft_ms": 1198.561
+    },
+    {
+      "id": "json-intent",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n  \"intent\": \"reschedule\"\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 38,
+        "cached_tokens": 2,
+        "completion_tokens": 17,
+        "reasoning_tokens": 0
+      },
+      "ms": 9528.697,
+      "ttft_ms": 1687.916
+    },
+    {
+      "id": "json-intent",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": true,
+      "pass": true,
+      "answer": "{\"intent\": \"reschedule\"}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 45,
+        "cached_tokens": 2,
+        "completion_tokens": 12,
+        "reasoning_tokens": 0
+      },
+      "ms": 7754.141,
+      "ttft_ms": 1502.856
+    }
+  ],
+  "summary": {
+    "json": {
+      "n": 5,
+      "pass": 5,
+      "rate": 1
+    },
+    "json+thinking": {
+      "n": 5,
+      "pass": 5,
+      "rate": 1
+    },
+    "tools": {
+      "n": 5,
+      "pass": 5,
+      "rate": 1
+    },
+    "tools+thinking": {
+      "n": 5,
+      "pass": 5,
+      "rate": 1
+    }
+  },
+  "by_lang": {
+    "en": {
+      "n": 4,
+      "pass": 4,
+      "rate": 1
+    },
+    "ru": {
+      "n": 16,
+      "pass": 16,
+      "rate": 1
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 1937.992,
+    "ttft_ms_p95": 5397.729
+  }
+}

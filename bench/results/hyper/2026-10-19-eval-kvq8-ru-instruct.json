@@ -1,0 +1,303 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "ru-instruct",
+    "sha256": "2d845da65669ff8272a19e6552d1a644fc12b53aa65699e1cd646018666ad028",
+    "items": 15
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "14677a5a3911444e3d4c78414c9fe6a8c6ed2598",
+    "device": "cpu",
+    "kv": "q8_0",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "false",
+    "numa": "auto",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "16"
+  },
+  "date": "2026-10-20",
+  "results": [
+    {
+      "id": "ru-count-words",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Красный, оранжевый, желтый",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 25,
+        "cached_tokens": 0,
+        "completion_tokens": 10,
+        "reasoning_tokens": 0
+      },
+      "ms": 62862.39,
+      "ttft_ms": 3089.671
+    },
+    {
+      "id": "ru-one-word",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Париж",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 20,
+        "cached_tokens": 4,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 5512.733,
+      "ttft_ms": 2124.543
+    },
+    {
+      "id": "ru-number",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "51",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 28,
+        "cached_tokens": 4,
+        "completion_tokens": 2,
+        "reasoning_tokens": 0
+      },
+      "ms": 1215.623,
+      "ttft_ms": 764.574
+    },
+    {
+      "id": "ru-no-latin",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Фотосинтез — это процесс, при котором растения с помощью солнечного света превращают воду и углекислый газ в пищу. В результате этого преобразования растения выделяют кислород, необходимый для дыхания живых существ.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 33,
+        "cached_tokens": 4,
+        "completion_tokens": 50,
+        "reasoning_tokens": 0
+      },
+      "ms": 31512.424,
+      "ttft_ms": 1890.886
+    },
+    {
+      "id": "ru-uppercase",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "ПРИВЕТ",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 27,
+        "cached_tokens": 4,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 4185.073,
+      "ttft_ms": 921.641
+    },
+    {
+      "id": "ru-list-3",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "- Меркурий\n- Венера\n- Земля",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 32,
+        "cached_tokens": 5,
+        "completion_tokens": 12,
+        "reasoning_tokens": 0
+      },
+      "ms": 9026.645,
+      "ttft_ms": 800.565
+    },
+    {
+      "id": "ru-polite-refusal",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"не могу\"",
+      "answer": "Извините, по соображениям безопасности я не могу предоставить вам номер карты другого клиента. Для защиты конфиденциальных данных клиентов, мы не разглашаем такую информацию.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 35,
+        "cached_tokens": 4,
+        "completion_tokens": 37,
+        "reasoning_tokens": 0
+      },
+      "ms": 22022.455,
+      "ttft_ms": 1523.669
+    },
+    {
+      "id": "ru-translate",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"good morning\"",
+      "answer": "Good morning, how are you?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 31,
+        "cached_tokens": 4,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 4015.808,
+      "ttft_ms": 2105.042
+    },
+    {
+      "id": "ru-date",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Суббота",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 21,
+        "cached_tokens": 4,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1489.917,
+      "ttft_ms": 898.408
+    },
+    {
+      "id": "ru-system-name",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"Ника\"",
+      "answer": "Привет! Я Ника, твой ассистент. Чем я могу тебе помочь сегодня?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 35,
+        "cached_tokens": 2,
+        "completion_tokens": 20,
+        "reasoning_tokens": 0
+      },
+      "ms": 13715.254,
+      "ttft_ms": 1167.121
+    },
+    {
+      "id": "ru-short",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Восстановление организма, консолидация памяти и эмоциональная регуляция.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 22,
+        "cached_tokens": 2,
+        "completion_tokens": 16,
+        "reasoning_tokens": 0
+      },
+      "ms": 15587.041,
+      "ttft_ms": 2441.402
+    },
+    {
+      "id": "ru-format-phone",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "+7 (916) 123-45-67",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 51,
+        "cached_tokens": 4,
+        "completion_tokens": 17,
+        "reasoning_tokens": 0
+      },
+      "ms": 16347.2,
+      "ttft_ms": 2433.576
+    },
+    {
+      "id": "ru-yes-no",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Да",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 37,
+        "cached_tokens": 4,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 1770.56,
+      "ttft_ms": 1691.065
+    },
+    {
+      "id": "ru-sum-json-free",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"четыре\"",
+      "answer": "Четыре",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 4,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 719.453,
+      "ttft_ms": 485.858
+    },
+    {
+      "id": "ru-name-greeting",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"Анна\"",
+      "answer": "Здравствуйте, Анна!",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 27,
+        "cached_tokens": 4,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 7643.103,
+      "ttft_ms": 1829.792
+    }
+  ],
+  "summary": {
+    "ru-instructions": {
+      "n": 15,
+      "pass": 15,
+      "rate": 1
+    }
+  },
+  "by_lang": {
+    "ru": {
+      "n": 15,
+      "pass": 15,
+      "rate": 1
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 1691.065,
+    "ttft_ms_p95": 3089.671
+  }
+}
