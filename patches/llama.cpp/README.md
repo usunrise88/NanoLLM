@@ -17,7 +17,18 @@ Rules:
 - A patch that fixes something for everyone is offered upstream, once the
   owner agrees.
 
-The series is empty at first; the build with no patches is upstream's.
+The series, in order:
+
+- 0001 gemma4: drop the rows nobody needs after the last KV-owning layer (OPT-11, libllama).
+- 0002 x86: Q4_0 8x8 GEMV/GEMM kernels for AVX2 without VNNI, unsigned nibbles
+  (OPT-16, CPU backend; bit-exact with the existing kernels, prefill x1.8-1.9,
+  decode x1.15-1.4 on a Zen 1).
+- 0003 ggml-cpu: repack a tensor on several threads while the model loads, with
+  NUMA first-touch (OPT-14, CPU backend; `GGML_REPACK_THREADS`).
+
+0002 and 0003 change the CPU backend, so the targets marked `cpu` in
+`libs-build.yml` ship the CPU variants too (see there and `scripts/fetch-libs.sh`).
+Without patches the build is upstream's.
 
 ## Patches under test: `patches/next`
 

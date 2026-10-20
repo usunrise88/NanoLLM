@@ -9,3 +9,8 @@
 To take it in, after the long checks of the current series (stage2-final-checks.sh) are done:
   cp patches/proposed/000[23]-*.patch patches/next/ ; scripts/build-libs.sh --next --cpus 8 --jobs 8 --out dist/linux_amd64-next-v2
 then A/B against dist/linux_amd64-next (scripts/tools-ab.sh), golden, KLD (scripts/kld-cand.sh), native tests, then swap.
+
+Update after the release of b11600-n3 (0002 revision 1 and 0003 are in patches/llama.cpp now): this revision
+is no longer a replacement of 0002 but has to go on top of the released series as a new patch (0004: GEMV
+prefetch 8 blocks ahead and the feature REPACK_Q4_0_ROWS), to be released as b11600-n4. The two files here
+are kept as the written-down result; regenerate them as a delta when the n4 build starts.

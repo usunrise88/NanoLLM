@@ -23,11 +23,14 @@
 # scripts/llama.cpp.commit differs from scripts/llama.cpp.base the pinned build
 # carries patches (patches/llama.cpp), and the libraries built from them in CI
 # (the release named in scripts/libs.release, nanollm-libs-<target>.tar.gz) are
-# laid over upstream's: the patches touch libllama only, so the CPU variants
-# and the GPU backends come from upstream's archive as they are. The overlay
-# lands in dist/<target>/lib and, with --tools, in tools/ too, so the
-# reference tools run the same libllama. NANOLLM_LIBS_URL replaces the
-# release's download URL (a mirror, or file:// for a local build).
+# laid over upstream's. An archive that also holds CPU variants
+# (libggml-cpu-*, built for the targets marked `cpu` in libs-build.yml)
+# replaces upstream's variants wholesale, since patches 0002 and 0003 live
+# there; for the other targets the CPU variants and all GPU backends come from
+# upstream's archive as they are. The overlay lands in dist/<target>/lib and,
+# with --tools, in tools/ too, so the reference tools run the same libraries.
+# NANOLLM_LIBS_URL replaces the release's download URL (a mirror, or file://
+# for a local build).
 #
 # NanoLLM compiles no C code. If an upstream archive layout changes, this
 # script fails on the layout check below rather than shipping a lib/ that is
@@ -157,10 +160,12 @@ download_own() {
 }
 
 # overlay_own TARGET DIR...: replace libllama and libggml-base in each DIR with
-# ours. Upstream's copies go first: a library's version suffix differs, and two
-# of them side by side would leave libllama.so.0 pointing at whichever came last.
+# ours, and the CPU variants too when the archive carries them. Upstream's
+# copies go first: a library's version suffix differs, and two of them side by
+# side would leave libllama.so.0 pointing at whichever came last; a variant set
+# that is not wholly ours would mix patched and unpatched kernels.
 overlay_own() {
-  local target=$1 archive stage dir
+  local target=$1 archive stage dir cpu=0 what="libllama, libggml-base"
   shift
   archive=$(download_own "$target")
   stage=$(mktemp -d)
@@ -170,11 +175,18 @@ overlay_own() {
     echo "fetch-libs: $archive lacks libllama or libggml-base" >&2
     exit 1
   fi
+  if compgen -G "$stage/*ggml-cpu*" >/dev/null; then
+    cpu=1
+    what="$what and the CPU variants"
+  fi
   for dir in "$@"; do
     find "$dir" \( -type f -o -type l \) \( -name 'libllama.*' -o -name 'llama.dll' -o -name 'libggml-base.*' -o -name 'ggml-base.dll' \) -delete
+    if (( cpu )); then
+      find "$dir" \( -type f -o -type l \) \( -name 'libggml-cpu*' -o -name 'ggml-cpu*.dll' \) -delete
+    fi
     find "$stage" \( -type f -o -type l \) -exec cp -P {} "$dir/" \;
   done
-  echo "$target: libllama and libggml-base from $OWN_REL"
+  echo "$target: $what from $OWN_REL"
 }
 
 unpack() {

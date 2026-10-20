@@ -3,10 +3,15 @@ name: libs-build
 # NanoLLM's own libllama and libggml-base (docs/STAGE2.md 2.1): the pinned
 # llama.cpp tag plus patches/llama.cpp, built for every target from the same
 # commit (scripts/build-libs.sh --prepare-only applies the series and checks its
-# hash against scripts/llama.cpp.commit). The patches touch only libllama, so
-# the rest of upstream's archives (the CPU variants, Vulkan, CUDA) are used as
-# they are; fetch-libs.sh lays these two libraries over them. ggml_commit()
-# lives in libggml-base, so the commit check sees our commit.
+# hash against scripts/llama.cpp.commit). ggml_commit() lives in libggml-base,
+# so the commit check sees our commit.
+#
+# Patches 0002 and 0003 live in the CPU backend (ggml-cpu), so a target marked
+# `cpu` in the matrix also builds the CPU variants (GGML_CPU_ALL_VARIANTS, the
+# flags of upstream's release job) and ships them in the same archive; a target
+# without it keeps upstream's CPU variants, which run the same model with the
+# unpatched kernels. The Vulkan and CUDA backends are always upstream's.
+# fetch-libs.sh lays what the archive holds over upstream's.
 #
 # Published as a release of this repository, llama-<tag>-n<N> (scripts/libs.release),
 # one nanollm-libs-<target>.tar.gz per target.
@@ -30,9 +35,10 @@ permissions:
   contents: write
 
 env:
-  # What libllama and libggml-base need and nothing else: no backends, no tools.
+  # What libllama and libggml-base need and nothing else: no GPU backends, no
+  # tools; the CPU backend only on the targets that ship it (CPU_FLAGS below).
   CMAKE_FLAGS: >-
-    -DGGML_BACKEND_DL=ON -DGGML_NATIVE=OFF -DGGML_CPU=OFF
+    -DGGML_BACKEND_DL=ON -DGGML_NATIVE=OFF
     -DLLAMA_BUILD_COMMON=OFF -DLLAMA_BUILD_TOOLS=OFF -DLLAMA_BUILD_TESTS=OFF
     -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_SERVER=OFF -DLLAMA_OPENSSL=OFF
 
@@ -44,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: linux_amd64, os: ubuntu-22.04, rpath: '$ORIGIN' }
+          - { target: linux_amd64, os: ubuntu-22.04, rpath: '$ORIGIN', cpu: true }
           - { target: linux_arm64, os: ubuntu-24.04-arm, rpath: '$ORIGIN' }
           - { target: darwin_arm64, os: macos-15, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3' }
           - { target: darwin_amd64, os: macos-15-intel, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3' }
@@ -60,10 +66,17 @@ jobs:
       - name: Build (Unix)
         if: ${{ !matrix.win }}
         run: |
+          if [ "${{ matrix.cpu }}" = true ]; then
+            CPU_FLAGS="-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON"
+            TARGETS=""
+          else
+            CPU_FLAGS="-DGGML_CPU=OFF"
+            TARGETS="--target llama ggml-base"
+          fi
           cmake -S .cache/llama.cpp/src -B build -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_RPATH='${{ matrix.rpath }}' -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
-            ${{ matrix.extra }} $CMAKE_FLAGS
-          cmake --build build --config Release --target llama ggml-base -j 4
+            ${{ matrix.extra }} $CMAKE_FLAGS $CPU_FLAGS
+          cmake --build build --config Release $TARGETS -j 4
 
       - name: Build (Windows)
         if: ${{ matrix.win }}
@@ -73,7 +86,7 @@ jobs:
           call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.win == 'x64' && 'x64' || 'amd64_arm64' }}
           cmake -S .cache/llama.cpp/src -B build -G "Ninja Multi-Config" ^
             -D CMAKE_TOOLCHAIN_FILE=cmake/${{ matrix.win }}-windows-llvm.cmake ^
-            -DGGML_OPENMP=ON -DGGML_OPENMP_FETCH=ON ^
+            -DGGML_OPENMP=ON -DGGML_OPENMP_FETCH=ON -DGGML_CPU=OFF ^
             %CMAKE_FLAGS%
           cmake --build build --config Release --target llama ggml-base
 
@@ -81,7 +94,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p out
-          find build -type f -o -type l | grep -E '/(lib)?(llama|ggml-base|omp)[.0-9a-z]*\.(so|dylib|dll)[.0-9]*$' | while read -r f; do cp -P "$f" out/; done
+          find build -type f -o -type l | grep -E '/(lib)?(llama|ggml-base|ggml-cpu-[0-9a-z_]+|omp)[.0-9a-z]*\.(so|dylib|dll)[.0-9]*$' | while read -r f; do cp -P "$f" out/; done
           ls -l out
           test -n "$(ls out)" || { echo "no libraries were built" >&2; exit 1; }
           tar -czf "nanollm-libs-${{ matrix.target }}.tar.gz" -C out .
@@ -108,5 +121,5 @@ jobs:
           rel=$(tr -d '[:space:]' < scripts/libs.release)
           (cd assets && sha256sum nanollm-libs-*.tar.gz | tee ../libs-own.sha256)
           gh release view "$rel" >/dev/null 2>&1 || gh release create "$rel" --title "$rel" \
-            --notes "NanoLLM's libllama and libggml-base: llama.cpp $(cat scripts/llama.cpp.tag) plus patches/llama.cpp. Put their sha256 (libs-own.sha256) in scripts/libs.sha256."
+            --notes "NanoLLM's libllama and libggml-base (and the CPU variants of the targets that build them): llama.cpp $(cat scripts/llama.cpp.tag) plus patches/llama.cpp. Put their sha256 (libs-own.sha256) in scripts/libs.sha256."
           gh release upload "$rel" assets/nanollm-libs-*.tar.gz libs-own.sha256 --clobber
