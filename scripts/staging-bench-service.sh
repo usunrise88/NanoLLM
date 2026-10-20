@@ -1,30 +1,34 @@
 #!/usr/bin/env bash
-# Staging of the benchmark service (services/bench) on hyper: benchd in a
-# container on 127.0.0.1:27418, the host's own Caddy in front of it at
-# nano.llmto.day, the whole site behind basic_auth until the legal review is
-# done. The steps, the vendor-verified badge and how to submit a result are in
-# services/bench/README.md, "Staging на hyper".
+# Staging of the benchmark service (services/bench) and of the static site (site/)
+# on hyper: benchd in a container on 127.0.0.1:27418, the site (the landing page
+# of Nano* and the product pages) in another on 127.0.0.1:27419, and the host's
+# own Caddy in front of both at nano.llmto.day. The steps, the vendor-verified
+# badge and how to submit a result are in services/bench/README.md, "Staging на hyper".
 #
-#   sudo scripts/staging-bench-service.sh caddy [--hash HASH]   # root: site file -> /etc/caddy/sites.d/, validate, reload
-#   sudo scripts/staging-bench-service.sh caddy remove          # root: take the site off Caddy again
-#   scripts/staging-bench-service.sh up                         # no sudo: build and start benchd
-#   scripts/staging-bench-service.sh down                       # no sudo: stop it, the database volume stays
-#   scripts/staging-bench-service.sh status                     # no sudo: read-only checks
+#   sudo scripts/staging-bench-service.sh caddy   # root: site file -> /etc/caddy/sites.d/, validate, reload
+#   sudo scripts/staging-bench-service.sh caddy remove   # root: take the site off Caddy again
+#   scripts/staging-bench-service.sh up       # no sudo: build and start benchd (and the site, if site/dist is built)
+#   scripts/staging-bench-service.sh site     # no sudo: build site/ (npm) and start or refresh its container
+#   scripts/staging-bench-service.sh down     # no sudo: stop both, the database volume stays
+#   scripts/staging-bench-service.sh status   # no sudo: read-only checks
 #
-# Only `caddy` needs root; `up`, `down` and `status` refuse it, because the
-# admin token lives in the owner's home. Every command can be run again: the
-# site file is rewritten only when it differs, the token is made once, and
-# compose recreates a container only when its configuration changed.
+# Only `caddy` needs root; the rest refuse it, because the admin token lives in
+# the owner's home. Every command can be run again: the site file is rewritten
+# only when it differs, the token is made once, and compose recreates a
+# container only when its configuration changed. The site is open (the owner
+# accepted the privacy and consent texts); an older site file with a login
+# (basic_auth, a password hash) is replaced by the one in the repository.
 #
-# HASH is `caddy hash-password` output for the staging login (user "owner"),
-# also read from $BENCH_BASIC_AUTH_HASH (sudo --preserve-env=BENCH_BASIC_AUTH_HASH).
-# Once a hash is installed it is kept when the command is run again without
-# one. Quote it: it contains `$`.
+# If the site file in the repository ever holds the placeholder @BASIC_AUTH_HASH@
+# again, `caddy` wants a login hash: --hash HASH (`caddy hash-password` output
+# for the user "owner"), or $BENCH_BASIC_AUTH_HASH (sudo --preserve-env=...).
+# Quote it: it contains `$`.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SITE=nano.llmto.day
-PORT=27418 # the same number as in services/bench/deploy/staging/
+PORT=27418 # the same numbers as in services/bench/deploy/staging/
+SITE_PORT=27419
 SITE_SRC=services/bench/deploy/staging/$SITE.caddy
 SITE_DST=/etc/caddy/sites.d/$SITE.caddy
 PLACEHOLDER=@BASIC_AUTH_HASH@
@@ -128,7 +132,7 @@ and run again with
 	systemctl reload caddy || die "systemctl reload caddy failed; $SITE_DST stays as validated, see: journalctl -u caddy -n 30"
 	echo "caddy reloaded"
 	if ! $remove; then
-		echo "next: scripts/staging-bench-service.sh up   (then: status)"
+		echo "next: scripts/staging-bench-service.sh up and site   (then: status)"
 	fi
 }
 
@@ -163,7 +167,11 @@ cmd_up() {
 	need_docker
 	make_env
 	# The first build downloads the Go toolchain image and modules.
-	compose up -d --build benchd
+	if [[ -f site/dist/index.html ]]; then
+		compose up -d --build benchd site
+	else
+		compose up -d --build benchd
+	fi
 	local i
 	for i in $(seq 1 30); do
 		if curl -fsS --max-time 2 "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
@@ -174,6 +182,28 @@ cmd_up() {
 	done
 	compose logs --tail 20 benchd >&2 || true
 	die "benchd does not answer on 127.0.0.1:$PORT"
+}
+
+# cmd_site builds site/ and starts or refreshes the container that serves it.
+# The build is npm (a few minutes of one core the first time): run it when no
+# measurement is going.
+cmd_site() {
+	need_user site
+	need_docker
+	make_env
+	command -v npm >/dev/null || die "npm is needed to build site/"
+	(cd site && nice -n 10 npm ci --no-audit --no-fund && nice -n 10 npm run build)
+	compose up -d site
+	local i
+	for i in $(seq 1 30); do
+		if curl -fsS --max-time 2 "http://127.0.0.1:$SITE_PORT/" >/dev/null 2>&1; then
+			echo "the site answers on http://127.0.0.1:$SITE_PORT"
+			return 0
+		fi
+		sleep 1
+	done
+	compose logs --tail 20 site >&2 || true
+	die "the site does not answer on 127.0.0.1:$SITE_PORT"
 }
 
 cmd_down() {
@@ -189,25 +219,31 @@ cmd_status() {
 	need_user status
 	echo "== Caddy site file"
 	if [[ ! -f $SITE_DST ]]; then
-		echo "not installed ($SITE_DST): sudo $0 caddy --hash '...'"
-	elif grep -q "$PLACEHOLDER" "$SITE_DST"; then
-		echo "installed with the PLACEHOLDER hash; run caddy again with --hash"
-	elif ! grep -q "127.0.0.1:$PORT" "$SITE_DST"; then
-		echo "installed, but not for port $PORT: $SITE_DST differs from the repository"
+		echo "not installed ($SITE_DST): sudo $0 caddy"
+	elif grep -q "$PLACEHOLDER\|basic_auth" "$SITE_DST"; then
+		echo "installed with a login (basic_auth): the site is still closed; run: sudo $0 caddy"
+	elif ! grep -q "127.0.0.1:$PORT" "$SITE_DST" || ! grep -q "127.0.0.1:$SITE_PORT" "$SITE_DST"; then
+		echo "installed, but not for ports $PORT and $SITE_PORT: $SITE_DST differs from the repository; run: sudo $0 caddy"
 	else
-		echo "installed, reverse proxy to 127.0.0.1:$PORT"
+		echo "installed: benchd on 127.0.0.1:$PORT, the site on 127.0.0.1:$SITE_PORT, no login"
 	fi
-	echo "== container"
-	if has_docker; then compose ps benchd || true; else echo "docker compose is not available"; fi
-	echo "== benchd on the loopback"
+	echo "== containers"
+	if has_docker; then compose ps benchd site || true; else echo "docker compose is not available"; fi
 	local h
+	echo "== on the loopback"
 	h=$(code "http://127.0.0.1:$PORT/healthz")
-	echo "GET /healthz -> ${h:-000} (200 expected)"
+	echo "benchd GET /healthz -> ${h:-000} (200 expected)"
+	h=$(code "http://127.0.0.1:$SITE_PORT/")
+	echo "site GET / -> ${h:-000} (200 expected; run: $0 site)"
 	echo "== through Caddy (resolved to this host)"
+	h=$(code --resolve "$SITE:443:127.0.0.1" "https://$SITE/")
+	echo "GET / -> ${h:-000} (200 expected: the landing page; 401: still behind a login; 000: no certificate yet or the site is not loaded)"
+	h=$(code --resolve "$SITE:443:127.0.0.1" "https://$SITE/nanollm/")
+	echo "GET /nanollm/ -> ${h:-000} (200 expected)"
 	h=$(code --resolve "$SITE:443:127.0.0.1" "https://$SITE/benchmarks")
-	echo "GET /benchmarks without a login -> ${h:-000} (401 expected; 000: no certificate yet or the site is not loaded)"
+	echo "GET /benchmarks -> ${h:-000} (200 expected)"
 	h=$(code --resolve "$SITE:443:127.0.0.1" "https://$SITE/admin/")
-	echo "GET /admin/ from the host -> ${h:-000} (200 expected: the page, its API needs the token)"
+	echo "GET /admin/ -> ${h:-000} (200 expected: the page, its API needs the token)"
 }
 
 case ${1:-} in
@@ -216,6 +252,7 @@ caddy)
 	cmd_caddy "$@"
 	;;
 up) cmd_up ;;
+site) cmd_site ;;
 down) cmd_down ;;
 status) cmd_status ;;
 *)

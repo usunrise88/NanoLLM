@@ -1,0 +1,23 @@
+# The static site inside its container (docker-compose.staging.yml): files from
+# /srv, which is site/dist. TLS, the access log and the other routes belong to
+# the host's Caddy in front of it.
+{
+	auto_https off
+	admin off
+}
+
+:80 {
+	root * /srv
+	encode zstd gzip
+
+	# Hashed build output never changes under its name.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	file_server
+
+	handle_errors {
+		rewrite * /404.html
+		file_server
+	}
+}

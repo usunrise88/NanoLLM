@@ -1,25 +1,21 @@
-# nano.llmto.day on hyper: the staging of benchd (services/bench) behind the
-# host's own Caddy. Installed to /etc/caddy/sites.d/ by
+# nano.llmto.day on hyper, behind the host's own Caddy. Installed to
+# /etc/caddy/sites.d/ by
 #
 #   sudo scripts/staging-bench-service.sh caddy
 #
-# which fills in the password hash below and validates the whole config
-# before it reloads Caddy. Do not copy this file by hand: it still holds the
-# placeholder.
+# which validates the whole config as the caddy user before it reloads Caddy.
 #
-# The whole site is behind basic_auth until the legal review of the privacy
-# text and the consent text is done (docs/BENCHMARKS.md). The one exception
-# is /admin: benchd's own bearer token travels in the same Authorization
-# header that basic_auth uses, so both cannot guard it; it is served only to
-# a client on the host itself (curl --resolve nano.llmto.day:443:127.0.0.1,
-# or the loopback port directly) and is a 404 from anywhere else.
+# Two upstreams, both on the loopback:
+#   - benchd (services/bench), 127.0.0.1:27418: /benchmarks, /api/v1/* and /admin;
+#   - the static site (site/), 127.0.0.1:27419: everything else, that is the
+#     landing page of the Nano* family and the product pages.
 #
-# benchd listens on 127.0.0.1:27418 only (docker-compose.staging.yml). Access
-# logs carry no client address, as in the Caddyfile next to this directory;
-# benchd sees the address only in X-Forwarded-For, which Caddy sets.
+# The site is open: the owner accepted the privacy and consent texts as they
+# are. /admin is open from anywhere too; what it shows is not sensitive, and
+# its API needs benchd's own bearer token (~/.config/nanollm-bench-staging/env).
 #
-# After the review: delete the basic_auth block here and run the script's
-# `caddy` again; without the placeholder it needs no hash.
+# Access logs carry no client address, as in the Caddyfile next to this
+# directory; benchd sees the address only in X-Forwarded-For, which Caddy sets.
 
 nano.llmto.day {
 	import common
@@ -43,30 +39,15 @@ nano.llmto.day {
 		}
 	}
 
-	@admin path /admin /admin/*
-	handle @admin {
-		@elsewhere not remote_ip 127.0.0.1 ::1
-		respond @elsewhere "not found" 404
+	@bench path /benchmarks /benchmarks/* /api/v1/* /admin /admin/*
+	handle @bench {
+		request_body {
+			max_size 300KB
+		}
 		reverse_proxy 127.0.0.1:27418
 	}
 
 	handle {
-		basic_auth {
-			# Replace the hash only with `caddy hash-password`, and only through
-			# the script (BENCH_BASIC_AUTH_HASH); never write the password here.
-			owner @BASIC_AUTH_HASH@
-		}
-
-		@bench path /benchmarks /benchmarks/* /api/v1/*
-		handle @bench {
-			request_body {
-				max_size 300KB
-			}
-			reverse_proxy 127.0.0.1:27418
-		}
-
-		handle {
-			respond "nano.llmto.day" 200
-		}
+		reverse_proxy 127.0.0.1:27419
 	}
 }

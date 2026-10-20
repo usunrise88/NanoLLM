@@ -96,6 +96,33 @@ jobs:
           name: web-dist
           path: web/dist
 
+  # nano.llmto.day (site/): the landing page and the product pages, prerendered
+  # from React. Typecheck, build, and look for what the pages must carry.
+  site:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+      - name: The pages are there
+        run: |
+          for f in index.html nanollm/index.html nanoasr/index.html nanotts/index.html 404.html; do
+            test -s "dist/$f" || { echo "dist/$f is missing or empty" >&2; exit 1; }
+          done
+          grep -q "No GPU required" dist/index.html
+          grep -q 'href="/benchmarks"' dist/nanollm/index.html
+          grep -q "github.com/usunrise88/NanoASR" dist/nanoasr/index.html
+          grep -q "github.com/usunrise88/NanoTTS" dist/nanotts/index.html
+
   # The SPA embedded in the real binary, in Chromium, against `serve` on the
   # fake backend: one server in open mode and one demanding a key, both
   # started by playwright.config.ts. Screens whose backend lands later (jobs,

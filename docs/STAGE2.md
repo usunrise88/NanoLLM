@@ -235,7 +235,8 @@ MTP по умолчанию выключается для CPU-планов с п
 ## 2.9 Бенчмарк и сервис
 
 `bench --suite standard`; потолки правдоподобия для EPYC 7xx1; staging сервиса
-на этом хосте за Caddy на `nano.llmto.day` под `basic_auth`; метка
+на этом хосте за Caddy на `nano.llmto.day` (с 2026-10-20 без пароля: главная Nano*,
+страница NanoLLM со ссылкой на бенчмарк, заглушки NanoASR и NanoTTS из `site/`); метка
 vendor-verified.
 
 ## Результаты и отступления

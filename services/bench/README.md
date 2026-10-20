@@ -62,7 +62,7 @@ and depend on a tagged `benchfmt/v1.x.y`.
 
 Pages: `/benchmarks`, `/benchmarks/systems/<slug>`, `/benchmarks/cpu/<slug>`,
 `/benchmarks/gpu/<slug>`, `/benchmarks/s/<id>`, `/benchmarks/how-to-run`,
-`/benchmarks/privacy` (a draft pending legal review). `?lang=ru|en`, else
+`/benchmarks/privacy` (the texts the owner accepted as they are on 2026-10-20). `?lang=ru|en`, else
 the `lang` cookie, else `Accept-Language`.
 
 ## Checks on a submission
@@ -166,54 +166,60 @@ the image with a smoke run, and the Caddyfile).
 
 ## Staging на hyper
 
-benchd в контейнере слушает только `127.0.0.1:27418`; перед ним системный
-Caddy hyper'а на `nano.llmto.day`. Весь сайт закрыт `basic_auth` (пользователь
-`owner`), пока владелец не закончил юридическую проверку политики приватности
-и текста согласия. Порт фиксирован: 27418 ниже эфемерного диапазона
-(32768–60999), поэтому исходящее соединение его не займёт. Число стоит в
-`deploy/staging/docker-compose.staging.yml`, `deploy/staging/nano.llmto.day.caddy`
-и `scripts/staging-bench-service.sh`; менять нужно во всех трёх.
+benchd в контейнере слушает только `127.0.0.1:27418`; рядом второй контейнер
+со статическим сайтом (`site/`: главная страница Nano* и страницы продуктов)
+на `127.0.0.1:27419`. Перед обоими системный Caddy hyper'а на `nano.llmto.day`:
+`/benchmarks`, `/api/v1/*` и `/admin` идут в benchd, всё остальное в сайт.
+Сайт открытый: владелец принял текст политики приватности и согласия как есть
+(2026-10-20), `basic_auth` снят. Порты фиксированы: 27418 и 27419 ниже
+эфемерного диапазона (32768–60999), поэтому исходящее соединение их не займёт.
+Числа стоят в `deploy/staging/docker-compose.staging.yml`,
+`deploy/staging/nano.llmto.day.caddy` и `scripts/staging-bench-service.sh`;
+менять нужно во всех трёх.
 
-Файлы: `deploy/staging/nano.llmto.day.caddy` (сайт для `/etc/caddy/sites.d/`,
-хэш пароля — заглушка `@BASIC_AUTH_HASH@`), `deploy/staging/docker-compose.staging.yml`
-(поверх `deploy/docker-compose.yml`: публикация на петле, встроенный Caddy
-выключен профилем, проект `nanollm-bench-staging`) и
-`scripts/staging-bench-service.sh`. sudo нужен только подкоманде `caddy`;
-`up`, `down` и `status` от root отказываются. Все подкоманды можно повторять.
+Файлы: `deploy/staging/nano.llmto.day.caddy` (сайт для `/etc/caddy/sites.d/`),
+`deploy/staging/Caddyfile.site` (конфигурация контейнера со статикой),
+`deploy/staging/docker-compose.staging.yml` (поверх `deploy/docker-compose.yml`:
+публикация на петле, контейнер `site`, встроенный Caddy выключен профилем,
+проект `nanollm-bench-staging`) и `scripts/staging-bench-service.sh`. sudo
+нужен только подкоманде `caddy`; `up`, `site`, `down` и `status` от root
+отказываются. Все подкоманды можно повторять.
 
-1. Хэш пароля: `caddy hash-password` (спрашивает пароль без эха).
-2. `! sudo scripts/staging-bench-service.sh caddy --hash '$2a$14$…'` кладёт
-   файл в `/etc/caddy/sites.d/`, проверяет весь конфиг `caddy validate` от
+1. `! sudo scripts/staging-bench-service.sh caddy` кладёт файл в
+   `/etc/caddy/sites.d/`, проверяет весь конфиг `caddy validate` от
    пользователя `caddy` (от root проверка создала бы лог-файл сайта с
    владельцем root), при ошибке возвращает прежний файл, затем делает
-   `systemctl reload caddy`. Без `--hash` остаётся уже установленный хэш.
+   `systemctl reload caddy`. Файл без заглушки хэша пароля логина не требует.
    Снять сайт: `! sudo scripts/staging-bench-service.sh caddy remove`.
-3. `! scripts/staging-bench-service.sh up`: при первом запуске создаёт
+2. `! scripts/staging-bench-service.sh up`: при первом запуске создаёт
    `~/.config/nanollm-bench-staging/env` с `BENCHD_ADMIN_TOKEN` (режим 600),
-   собирает образ и поднимает только `benchd`, ждёт `/healthz`. Сборка идёт в
-   демоне docker, и `nice` её не смягчает: запускать, когда замеры не идут.
-4. `! scripts/staging-bench-service.sh status`: файл Caddy на месте, контейнер
-   жив, `/healthz` на петле 200, `/benchmarks` без пароля через Caddy 401
-   (000, пока Let's Encrypt не выдал сертификат), `/admin/` с самого хоста 200.
+   собирает образ и поднимает `benchd` (и сайт, если `site/dist` уже собран),
+   ждёт `/healthz`. Сборка идёт в демоне docker, и `nice` её не смягчает:
+   запускать, когда замеры не идут.
+3. `! scripts/staging-bench-service.sh site`: собирает `site/` (`npm ci` и
+   `npm run build` под `nice`, несколько минут на одном ядре) и запускает или
+   обновляет контейнер со статикой. Так же выкладывается любая правка сайта:
+   sudo не нужен.
+4. `! scripts/staging-bench-service.sh status`: файл Caddy на месте, контейнеры
+   живы, `/healthz` на петле 200, через Caddy `/`, `/nanollm/`, `/benchmarks`
+   и `/admin/` отвечают 200 (000, пока Let's Encrypt не выдал сертификат).
 
 `down` останавливает контейнер; база остаётся в томе
 `nanollm-bench-staging_bench-data`.
 
-**Админка.** Токен benchd идёт в том же заголовке `Authorization`, что и
-пароль `basic_auth`, поэтому закрыть `/admin` обоими способами нельзя. Через
-Caddy он отдаётся только клиенту с самого хоста (`remote_ip` петля), отовсюду
-ещё 404. Проще всего прямо на петле: с ноутбука
-`ssh -L 27418:127.0.0.1:27418 hyper`, затем `http://127.0.0.1:27418/admin`;
-токен лежит в `env` выше.
+**Админка.** `/admin` открыта с любых адресов (решение владельца: в ней нет
+чувствительных данных). Страница отдаётся всем, а её API требует токен benchd
+из заголовка `Authorization: Bearer …`; токен лежит в
+`~/.config/nanollm-bench-staging/env`. Токен ходит по HTTPS через Caddy. Если
+понадобится закрыть админку снова, вернуть в `nano.llmto.day.caddy` ограничение
+по `remote_ip` и сделать `caddy` ещё раз.
 
 **Отправка результата с hyper.** Клиент принимает только `https`-адрес
 (`bench.submit_url must be an https URL`), поэтому петлевой
-`http://127.0.0.1:27418` ему не подходит. Отправка идёт через Caddy, логин
-передаётся в адресе (Go-клиент превращает его в `Authorization: Basic`;
-символы пароля вне букв и цифр кодируются в процентной форме):
+`http://127.0.0.1:27418` ему не подходит. Отправка идёт через Caddy:
 
 ```sh
-NANOLLM_BENCH_SUBMIT_URL='https://owner:ПАРОЛЬ@nano.llmto.day' \
+NANOLLM_BENCH_SUBMIT_URL='https://nano.llmto.day' \
   nanollm bench --suite standard --submit
 ```
 

@@ -1,0 +1,32 @@
+{
+  "name": "nano-site",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "nano.llmto.day: the landing page of the Nano* family and the NanoLLM product page. Static pages, prerendered from React.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build --outDir dist && vite build --ssr src/entry-server.tsx --outDir dist-ssr && node scripts/prerender.mjs",
+    "typecheck": "tsc -b --force --noEmit"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.7.0",
+    "@radix-ui/colors": "^3.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "iconoir-react": "^7.12.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2"
+  }
+}

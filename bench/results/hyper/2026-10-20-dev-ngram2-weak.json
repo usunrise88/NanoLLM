@@ -1,0 +1,245 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "dev",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "aad9f95e3ad7d397a4e54770d0e712ae281cd9af"
+    },
+    "ggml_cpu_variant": "haswell",
+    "os": "linux",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "AMD",
+      "model": "AMD EPYC 7351P",
+      "cores": 16,
+      "threads": 32,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c"
+      ]
+    },
+    "memory": {
+      "total_bytes": 135036997632
+    },
+    "system": {
+      "vendor": "To Be Filled By O.E.M.",
+      "product": "To Be Filled By O.E.M.",
+      "form_factor": "server",
+      "chassis": "desktop"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "26.04",
+      "kernel_mm": "7.0"
+    },
+    "power": {},
+    "disk": {
+      "type": "hdd"
+    },
+    "extra": [
+      {
+        "key": "numa_nodes",
+        "value": "4"
+      },
+      {
+        "key": "governor",
+        "value": "performance"
+      },
+      {
+        "key": "boost",
+        "value": "1"
+      },
+      {
+        "key": "thp",
+        "value": "madvise"
+      },
+      {
+        "key": "numa_balancing",
+        "value": "1"
+      },
+      {
+        "key": "loadavg_1m",
+        "value": "5.48"
+      },
+      {
+        "key": "model_disk",
+        "value": "md3"
+      },
+      {
+        "key": "model_disk_rotational",
+        "value": "1"
+      },
+      {
+        "key": "model_read_ahead_kb",
+        "value": "8192"
+      },
+      {
+        "key": "model_max_sectors_kb",
+        "value": "4096"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "preset": "ram-4g",
+      "plan_hash": "908a7d817ab5cf7c",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 4,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 20910.694,
+        "pp_tok_s": 43.45469257718154,
+        "tg_tok_s": {
+          "d0": 11.917658675957382
+        },
+        "ttft_ms": 1474.043,
+        "chat_tok_s": 11.74651316893873,
+        "mtp": {
+          "acceptance": 0.357487922705314,
+          "speedup": 0.7390798552131624,
+          "tok_s": 8.681611252158742
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 1.507365030674735,
+          "tok_s": 17.021781070119115
+        },
+        "peak_rss": 4510572544,
+        "peak_locked": 2932736,
+        "peak_page_cache": 2205274112,
+        "peak_cgroup": 4496297984,
+        "buffers": {
+          "CPU_Mapped": 2002895427,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.4428207284823362,
+          "echo_draft_tok_s": 0.01703618676269511,
+          "echo_tok_s": 0.013802800035587849,
+          "mtp_tok_s": 0.10602784660526722,
+          "pp_tok_s": 1.7827328951162857,
+          "tg_tok_s.d0": 0.8359888991507507,
+          "ttft_ms": 145.5679632760359
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "draft_max=4,ngram=0"
+    },
+    {
+      "preset": "ram-4g",
+      "plan_hash": "b912a020d96499d9",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": false,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 19942.076,
+        "pp_tok_s": 43.61244755635976,
+        "tg_tok_s": {
+          "d0": 11.911447429059749
+        },
+        "ttft_ms": 1485.176,
+        "chat_tok_s": 11.71926460266995,
+        "mtp": {
+          "acceptance": 0.3333333333333333,
+          "speedup": 0.9422853740585212,
+          "tok_s": 11.04289162981764
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 1.5560019096403435,
+          "tok_s": 17.551627991428198
+        },
+        "peak_rss": 4509855744,
+        "peak_locked": 2932736,
+        "peak_page_cache": 2211733504,
+        "peak_cgroup": 4496293888,
+        "buffers": {
+          "CPU_Mapped": 1965146691,
+          "CPU_REPACK": 2612181073
+        },
+        "stddev": {
+          "chat_tok_s": 0.4399230363337624,
+          "echo_draft_tok_s": 0.021082995104026482,
+          "echo_tok_s": 0.01471150111376819,
+          "mtp_tok_s": 0.003956351526013964,
+          "pp_tok_s": 1.7239243296723643,
+          "tg_tok_s.d0": 0.8933527950307423,
+          "ttft_ms": 164.74280322065673
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "fab7a62f8f866c6db18dbbb1df23b9990c154be774b76c3216b745dd57c83342",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "draft_max=4,ngram=3"
+    }
+  ],
+  "date": "2026-10-20",
+  "duration_s": 504.691146037
+}
