@@ -95,7 +95,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p out
-          find build -type f -o -type l | grep -E '/(lib)?(llama|ggml-base|ggml-cpu(-[0-9a-z_]+)?|omp)[.0-9a-z]*\.(so|dylib|dll)[.0-9]*$' | while read -r f; do cp -P "$f" out/; done
+          find build -type f -o -type l | grep -E '/(lib)?(llama|ggml-base|ggml-cpu[-.0-9a-z_]*|omp)[.0-9a-z]*\.(so|dylib|dll)[.0-9]*$' | while read -r f; do cp -P "$f" out/; done
           ls -l out
           test -n "$(ls out)" || { echo "no libraries were built" >&2; exit 1; }
           if [ "${{ matrix.cpu }}" = true ]; then
