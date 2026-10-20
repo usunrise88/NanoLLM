@@ -3,32 +3,82 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>{{.Title}} · {{t .Lang "site"}}</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/benchmarks/static/style.css">
+<script src="/benchmarks/static/theme.js"></script>
 <script src="/benchmarks/static/app.js" defer></script>
 </head>
 <body>
-<header class="top">
-  <a class="brand" href="/benchmarks">{{t .Lang "site"}}</a>
-  <nav>
-    <a href="/benchmarks">{{t .Lang "nav.results"}}</a>
-    <a href="/benchmarks/how-to-run">{{t .Lang "nav.howto"}}</a>
-    <a href="/benchmarks/privacy">{{t .Lang "nav.privacy"}}</a>
-    <a href="{{.OtherURL}}" hreflang="{{.OtherLang}}" class="lang">{{t .Lang "lang.other"}}</a>
-  </nav>
+<a class="skip" href="#main">{{t .Lang "skip"}}</a>
+<header class="site">
+  <div class="wrap bar">
+    <a class="brand" href="/">Nano<span>*</span></a>
+    <nav class="main" aria-label="Main">
+      <a href="/nanollm/">NanoLLM</a>
+      <a href="/nanoasr/">NanoASR</a>
+      <a href="/nanotts/">NanoTTS</a>
+      <a href="/benchmarks" aria-current="page">{{t .Lang "nav.benchmark"}}</a>
+    </nav>
+    <div class="tools">
+      <a class="lang" href="{{.OtherURL}}" hreflang="{{.OtherLang}}" title="{{t .Lang "lang.other"}}">{{.OtherLang}}</a>
+      <a class="icon" href="https://github.com/usunrise88" aria-label="Nano* on GitHub" title="GitHub">{{template "i-github"}}</a>
+      <div class="theme" role="group" aria-label="{{t .Lang "theme"}}" hidden>
+        <button type="button" data-theme="system" aria-label="{{t .Lang "theme.system"}}" title="{{t .Lang "theme.system"}}">{{template "i-laptop"}}</button>
+        <button type="button" data-theme="light" aria-label="{{t .Lang "theme.light"}}" title="{{t .Lang "theme.light"}}">{{template "i-sun"}}</button>
+        <button type="button" data-theme="dark" aria-label="{{t .Lang "theme.dark"}}" title="{{t .Lang "theme.dark"}}">{{template "i-moon"}}</button>
+      </div>
+    </div>
+  </div>
 </header>
-<main>
+<div class="subbar">
+  <nav class="wrap tabs" aria-label="{{t .Lang "nav.benchmark"}}">
+    <a href="/benchmarks"{{if eq .Section "results"}} aria-current="page"{{end}}>{{t .Lang "nav.results"}}</a>
+    <a href="/benchmarks/how-to-run"{{if eq .Section "howto"}} aria-current="page"{{end}}>{{t .Lang "nav.howto"}}</a>
+    <a href="/benchmarks/privacy"{{if eq .Section "privacy"}} aria-current="page"{{end}}>{{t .Lang "nav.privacy"}}</a>
+    <span class="grow"></span>
+    <a class="data" href="/api/v1/export?format=csv">CSV</a>
+    <a class="data" href="/api/v1/export?format=json">JSON</a>
+  </nav>
+</div>
+<main id="main" class="wrap">
 {{template "content" .}}
 </main>
-<footer>
-  {{t .Lang "footer.license"}}
-  {{if .LicenseURL}}<a href="{{.LicenseURL}}" rel="license">{{.License}}</a>{{else}}{{.License}}{{end}} ·
-  <a href="/api/v1/export?format=csv">CSV</a> ·
-  <a href="/api/v1/export?format=json">JSON</a> ·
-  <a href="/api/v1/export?format=csv&amp;what=runs">{{t .Lang "export.runs"}}</a>
+<footer class="site">
+  <div class="wrap foot">
+    <div class="about">
+      <p class="brand">Nano<span>*</span></p>
+      <p>Decent AI for everyone, no GPU required.</p>
+      <p class="license">{{t .Lang "footer.license"}}
+        {{if .LicenseURL}}<a href="{{.LicenseURL}}" rel="license">{{.License}}</a>{{else}}{{.License}}{{end}}.</p>
+    </div>
+    <ul>
+      <li><a href="/nanollm/">NanoLLM</a></li>
+      <li><a href="/nanoasr/">NanoASR</a></li>
+      <li><a href="/nanotts/">NanoTTS</a></li>
+    </ul>
+    <ul>
+      <li><a href="/benchmarks">{{t .Lang "nav.results"}}</a></li>
+      <li><a href="/benchmarks/how-to-run">{{t .Lang "nav.howto"}}</a></li>
+      <li><a href="/benchmarks/privacy">{{t .Lang "nav.privacy"}}</a></li>
+    </ul>
+    <ul>
+      <li><a href="/api/v1/export?format=csv">CSV</a></li>
+      <li><a href="/api/v1/export?format=json">JSON</a></li>
+      <li><a href="/api/v1/export?format=csv&amp;what=runs">{{t .Lang "export.runs"}}</a></li>
+      <li><a href="https://github.com/usunrise88">GitHub</a></li>
+    </ul>
+  </div>
 </footer>
 </body>
 </html>
+
+{{define "i-github"}}<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 22.0268V19.1568C16.0375 18.68 15.9731 18.2006 15.811 17.7506C15.6489 17.3006 15.3929 16.8902 15.06 16.5468C18.2 16.1968 21.5 15.0068 21.5 9.54679C21.4997 8.15062 20.9627 6.80799 20 5.79679C20.4558 4.5753 20.4236 3.22514 19.91 2.02679C19.91 2.02679 18.73 1.67679 16 3.50679C13.708 2.88561 11.292 2.88561 8.99999 3.50679C6.26999 1.67679 5.08999 2.02679 5.08999 2.02679C4.57636 3.22514 4.54413 4.5753 4.99999 5.79679C4.03011 6.81549 3.49251 8.17026 3.49999 9.57679C3.49999 14.9968 6.79998 16.1868 9.93998 16.5768C9.61098 16.9168 9.35725 17.3222 9.19529 17.7667C9.03334 18.2112 8.96679 18.6849 8.99999 19.1568V22.0268"/><path d="M9 20.0267C6 20.9999 3.5 20.0267 2 17.0267"/></svg>{{end}}
+{{define "i-laptop"}}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 14.2222V4C3.2 2.89543 4.09543 2 5.2 2H18.8C19.9046 2 20.8 2.89543 20.8 4V14.2222M3.2 14.2222H20.8M3.2 14.2222L1.71969 19.4556C1.35863 20.7321 2.31762 22 3.64418 22H20.3558C21.6824 22 22.6414 20.7321 22.2803 19.4556L20.8 14.2222"/><path d="M11 19L13 19"/></svg>{{end}}
+{{define "i-sun"}}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z"/><path d="M22 12L23 12"/><path d="M12 2V1"/><path d="M12 23V22"/><path d="M20 20L19 19"/><path d="M20 4L19 5"/><path d="M4 20L5 19"/><path d="M4 4L5 5"/><path d="M1 12L2 12"/></svg>{{end}}
+{{define "i-moon"}}<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5066C3 16.7497 7.25034 21 12.4934 21C16.2209 21 19.4466 18.8518 21 15.7259C12.4934 15.7259 8.27411 11.5066 8.27411 3C5.14821 4.55344 3 7.77915 3 11.5066Z"/></svg>{{end}}
+{{define "i-arrow"}}<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.00005 19L19 5.99996M19 5.99996V18.48M19 5.99996H6.52005"/></svg>{{end}}
 
 {{define "stat"}}{{if .}}<span class="med">{{num .Median}}</span>{{if gt .N 1}} <span class="iqr">({{num .P25}}–{{num .P75}})</span>{{end}}{{else}}—{{end}}{{end}}
 
@@ -71,6 +121,9 @@
 </div>
 <p class="note">{{t $lang "note.range"}}</p>
 {{else}}
-<p class="empty">{{t $lang "empty"}}</p>
+<div class="empty">
+  <p>{{t $lang "empty"}}</p>
+  <a class="btn" href="/benchmarks/how-to-run">{{t $lang "empty.cta"}}</a>
+</div>
 {{end}}
 {{end}}

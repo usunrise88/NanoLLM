@@ -6,13 +6,17 @@
 <meta name="robots" content="noindex">
 <title>benchd admin</title>
 <link rel="stylesheet" href="/benchmarks/static/style.css">
+<script src="/benchmarks/static/theme.js"></script>
 <script src="/benchmarks/static/admin.js" defer></script>
 </head>
 <body class="admin">
-<header class="top"><span class="brand">benchd admin</span>
-  <nav><a href="/benchmarks">/benchmarks</a> <a href="#" id="logout">forget token</a></nav>
+<header class="site">
+  <div class="wrap bar">
+    <a class="brand" href="/">Nano<span>*</span> <span>admin</span></a>
+    <nav class="main" aria-label="Main"><a href="/benchmarks">/benchmarks</a><a href="#" id="logout">forget token</a></nav>
+  </div>
 </header>
-<main>
+<main class="wrap">
 <p class="status" id="status"></p>
 
 <section>

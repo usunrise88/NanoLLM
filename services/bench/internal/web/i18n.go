@@ -13,6 +13,13 @@ const (
 
 var messages = map[string][2]string{ // key → {ru, en}
 	"site":             {"NanoLLM — бенчмарк", "NanoLLM benchmark"},
+	"skip":             {"К содержимому", "Skip to content"},
+	"nav.benchmark":    {"Бенчмарк", "Benchmark"},
+	"theme":            {"Тема", "Theme"},
+	"theme.system":     {"Как в системе", "Match the system theme"},
+	"theme.light":      {"Светлая тема", "Light theme"},
+	"theme.dark":       {"Тёмная тема", "Dark theme"},
+	"empty.cta":        {"Как запустить бенчмарк", "How to run the benchmark"},
 	"nav.results":      {"Результаты", "Results"},
 	"nav.howto":        {"Как запустить", "How to run"},
 	"nav.privacy":      {"Приватность", "Privacy"},

@@ -261,3 +261,37 @@ func postJSON(url string, body []byte) (*http.Response, error) {
 	req.Header.Set("Content-Type", "application/json")
 	return http.DefaultClient.Do(req)
 }
+
+// The pages are one site with nano.llmto.day: the same bar with the other
+// products, the benchmark's own tabs with the current one marked, the theme
+// script served from our own origin (the Content-Security-Policy has no
+// inline scripts), and no external requests.
+func TestPagesBelongToTheSite(t *testing.T) {
+	e := setup(t)
+	for _, c := range []struct{ path, current string }{
+		{"/benchmarks", `<a href="/benchmarks"`},
+		{"/benchmarks/how-to-run", `<a href="/benchmarks/how-to-run" aria-current="page"`},
+		{"/benchmarks/privacy", `<a href="/benchmarks/privacy" aria-current="page"`},
+	} {
+		resp, body := get(t, e.srv.URL+c.path, "Accept-Language", "en")
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("%s: %d", c.path, resp.StatusCode)
+		}
+		for _, want := range []string{`href="/nanollm/"`, `href="/nanoasr/"`, `href="/nanotts/"`, `href="https://github.com/usunrise88"`, `/benchmarks/static/theme.js`, c.current} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s lacks %q", c.path, want)
+			}
+		}
+		for _, bad := range []string{"https://fonts.", "cdn.", "<script>", ` style="`} {
+			if strings.Contains(body, bad) {
+				t.Errorf("%s has %q, which the Content-Security-Policy or the no-third-party rule forbids", c.path, bad)
+			}
+		}
+	}
+	for _, f := range []string{"theme.js", "app.js", "style.css"} {
+		resp, body := get(t, e.srv.URL+"/benchmarks/static/"+f)
+		if resp.StatusCode != http.StatusOK || len(body) == 0 {
+			t.Errorf("static/%s: %d, %d bytes", f, resp.StatusCode, len(body))
+		}
+	}
+}

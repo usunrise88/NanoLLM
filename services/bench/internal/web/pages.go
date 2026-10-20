@@ -60,6 +60,7 @@ func loadPages() (*pages, error) {
 // base is what every page's layout needs.
 type base struct {
 	Lang        string
+	Section     string // results, howto or privacy: the tab that is current
 	OtherLang   string
 	OtherURL    string
 	Title       string
@@ -77,8 +78,15 @@ func (s *Server) base(w http.ResponseWriter, r *http.Request, titleKey string) b
 	}
 	q := r.URL.Query()
 	q.Set("lang", other)
+	section := "results"
+	switch titleKey {
+	case "title.howto":
+		section = "howto"
+	case "title.privacy":
+		section = "privacy"
+	}
 	return base{
-		Lang: l, OtherLang: other, OtherURL: r.URL.Path + "?" + q.Encode(), Title: T(l, titleKey),
+		Lang: l, Section: section, OtherLang: other, OtherURL: r.URL.Path + "?" + q.Encode(), Title: T(l, titleKey),
 		License: s.cfg.DataLicense, LicenseURL: s.cfg.DataLicenseURL, PublicURL: s.cfg.PublicURL,
 	}
 }
