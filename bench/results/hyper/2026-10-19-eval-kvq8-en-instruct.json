@@ -1,0 +1,320 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "en-instruct",
+    "sha256": "b72aedf860d16e60b8c45a7898e2463dc2afadb235cfaee1075af35342795a1a",
+    "items": 16
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "14677a5a3911444e3d4c78414c9fe6a8c6ed2598",
+    "device": "cpu",
+    "kv": "q8_0",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "false",
+    "numa": "auto",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "16"
+  },
+  "date": "2026-10-20",
+  "results": [
+    {
+      "id": "en-three-colors",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Red, Orange, Yellow",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 25,
+        "cached_tokens": 0,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 53463.188,
+      "ttft_ms": 817.871
+    },
+    {
+      "id": "en-one-word",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Tokyo",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 21,
+        "cached_tokens": 4,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 748.046,
+      "ttft_ms": 612.55
+    },
+    {
+      "id": "en-number",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "51",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 25,
+        "cached_tokens": 4,
+        "completion_tokens": 2,
+        "reasoning_tokens": 0
+      },
+      "ms": 994.362,
+      "ttft_ms": 562.441
+    },
+    {
+      "id": "en-no-digits",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Photosynthesis is the vital process by which green plants convert light energy into chemical energy. This transformation uses water and carbon dioxide to create sugars for the plant's sustenance.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 4,
+        "completion_tokens": 34,
+        "reasoning_tokens": 0
+      },
+      "ms": 6408.723,
+      "ttft_ms": 859.684
+    },
+    {
+      "id": "en-uppercase",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "HELLO",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 22,
+        "cached_tokens": 4,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 551.482,
+      "ttft_ms": 459.669
+    },
+    {
+      "id": "en-list-3",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "- Mercury\n- Venus\n- Earth",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 30,
+        "cached_tokens": 4,
+        "completion_tokens": 8,
+        "reasoning_tokens": 0
+      },
+      "ms": 2135.207,
+      "ttft_ms": 1257.026
+    },
+    {
+      "id": "en-polite-refusal",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"cannot\"",
+      "answer": "\"I'm sorry, but for security reasons, I cannot read out another customer's card number. I can only assist you with your own account information.\"",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 34,
+        "cached_tokens": 4,
+        "completion_tokens": 33,
+        "reasoning_tokens": 0
+      },
+      "ms": 6480.863,
+      "ttft_ms": 747.427
+    },
+    {
+      "id": "en-translate",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"bonjour\"",
+      "answer": "Bonjour, comment allez-vous ?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 27,
+        "cached_tokens": 4,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 2014.442,
+      "ttft_ms": 753.074
+    },
+    {
+      "id": "en-weekday",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Saturday",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 21,
+        "cached_tokens": 4,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 512.712,
+      "ttft_ms": 427.699
+    },
+    {
+      "id": "en-system-name",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"Nika\"",
+      "answer": "Hello! I'm Nika. I'm an AI assistant here to help you with your questions and tasks. How can I assist you today?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 32,
+        "cached_tokens": 2,
+        "completion_tokens": 31,
+        "reasoning_tokens": 0
+      },
+      "ms": 6673.047,
+      "ttft_ms": 959.635
+    },
+    {
+      "id": "en-short",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Rest for physical and mental restoration, memory consolidation, and health.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 2,
+        "completion_tokens": 13,
+        "reasoning_tokens": 0
+      },
+      "ms": 2592.231,
+      "ttft_ms": 671.152
+    },
+    {
+      "id": "en-format-phone",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "(415) 555-0123",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 45,
+        "cached_tokens": 4,
+        "completion_tokens": 14,
+        "reasoning_tokens": 0
+      },
+      "ms": 2909.272,
+      "ttft_ms": 1405.808
+    },
+    {
+      "id": "en-yes-no",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "yes",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 31,
+        "cached_tokens": 4,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 2486.728,
+      "ttft_ms": 1942.153
+    },
+    {
+      "id": "en-sum-word",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"four\"",
+      "answer": "Four",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 4,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 1592.412,
+      "ttft_ms": 1491.888
+    },
+    {
+      "id": "en-name-greeting",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"Anna\"",
+      "answer": "Hello Anna, it's nice to meet you!",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 4,
+        "completion_tokens": 11,
+        "reasoning_tokens": 0
+      },
+      "ms": 1660.191,
+      "ttft_ms": 575.15
+    },
+    {
+      "id": "en-json-keys",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n\"name\": \"Tom\",\n\"age\": 30\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 40,
+        "cached_tokens": 4,
+        "completion_tokens": 17,
+        "reasoning_tokens": 0
+      },
+      "ms": 3206.924,
+      "ttft_ms": 829.782
+    }
+  ],
+  "summary": {
+    "en-instructions": {
+      "n": 16,
+      "pass": 16,
+      "rate": 1
+    }
+  },
+  "by_lang": {
+    "en": {
+      "n": 16,
+      "pass": 16,
+      "rate": 1
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 817.871,
+    "ttft_ms_p95": 1942.153
+  }
+}

@@ -1,0 +1,468 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "long-context",
+    "sha256": "generated:long-context/v1",
+    "items": 12
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "14677a5a3911444e3d4c78414c9fe6a8c6ed2598",
+    "device": "cpu",
+    "kv": "f16",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "false",
+    "numa": "auto",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "16"
+  },
+  "date": "2026-10-19",
+  "results": [
+    {
+      "id": "needle-1024-start",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-8173",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 946,
+        "cached_tokens": 0,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 75143.755,
+      "ttft_ms": 22138.752
+    },
+    {
+      "id": "needle-1024-start",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-8173",
+      "reasoning": "*   **Analyze the Request:** The user has provided a long, repetitive block of text and asked a specific question: \"What is the code word for safe number 1024? Answer only with the code word.\"\n\n*   **Scan the Text for the Answer:** I need to find the phrase \"Кодовое слово для сейфа номер 1024\" and the associated value.\n\n    *   *Text Snippet:* \"Кодовое слово для сейфа номер 1024 — «сокол-8173».\"\n\n*   **Extract the Answer:** The code word is \"сокол-8173\".\n\n*   **Format the Output:** The user requested *only* the code word.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 953,
+        "cached_tokens": 2,
+        "completion_tokens": 167,
+        "reasoning_tokens": 158
+      },
+      "ms": 61100.867,
+      "ttft_ms": 21919.528
+    },
+    {
+      "id": "needle-1024-middle",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-8218",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 946,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 34647.736,
+      "ttft_ms": 27042.463
+    },
+    {
+      "id": "needle-1024-middle",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-8218",
+      "reasoning": "Here's a thinking process to arrive at the answer:\n\n1.  **Analyze the Request:** The user has provided a large block of repetitive text (a narrative about morning scenes) and embedded a specific question within it: \"Кодовое слово для сейфа номер 1024 — «сокол-8218».\" The user then asks: \"Какое кодовое слово для сейфа номер 1024? Ответь только кодовым словом.\"\n\n2.  **Scan the Text for the Key Information:** I need to locate the phrase \"Кодовое слово для сейфа номер 1024\" and the associated value.\n\n    *   *Scanning the text...*\n    *   Found it: \"Кодовое слово для сейфа номер 1024 — «сокол-8218».\"\n\n3.  **Extract the Answer:** The code word is \"сокол-8218\".\n\n4.  **Format the Output:** The user explicitly requested: \"Ответь только кодовым словом.\"\n\n5.  **Final Answer Generation:** сокол-8218",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 953,
+        "cached_tokens": 2,
+        "completion_tokens": 258,
+        "reasoning_tokens": 249
+      },
+      "ms": 127202.181,
+      "ttft_ms": 21803.872
+    },
+    {
+      "id": "needle-1024-end",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-8263",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 946,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 50884.527,
+      "ttft_ms": 24651.341
+    },
+    {
+      "id": "needle-1024-end",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-8263",
+      "reasoning": "Here's a thinking process to arrive at the answer:\n\n1.  **Analyze the Request:** The user has provided a large block of repetitive text (a descriptive passage) and then a specific question: \"Какое кодовое слово для сейфа номер 1024? Ответь только кодовым словом.\" (What is the code word for safe number 1024? Answer only with the code word.)\n\n2.  **Scan the Text for the Answer:** I need to look through the entire provided text specifically for the phrase \"кодовое слово для сейфа номер 1024\" or the actual code word.\n\n3.  **Locate the Relevant Sentence:**\n    *   The text is mostly descriptive (fog, fishermen, library, train, gardener, pigeons, engineer).\n    *   The final paragraph contains the key information: \"Утром над рекой поднимался туман, и рыбаки не спешили выходить на лодках. Кодовое слово для сейфа номер 1024 — «сокол-8263». В старой библиотеке пахло бумагой и пылью, а часы на стене отставали на пять минут. Поезд из соседнего города опаздывал, поэтому на перроне собралась небольшая толпа.\"\n\n4.  **Extract the Code Word:** The sentence explicitly states: \"Кодовое слово для сейфа номер 1024 — «сокол-8263».\"\n\n5.  **Format the Output:** The user requested *only* the code word.\n\n6.  **Final Answer:** сокол-8263",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 953,
+        "cached_tokens": 2,
+        "completion_tokens": 363,
+        "reasoning_tokens": 354
+      },
+      "ms": 167379.911,
+      "ttft_ms": 28704.422
+    },
+    {
+      "id": "needle-4096-start",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-2677",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 3577,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 65051.197,
+      "ttft_ms": 64374.725
+    },
+    {
+      "id": "needle-4096-start",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-2677",
+      "reasoning": "Here's a thinking process to arrive at the answer:\n\n1.  **Analyze the Request:** The user has provided a very long, repetitive block of text (a narrative about various morning scenes) and asks a specific question: \"Какое кодовое слово для сейфа номер 4096? Ответь только кодовым словом.\" (What is the code word for safe number 4096? Answer only with the code word.)\n\n2.  **Scan the Text for the Key Information:** I need to find the phrase \"Кодовое слово для сейфа номер 4096\" or similar.\n\n3.  **Locate the Specific Sentence:**\n    *   *Initial scan:* The text is mostly descriptive (fog, library, train, gardener, pigeons, engineer).\n    *   *Detailed scan:* I find the sentence: \"Кодовое слово для сейфа номер 4096 — «сокол-2677».\"\n\n4.  **Extract the Answer:** The code word is \"сокол-2677\".\n\n5.  **Format the Output:** The user explicitly requested *only* the code word.\n\n6.  **Final Answer Generation:** сокол-2677",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 3584,
+        "cached_tokens": 2,
+        "completion_tokens": 277,
+        "reasoning_tokens": 268
+      },
+      "ms": 95915.673,
+      "ttft_ms": 58750.931
+    },
+    {
+      "id": "needle-4096-middle",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-2722",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 3577,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 61969.895,
+      "ttft_ms": 61020.171
+    },
+    {
+      "id": "needle-4096-middle",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-2722",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user has provided a large block of repetitive text (a descriptive passage) and a specific question: \"Какое кодовое слово для сейфа номер 4096? Ответь только кодовым словом.\" (What is the code word for safe number 4096? Answer only with the code word.)\n2.  **Scan the Text for the Answer:** I need to find the specific phrase linking \"сейф номер 4096\" (safe number 4096) to a code word.\n3.  **Locate the Key Information:** I scan the provided text.\n    *   The text is mostly repetitive descriptions (fog, fishermen, library, train, gardener, pigeons, newspaper seller, engineer).\n    *   I find the specific line: \"Кодовое слово для сейфа номер 4096 — «сокол-2722».\" (The code word for safe number 4096 is \"falcon-2722\".)\n4.  **Extract the Code Word:** The code word is \"сокол-2722\".\n5.  **Format the Output:** The user requested *only* the code word.\n6.  **Final Answer Generation:** сокол-2722.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 3584,
+        "cached_tokens": 2,
+        "completion_tokens": 297,
+        "reasoning_tokens": 288
+      },
+      "ms": 87467.824,
+      "ttft_ms": 60398.615
+    },
+    {
+      "id": "needle-4096-end",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-2767",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 3577,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 82525.485,
+      "ttft_ms": 79100.436
+    },
+    {
+      "id": "needle-4096-end",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-2767",
+      "reasoning": "Here's a thinking process to arrive at the answer:\n\n1.  **Analyze the Request:** The user has provided a very long, repetitive block of text (a narrative about morning scenes) and embedded a specific question within it: \"Кодовое слово для сейфа номер 4096 — «сокол-2767».\" The user then asks: \"Какое кодовое слово для сейфа номер 4096? Ответь только кодовым словом.\"\n\n2.  **Scan the Text for the Answer:** I need to locate the phrase \"Кодовое слово для сейфа номер 4096\" and identify the associated value.\n    *   *Scanning the provided text...*\n    *   Found it: \"Кодовое слово для сейфа номер 4096 — «сокол-2767».\"\n\n3.  **Extract the Code:** The code is \"сокол-2767\".\n\n4.  **Format the Output:** The user explicitly requested: \"Ответь только кодовым словом.\"\n\n5.  **Final Answer Generation:** сокол-2767",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 3584,
+        "cached_tokens": 2,
+        "completion_tokens": 260,
+        "reasoning_tokens": 251
+      },
+      "ms": 245121.597,
+      "ttft_ms": 101441.504
+    },
+    {
+      "id": "needle-8192-start",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-4349",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 7089,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 234072.357,
+      "ttft_ms": 216275.942
+    },
+    {
+      "id": "needle-8192-start",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-4349",
+      "reasoning": "Here's a thinking process to arrive at the answer:\n\n1.  **Analyze the Request:** The user has provided a very long, repetitive block of text (a narrative description of various morning scenes) and asks a specific question: \"Какое кодовое слово для сейфа номер 8192? Ответь только кодовым словом.\" (What is the code word for safe number 8192? Answer only with the code word.)\n\n2.  **Scan the Text for the Key Information:** I need to look for the phrase \"сейф номер 8192\" (safe number 8192) and the associated code word.\n\n3.  **Locate the Specific Sentence:** I scan the provided text.\n    *   *Initial repetitions:* (Fog, library, train, gardener, pigeons, newspaper seller, engineer...)\n    *   *Found the relevant sentence:* \"Кодовое слово для сейфа номер 8192 — «сокол-4349».\" (The code word for safe number 8192 is \"falcon-4349\".)\n\n4.  **Extract the Answer:** The code word is \"сокол-4349\".\n\n5.  **Format the Output:** The user explicitly requested: \"Ответь только кодовым словом.\" (Answer only with the code word.)\n\n6.  **Final Answer Generation:** сокол-4349",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 7096,
+        "cached_tokens": 2,
+        "completion_tokens": 322,
+        "reasoning_tokens": 313
+      },
+      "ms": 263681.095,
+      "ttft_ms": 181193.333
+    },
+    {
+      "id": "needle-8192-middle",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-4394",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 7089,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 136939.635,
+      "ttft_ms": 136108.183
+    },
+    {
+      "id": "needle-8192-middle",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-4394",
+      "reasoning": "*   **Analyze the Request:** The user has provided a very long, repetitive block of text (a narrative about morning scenes) and a specific question: \"What is the code word for safe number 8192? Answer only with the code word.\"\n\n*   **Scan the Text for the Answer:** I need to look for the phrase \"Кодовое слово для сейфа номер 8192\" or similar keywords.\n\n*   **Locate the Information:**\n    *   The text is mostly repetitions of: \"Утром над рекой поднимался туман, и рыбаки не спешили выходить на лодках. В старой библиотеке пахло бумагой и пылью, а часы на стене отставали на пять минут. Поезд из соседнего города опаздывал, поэтому на перроне собралась небольшая толпа. Садовник поливал розы каждое утро и записывал в тетрадь, сколько бутонов раскрылось. Над площадью кружили голуби, а продавец газет громко называл свежие заголовки. Инженер проверял чертежи моста третий раз, потому что не любил ошибок.\"\n    *   I find the specific line: \"Кодовое слово для сейфа номер 8192 — «сокол-4394».\"\n\n*   **Extract the Code Word:** The code word is \"сокол-4394\".\n\n*   **Format the Output:** The user requested *only* the code word.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 7096,
+        "cached_tokens": 2,
+        "completion_tokens": 333,
+        "reasoning_tokens": 324
+      },
+      "ms": 242907.517,
+      "ttft_ms": 164821.792
+    },
+    {
+      "id": "needle-8192-end",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-4439",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 7089,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 140498.36,
+      "ttft_ms": 139140.362
+    },
+    {
+      "id": "needle-8192-end",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-4439",
+      "reasoning": "Here's a thinking process to arrive at the answer:\n\n1.  **Analyze the Request:** The user has provided a very long, repetitive block of text (a series of descriptive sentences) and then asks a specific question: \"Какое кодовое слово для сейфа номер 8192? Ответь только кодовым словом.\" (What is the code word for safe number 8192? Answer only with the code word.)\n\n2.  **Scan the Text for the Answer:** I need to carefully read the entire provided text, looking for the phrase \"кодовое слово для сейфа номер 8192\" or any associated code.\n\n    *   *Initial reading (the long repetitive block):* The text describes a foggy morning, fishermen, a library, a train delay, a gardener, pigeons, a newspaper seller, and an engineer. This is filler/distraction.\n    *   *Scanning for the key phrase:* I find the phrase: \"Кодовое слово для сейфа номер 8192 — «сокол-4439».\" (The code word for safe number 8192 is \"falcon-4439\".)\n\n3.  **Identify the Target Information:**\n    *   Safe Number: 8192\n    *   Code Word: «сокол-4439»\n\n4.  **Formulate the Output:** The user explicitly requested *only* the code word.\n\n5.  **Final Answer Generation:** сокол-4439",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 7096,
+        "cached_tokens": 2,
+        "completion_tokens": 341,
+        "reasoning_tokens": 332
+      },
+      "ms": 323175.381,
+      "ttft_ms": 220354.224
+    },
+    {
+      "id": "needle-16384-start",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-7693",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 14094,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 365107.987,
+      "ttft_ms": 363915.314
+    },
+    {
+      "id": "needle-16384-start",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-7693",
+      "reasoning": "Here's a thinking process to arrive at the answer:\n\n1.  **Analyze the Request:** The user has provided a massive block of repetitive text (a narrative about morning scenes) and embedded a specific piece of information within it. The user asks: \"Какое кодовое слово для сейфа номер 16384? Ответь только кодовым словом.\" (What is the code word for safe number 16384? Answer only with the code word.)\n\n2.  **Scan the Text for Keywords:** I need to look for \"сейф\" (safe), \"16384\", and \"кодовое слово\" (code word).\n\n3.  **Locate the Information:** I scan the provided text. The repetitive narrative eventually breaks, and the target information appears:\n    *   \"...В старой библиотеке пахло бумагой и пылью, а часы на стене отставали на пять минут. **Кодовое слово для сейфа номер 16384 — «сокол-7693».** Поезд из соседнего города опаздывал...\"\n\n4.  **Extract the Answer:** The code word is \"сокол-7693\".\n\n5.  **Format the Output:** The user explicitly requested *only* the code word.\n\n6.  **Final Answer Generation:** сокол-7693",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 14101,
+        "cached_tokens": 2,
+        "completion_tokens": 307,
+        "reasoning_tokens": 298
+      },
+      "ms": 673104.235,
+      "ttft_ms": 359083.438
+    },
+    {
+      "id": "needle-16384-middle",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-7738",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 14094,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 290527.769,
+      "ttft_ms": 289245.878
+    },
+    {
+      "id": "needle-16384-middle",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-7738",
+      "reasoning": "Here's a thinking process to arrive at the answer:\n\n1.  **Analyze the Request:** The user has provided a massive block of repetitive text (a narrative about morning scenes) and embedded a specific piece of information within it. The user asks: \"Какое кодовое слово для сейфа номер 16384? Ответь только кодовым словом.\" (What is the code word for safe number 16384? Answer only with the code word.)\n\n2.  **Scan the Text for Keywords:** I need to look for \"сейф\" (safe), \"номер\" (number), \"16384\", and \"кодовое слово\" (code word).\n\n3.  **Locate the Information:** I scan the provided text. The repetitive narrative suddenly breaks, and the target information appears:\n    *   \"...Кодовое слово для сейфа номер 16384 — «сокол-7738».\"\n\n4.  **Extract the Answer:** The code word is \"сокол-7738\".\n\n5.  **Format the Output:** The user explicitly requested: \"Ответь только кодовым словом.\" (Answer only with the code word.)\n\n6.  **Final Answer Generation:** сокол-7738",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 14101,
+        "cached_tokens": 2,
+        "completion_tokens": 290,
+        "reasoning_tokens": 281
+      },
+      "ms": 325464.482,
+      "ttft_ms": 279262.953
+    },
+    {
+      "id": "needle-16384-end",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": false,
+      "pass": true,
+      "answer": "сокол-7783",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 14094,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 250859.225,
+      "ttft_ms": 249802.031
+    },
+    {
+      "id": "needle-16384-end",
+      "lang": "ru",
+      "capability": "long-context",
+      "thinking": true,
+      "pass": true,
+      "answer": "сокол-7783",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user has provided a large block of repetitive text (a descriptive passage) and then a specific question: \"Какое кодовое слово для сейфа номер 16384? Ответь только кодовым словом.\" (What is the code word for safe number 16384? Answer only with the code word.)\n2.  **Scan the Text for the Answer:** I need to find the specific phrase linking \"сейф номер 16384\" (safe number 16384) to a code word.\n3.  **Locate the Key Information:** Scanning the provided text, I find this sentence: \"Кодовое слово для сейфа номер 16384 — «сокол-7783».\" (The code word for safe number 16384 is \"falcon-7783\".)\n4.  **Extract the Code Word:** The code word is \"сокол-7783\".\n5.  **Format the Output:** The user explicitly requested *only* the code word.\n6.  **Final Answer Generation:** сокол-7783.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 14101,
+        "cached_tokens": 2,
+        "completion_tokens": 271,
+        "reasoning_tokens": 262
+      },
+      "ms": 463510.769,
+      "ttft_ms": 342197.295
+    }
+  ],
+  "summary": {
+    "long-context": {
+      "n": 12,
+      "pass": 12,
+      "rate": 1
+    },
+    "long-context+thinking": {
+      "n": 12,
+      "pass": 12,
+      "rate": 1
+    }
+  },
+  "by_lang": {
+    "ru": {
+      "n": 24,
+      "pass": 24,
+      "rate": 1
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 136108.183,
+    "ttft_ms_p95": 359083.438
+  }
+}

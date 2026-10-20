@@ -1,0 +1,27 @@
+# tn-curve 2026-10-20T01:55:46+00:00 gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf tools /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE
+## strong: 16 threads, all nodes
+| model                          |       size |     params | backend    | threads | n_batch | n_ubatch |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | ------: | -------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp1 |         20.38 ± 1.46 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp2 |         27.47 ± 2.19 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp3 |         35.66 ± 4.71 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp4 |         40.28 ± 1.12 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp5 |         48.57 ± 3.26 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp6 |         51.63 ± 2.68 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp7 |         54.19 ± 1.97 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp8 |         55.55 ± 2.24 |
+
+build: ace20f679 (11600)
+## weak: 4 cores of node 0 (cpus 0,1,2,3)
+| model                          |       size |     params | backend    | threads | n_batch | n_ubatch |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | ------: | -------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp1 |          8.00 ± 0.15 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp2 |         11.16 ± 0.07 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp3 |         12.82 ± 0.15 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp4 |         14.70 ± 0.19 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp5 |         15.10 ± 0.23 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp6 |         15.49 ± 0.22 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp7 |         15.82 ± 0.19 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp8 |         16.65 ± 0.10 |
+
+build: ace20f679 (11600)

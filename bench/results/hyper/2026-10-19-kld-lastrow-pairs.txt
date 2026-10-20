@@ -1,0 +1,5 @@
+base16 vs base8: 100 prompts; top-1 agree 100 (100.0%); KL mean 0, median 0, p99 0, max 0
+base16 vs base-norepack: 100 prompts; top-1 agree 99 (99.0%); KL mean 0.00276, median 0.000907, p99 0.0859, max 0.0859
+base16 vs opt11-16: 100 prompts; top-1 agree 98 (98.0%); KL mean 0.00115, median 0.000877, p99 0.0065, max 0.0065
+base-norepack vs opt11-norepack: 100 prompts; top-1 agree 100 (100.0%); KL mean 0.00122, median 0.000594, p99 0.0151, max 0.0151
+opt11-16 vs opt11-norepack: 100 prompts; top-1 agree 97 (97.0%); KL mean 0.00205, median 0.00111, p99 0.0379, max 0.0379

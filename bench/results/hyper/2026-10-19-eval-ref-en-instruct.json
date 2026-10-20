@@ -1,0 +1,611 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "en-instruct",
+    "sha256": "b72aedf860d16e60b8c45a7898e2463dc2afadb235cfaee1075af35342795a1a",
+    "items": 16
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "14677a5a3911444e3d4c78414c9fe6a8c6ed2598",
+    "device": "cpu",
+    "kv": "f16",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "false",
+    "numa": "auto",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "16"
+  },
+  "date": "2026-10-19",
+  "results": [
+    {
+      "id": "en-three-colors",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Red, Orange, Yellow",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 25,
+        "cached_tokens": 0,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 57126.982,
+      "ttft_ms": 1142.078
+    },
+    {
+      "id": "en-three-colors",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Red, Orange, Yellow",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 32,
+        "cached_tokens": 2,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 4287.844,
+      "ttft_ms": 845.89
+    },
+    {
+      "id": "en-one-word",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Tokyo",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 21,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 1346.364,
+      "ttft_ms": 882.924
+    },
+    {
+      "id": "en-one-word",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Tokyo",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 28,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 1230.74,
+      "ttft_ms": 1141.516
+    },
+    {
+      "id": "en-number",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "51",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 25,
+        "cached_tokens": 2,
+        "completion_tokens": 2,
+        "reasoning_tokens": 0
+      },
+      "ms": 1116.256,
+      "ttft_ms": 709.257
+    },
+    {
+      "id": "en-number",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "51",
+      "reasoning": "The user wants me to calculate 17 multiplied by 3.\n17 * 3 = (10 + 7) * 3 = 10 * 3 + 7 * 3 = 30 + 21 = 51.\nThe user requested the answer with the number only.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 32,
+        "cached_tokens": 2,
+        "completion_tokens": 74,
+        "reasoning_tokens": 70
+      },
+      "ms": 13957.733,
+      "ttft_ms": 817.975
+    },
+    {
+      "id": "en-no-digits",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Photosynthesis is the vital process by which green plants convert light energy into chemical energy. This transformation allows them to create their own food using water and carbon dioxide.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 2,
+        "completion_tokens": 32,
+        "reasoning_tokens": 0
+      },
+      "ms": 10681.063,
+      "ttft_ms": 744.362
+    },
+    {
+      "id": "en-no-digits",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Photosynthesis is the vital process by which green plants convert light energy into chemical energy. Using water and carbon dioxide, these organisms produce glucose for sustenance while releasing oxygen into the atmosphere.",
+      "reasoning": "1.  **Analyze the Request:** The user wants an explanation of photosynthesis.\n2.  **Constraint 1:** The explanation must be exactly two sentences.\n3.  **Constraint 2:** No digits (numbers like 1, 2, 3, etc., or numerical representations like 2024).\n4.  **Drafting (Focus on content):** Photosynthesis is how plants make food. They use sunlight, water, and carbon dioxide to create sugar and oxygen.\n5.  **Refining for Constraints (Two sentences, no digits):**\n    *   *Sentence 1:* Photosynthesis is the vital process by which green plants convert light energy into chemical energy.\n    *   *Sentence 2:* Using water and carbon dioxide, these organisms produce glucose for sustenance while releasing oxygen into the atmosphere.\n6.  **Final Check:**\n    *   Two sentences? Yes.\n    *   Explains photosynthesis? Yes.\n    *   No digits? Yes. (No numbers used).\n7.  **Output Generation.**",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 30,
+        "cached_tokens": 2,
+        "completion_tokens": 264,
+        "reasoning_tokens": 226
+      },
+      "ms": 50699.912,
+      "ttft_ms": 1293.572
+    },
+    {
+      "id": "en-uppercase",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "HELLO",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 22,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 890.027,
+      "ttft_ms": 805.707
+    },
+    {
+      "id": "en-uppercase",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "HELLO",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 29,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 1197.787,
+      "ttft_ms": 732.209
+    },
+    {
+      "id": "en-list-3",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "- Mercury\n- Venus\n- Earth",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 30,
+        "cached_tokens": 2,
+        "completion_tokens": 8,
+        "reasoning_tokens": 0
+      },
+      "ms": 2795.411,
+      "ttft_ms": 760.012
+    },
+    {
+      "id": "en-list-3",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "- Mercury\n- Venus\n- Earth",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user wants a list of three planets from the Solar System.\n2.  **Analyze the Formatting Constraints:**\n    *   Must be a list.\n    *   One planet per line.\n    *   Each line must start with \"- \".\n3.  **Select Three Planets:** (e.g., Mars, Jupiter, Earth).\n4.  **Apply Formatting:**\n    *   - Mars\n    *   - Jupiter\n    *   - Earth\n5.  **Final Output Generation.**",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 37,
+        "cached_tokens": 2,
+        "completion_tokens": 131,
+        "reasoning_tokens": 121
+      },
+      "ms": 29337.24,
+      "ttft_ms": 1898.396
+    },
+    {
+      "id": "en-polite-refusal",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"cannot\"",
+      "answer": "\"I'm sorry, but for security reasons, I cannot read out another customer's card number. I can only assist you with your own account information.\"",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 34,
+        "cached_tokens": 2,
+        "completion_tokens": 33,
+        "reasoning_tokens": 0
+      },
+      "ms": 9284.639,
+      "ttft_ms": 1151.31
+    },
+    {
+      "id": "en-polite-refusal",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"cannot\"",
+      "answer": "I cannot provide that information. For security and privacy reasons, I am strictly prohibited from disclosing another customer's private financial details.",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user is asking for a response to a specific scenario: a customer asking a bank operator to read out another customer's card number.\n2.  **Determine the Persona:** The response must be from a \"bank operator.\"\n3.  **Determine the Goal/Constraint:** The response must be in \"one or two sentences.\"\n4.  **Identify the Core Principle (Security/Policy):** Banks *never* disclose sensitive customer information (like card numbers) to unauthorized parties, especially not over the phone, due to strict privacy and security protocols (PCI DSS, etc.).\n5.  **Draft the Response (Focus on Refusal and Security):**\n    *   *Initial thought:* I cannot do that. It is against policy.\n    *   *Refining for professionalism (Bank Operator tone):* I cannot provide that information. For security reasons, I am unable to disclose another customer's private financial details.\n6.  **Final Polish (Check constraints):**\n    *   Bank operator tone? Yes.\n    *   One or two sentences? Yes.\n    *   Addresses the request appropriately (refusal)? Yes.\n\n7.  **Select the best response.** (The chosen response is professional, firm, and emphasizes security.)",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 41,
+        "cached_tokens": 2,
+        "completion_tokens": 305,
+        "reasoning_tokens": 277
+      },
+      "ms": 53641.286,
+      "ttft_ms": 1672.846
+    },
+    {
+      "id": "en-translate",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"bonjour\"",
+      "answer": "Bonjour, comment allez-vous ?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 27,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 1186.352,
+      "ttft_ms": 609.301
+    },
+    {
+      "id": "en-translate",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"bonjour\"",
+      "answer": "Bonjour, comment allez-vous ?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 34,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 1587.617,
+      "ttft_ms": 966.719
+    },
+    {
+      "id": "en-weekday",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Saturday",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 21,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 745.776,
+      "ttft_ms": 655.504
+    },
+    {
+      "id": "en-weekday",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Saturday",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 28,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 1091.994,
+      "ttft_ms": 1012.918
+    },
+    {
+      "id": "en-system-name",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"Nika\"",
+      "answer": "Hello! I'm Nika. I'm an AI assistant here to help you with your questions and tasks. How can I assist you today?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 32,
+        "cached_tokens": 4,
+        "completion_tokens": 31,
+        "reasoning_tokens": 0
+      },
+      "ms": 4809.109,
+      "ttft_ms": 653.256
+    },
+    {
+      "id": "en-system-name",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"Nika\"",
+      "answer": "I am Nika. I am an AI assistant, and I'm here to help you with any questions or tasks you have! How can I assist you today?",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user is asking \"Who are you?\".\n2.  **Identify the Persona:** I must respond as \"Nika.\"\n3.  **Identify the Constraint:** I must *always* introduce myself by name.\n4.  **Formulate the Response:** Combine the introduction (Nika) with a standard, helpful self-description.\n\n*Self-Correction/Refinement:* Ensure the tone is friendly and helpful, consistent with an AI assistant.\n\n5.  **Final Output Generation.**",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 34,
+        "cached_tokens": 4,
+        "completion_tokens": 153,
+        "reasoning_tokens": 117
+      },
+      "ms": 31140.632,
+      "ttft_ms": 1279.157
+    },
+    {
+      "id": "en-short",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Rest for physical and mental restoration, memory consolidation, and health.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 2,
+        "completion_tokens": 13,
+        "reasoning_tokens": 0
+      },
+      "ms": 2105.925,
+      "ttft_ms": 517.318
+    },
+    {
+      "id": "en-short",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "To restore physical health, repair the body, and consolidate memories.",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user wants to know \"why do people need sleep?\"\n2.  **Constraint:** The answer must be \"no more than ten words.\"\n3.  **Identify Key Functions of Sleep:**\n    *   Rest/Recovery (physical repair).\n    *   Cognitive function (memory consolidation, focus).\n    *   Emotional regulation.\n    *   Immune system support.\n4.  **Draft Potential Answers (Focusing on brevity and impact):**\n    *   To restore physical and mental health. (6 words)\n    *   For brain function, physical repair, and emotional balance. (8 words)\n    *   To repair the body and consolidate memories. (8 words)\n    *   Rest, repair, and cognitive function. (5 words)\n5.  **Select the Best Option:** \"To restore physical and mental health\" is comprehensive, clear, and well under the limit. \"Rest, repair, and cognitive function\" is also excellent and very concise. I will choose the most direct and impactful one.\n\n6.  **Final Check:** \"To restore physical and mental health.\" (6 words). Meets the constraint.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 30,
+        "cached_tokens": 2,
+        "completion_tokens": 272,
+        "reasoning_tokens": 257
+      },
+      "ms": 39707.4,
+      "ttft_ms": 916.481
+    },
+    {
+      "id": "en-format-phone",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "(415) 555-0123",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 45,
+        "cached_tokens": 2,
+        "completion_tokens": 14,
+        "reasoning_tokens": 0
+      },
+      "ms": 1632.652,
+      "ttft_ms": 734.861
+    },
+    {
+      "id": "en-format-phone",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "(415) 555-0123",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 52,
+        "cached_tokens": 2,
+        "completion_tokens": 14,
+        "reasoning_tokens": 0
+      },
+      "ms": 1717.458,
+      "ttft_ms": 829.634
+    },
+    {
+      "id": "en-yes-no",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "yes",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 31,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 639.407,
+      "ttft_ms": 564.897
+    },
+    {
+      "id": "en-yes-no",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Yes",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user is asking a specific scientific question: \"Does water boil at 100 degrees Celsius at sea level?\"\n2.  **Identify the Constraint:** The user explicitly demands the answer be \"yes\" or \"no\".\n3.  **Determine the Scientific Fact:** The boiling point of pure water at standard atmospheric pressure (sea level) is indeed 100 degrees Celsius (212 degrees Fahrenheit).\n4.  **Formulate the Answer:** Based on the fact, the answer is \"yes\".\n5.  **Final Check:** Does the answer meet the constraint? Yes, it is \"yes\".",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 38,
+        "cached_tokens": 2,
+        "completion_tokens": 146,
+        "reasoning_tokens": 143
+      },
+      "ms": 25933.975,
+      "ttft_ms": 670.101
+    },
+    {
+      "id": "en-sum-word",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"four\"",
+      "answer": "Four",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 734.67,
+      "ttft_ms": 644.839
+    },
+    {
+      "id": "en-sum-word",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"four\"",
+      "answer": "Four",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 30,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 1525.18,
+      "ttft_ms": 1266.958
+    },
+    {
+      "id": "en-name-greeting",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"Anna\"",
+      "answer": "Hello Anna, it's nice to meet you!",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 2,
+        "completion_tokens": 11,
+        "reasoning_tokens": 0
+      },
+      "ms": 4412.938,
+      "ttft_ms": 710.955
+    },
+    {
+      "id": "en-name-greeting",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"Anna\"",
+      "answer": "Hello Anna, it's a pleasure to meet you.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 30,
+        "cached_tokens": 2,
+        "completion_tokens": 12,
+        "reasoning_tokens": 0
+      },
+      "ms": 2544.604,
+      "ttft_ms": 1304.166
+    },
+    {
+      "id": "en-json-keys",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n\"name\": \"Tom\",\n\"age\": 30\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 40,
+        "cached_tokens": 2,
+        "completion_tokens": 17,
+        "reasoning_tokens": 0
+      },
+      "ms": 5680.534,
+      "ttft_ms": 1223.008
+    },
+    {
+      "id": "en-json-keys",
+      "lang": "en",
+      "capability": "en-instructions",
+      "thinking": true,
+      "pass": false,
+      "detail": "not JSON: invalid character '`' looking for beginning of value",
+      "answer": "```json\n{\n  \"name\": \"Tom\",\n  \"age\": 30\n}\n```",
+      "reasoning": "The user wants a JSON object.\nThe keys must be \"name\" and \"age\".\nThe values must be \"Tom\" and 30.\nThe output must be JSON only.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 47,
+        "cached_tokens": 2,
+        "completion_tokens": 68,
+        "reasoning_tokens": 42
+      },
+      "ms": 19583.368,
+      "ttft_ms": 1795.252
+    }
+  ],
+  "summary": {
+    "en-instructions": {
+      "n": 16,
+      "pass": 16,
+      "rate": 1
+    },
+    "en-instructions+thinking": {
+      "n": 16,
+      "pass": 15,
+      "rate": 0.9375
+    }
+  },
+  "by_lang": {
+    "en": {
+      "n": 32,
+      "pass": 31,
+      "rate": 0.96875
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 845.89,
+    "ttft_ms_p95": 1795.252
+  }
+}

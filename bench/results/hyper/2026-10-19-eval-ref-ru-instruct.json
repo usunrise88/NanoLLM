@@ -1,0 +1,576 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "ru-instruct",
+    "sha256": "2d845da65669ff8272a19e6552d1a644fc12b53aa65699e1cd646018666ad028",
+    "items": 15
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "14677a5a3911444e3d4c78414c9fe6a8c6ed2598",
+    "device": "cpu",
+    "kv": "f16",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "false",
+    "numa": "auto",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "16"
+  },
+  "date": "2026-10-19",
+  "results": [
+    {
+      "id": "ru-count-words",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Красный, оранжевый, желтый",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 25,
+        "cached_tokens": 0,
+        "completion_tokens": 10,
+        "reasoning_tokens": 0
+      },
+      "ms": 56393.367,
+      "ttft_ms": 801.959
+    },
+    {
+      "id": "ru-count-words",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Красный, оранжевый, желтый",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 32,
+        "cached_tokens": 2,
+        "completion_tokens": 10,
+        "reasoning_tokens": 0
+      },
+      "ms": 3098.988,
+      "ttft_ms": 933.398
+    },
+    {
+      "id": "ru-one-word",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Париж",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 20,
+        "cached_tokens": 2,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 944.03,
+      "ttft_ms": 625.916
+    },
+    {
+      "id": "ru-one-word",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Париж",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 27,
+        "cached_tokens": 2,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1101.386,
+      "ttft_ms": 780.202
+    },
+    {
+      "id": "ru-number",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "51",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 28,
+        "cached_tokens": 2,
+        "completion_tokens": 2,
+        "reasoning_tokens": 0
+      },
+      "ms": 892.671,
+      "ttft_ms": 677.414
+    },
+    {
+      "id": "ru-number",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "51",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 35,
+        "cached_tokens": 2,
+        "completion_tokens": 2,
+        "reasoning_tokens": 0
+      },
+      "ms": 1928.147,
+      "ttft_ms": 1646.027
+    },
+    {
+      "id": "ru-no-latin",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Фотосинтез — это процесс, при котором растения с помощью солнечного света превращают воду и углекислый газ в пищу. В результате этого преобразования растения выделяют кислород, необходимый для дыхания живых существ.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 33,
+        "cached_tokens": 2,
+        "completion_tokens": 50,
+        "reasoning_tokens": 0
+      },
+      "ms": 11198.292,
+      "ttft_ms": 1263.49
+    },
+    {
+      "id": "ru-no-latin",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Фотосинтез — это процесс, при котором растения используют солнечный свет, воду и углекислый газ. В результате они создают органические вещества для своего питания и выделяют кислород.",
+      "reasoning": "Here's a thinking process to arrive at the suggested answer:\n\n1.  **Analyze the Request:**\n    *   **Topic:** Explain photosynthesis.\n    *   **Constraint 1:** Must be in two sentences.\n    *   **Constraint 2:** Must *not* use Latin letters (i.e., use only Cyrillic/Russian alphabet).\n\n2.  **Define Photosynthesis (Core Concept):**\n    *   Plants use sunlight, water, and carbon dioxide.\n    *   They convert these into food (sugars/glucose) and oxygen.\n    *   It's the process of converting light energy into chemical energy.\n\n3.  **Draft the Explanation (Focusing on Simplicity and Flow):**\n    *   *Draft 1 (Mental Check):* Photosynthesis is how plants make food. They use sun, water, and air to create sugar and oxygen. (Too simple, maybe needs more scientific flavor.)\n    *   *Draft 2 (Adding Detail):* Фотосинтез — это процесс, при котором растения используют солнечный свет, воду и углекислый газ. В результате они создают органические вещества для питания и выделяют кислород.\n\n4.  **Review Against Constraints:**\n    *   *Two sentences?* Yes.\n    *   *No Latin letters?* Yes (Фотосинтез, процесс, растения, используют, солнечный, свет, воду, углекислый, газ, в, результате, они, создают, органические, вещества, для, питания, и, выделяют, кислород).\n\n5.  **Final Polish (The resulting Russian text):** (This matches the final output.)",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 40,
+        "cached_tokens": 2,
+        "completion_tokens": 405,
+        "reasoning_tokens": 362
+      },
+      "ms": 91783.093,
+      "ttft_ms": 1450.767
+    },
+    {
+      "id": "ru-uppercase",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "ПРИВЕТ",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 27,
+        "cached_tokens": 2,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 1099.689,
+      "ttft_ms": 659.801
+    },
+    {
+      "id": "ru-uppercase",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "ПРИВЕТ",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 34,
+        "cached_tokens": 2,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 1122.08,
+      "ttft_ms": 792.758
+    },
+    {
+      "id": "ru-list-3",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "- Меркурий\n- Венера\n- Земля",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 32,
+        "cached_tokens": 2,
+        "completion_tokens": 12,
+        "reasoning_tokens": 0
+      },
+      "ms": 2834.812,
+      "ttft_ms": 743.285
+    },
+    {
+      "id": "ru-list-3",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "- Земля\n- Марс\n- Юпитер",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user wants a list of three planets from the Solar System.\n2.  **Analyze the Formatting Constraints:**\n    *   List format.\n    *   Each item on a new line.\n    *   Each item must start with a hyphen (\"-\").\n3.  **Select Three Planets:** I need to choose any three planets (e.g., Earth, Mars, Jupiter).\n4.  **Format the Output:** Apply the constraints.\n\n*Self-Correction/Verification:*\n*   Three planets? Yes.\n*   Solar System? Yes.\n*   List? Yes.\n*   New line for each? Yes.\n*   Starts with \"-\"? Yes.\n\n5.  **Generate the response.** (Using Earth, Mars, and Jupiter as examples).",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 39,
+        "cached_tokens": 2,
+        "completion_tokens": 193,
+        "reasoning_tokens": 179
+      },
+      "ms": 37790.508,
+      "ttft_ms": 1186.488
+    },
+    {
+      "id": "ru-polite-refusal",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"не могу\"",
+      "answer": "Извините, по соображениям безопасности я не могу предоставить вам номер карты другого клиента. Для защиты конфиденциальности данных мы не разглашаем такую информацию.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 35,
+        "cached_tokens": 2,
+        "completion_tokens": 35,
+        "reasoning_tokens": 0
+      },
+      "ms": 6165.551,
+      "ttft_ms": 852.378
+    },
+    {
+      "id": "ru-polite-refusal",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"не можем\"",
+      "answer": "Приносим извинения, но в целях безопасности и соблюдения конфиденциальности мы не можем предоставлять персональные данные или информацию о картах других клиентов.",
+      "reasoning": "Here's a thinking process to arrive at the suggested response:\n\n1.  **Analyze the Request:**\n    *   **Scenario:** A client is asking for the card number of *another* client.\n    *   **Role:** Bank Operator.\n    *   **Constraint:** Respond in one or two sentences.\n    *   **Goal:** Deny the request while maintaining professionalism and adhering to security protocols.\n\n2.  **Determine the Core Policy (Security/Privacy):**\n    *   Bank operators *cannot* disclose private financial information (like card numbers) of third parties due to strict privacy laws (GDPR, local banking regulations, etc.). This is a non-negotiable security boundary.\n\n3.  **Draft Potential Responses (Internal Monologue/Drafting):**\n    *   *Draft 1 (Too blunt):* I cannot give you that number. It's private.\n    *   *Draft 2 (Too long/Wordy):* For security and privacy reasons, I am not allowed to share the card details of any other customer with you.\n    *   *Draft 3 (Professional and concise - focusing on policy):* We cannot provide personal financial information of other clients due to strict privacy regulations.\n    *   *Draft 4 (Action-oriented, if applicable, but still denying):* I apologize, but for security reasons, I cannot disclose the card details of another client.\n\n4.  **Select and Refine the Best Option (Meeting the 1-2 sentence constraint):**\n    *   Draft 4 is the most professional and direct. It clearly states the refusal and the reason (security).\n\n5.  **Final Polish (Russian Translation):**\n    *   *Target:* \"I apologize, but for security reasons, I cannot disclose the card details of another client.\"\n    *   *Russian:* \"Приносим извинения, но в целях безопасности мы не можем предоставлять персональные данные или информацию о картах других клиентов.\" (Slightly formal and comprehensive.)\n\n6.  **Final Check:**\n    *   Role: Bank Operator? Yes.\n    *   Addresses the request? Yes (denies it).\n    *   1-2 sentences? Yes.\n    *   Professional? Yes. (This is the chosen response.)",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 42,
+        "cached_tokens": 2,
+        "completion_tokens": 525,
+        "reasoning_tokens": 490
+      },
+      "ms": 91957.349,
+      "ttft_ms": 983.886
+    },
+    {
+      "id": "ru-translate",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"good morning\"",
+      "answer": "Good morning, how are you?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 31,
+        "cached_tokens": 2,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 4592.905,
+      "ttft_ms": 812.017
+    },
+    {
+      "id": "ru-translate",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"good morning\"",
+      "answer": "Good morning, how are you?",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user wants to translate the Russian phrase \"Доброе утро, как дела?\" into English.\n2.  **Analyze the Phrase:**\n    *   \"Доброе утро\" = Good morning.\n    *   \"как дела?\" = How are you? / How are things? / How's it going?\n3.  **Determine the Best Translation (Context/Tone):** Since this is a common greeting, the most natural and standard English equivalents are needed.\n4.  **Formulate the Translation:**\n    *   *Option 1 (Standard):* Good morning, how are you?\n    *   *Option 2 (Casual):* Good morning, how's it going?\n5.  **Apply Constraints:** The user requested: \"Ответь только переводом\" (Answer only with the translation).\n6.  **Final Selection:** Good morning, how are you? (or Good morning, how's it going?) I will provide the most common and direct translation.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 38,
+        "cached_tokens": 2,
+        "completion_tokens": 234,
+        "reasoning_tokens": 225
+      },
+      "ms": 40734.389,
+      "ttft_ms": 815.137
+    },
+    {
+      "id": "ru-date",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Суббота",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 21,
+        "cached_tokens": 2,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 902.552,
+      "ttft_ms": 650.922
+    },
+    {
+      "id": "ru-date",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Суббота",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 28,
+        "cached_tokens": 2,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1101.258,
+      "ttft_ms": 845.498
+    },
+    {
+      "id": "ru-system-name",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"Ника\"",
+      "answer": "Привет! Я Ника, твой ассистент. Чем я могу тебе помочь сегодня?",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 35,
+        "cached_tokens": 4,
+        "completion_tokens": 20,
+        "reasoning_tokens": 0
+      },
+      "ms": 4912.801,
+      "ttft_ms": 1275.474
+    },
+    {
+      "id": "ru-system-name",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"Ника\"",
+      "answer": "Я Ника, твой ассистент. Чем я могу тебе помочь?",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user is asking \"Who are you?\" (Кто ты?).\n2.  **Analyze the Persona Constraint:** The system instruction dictates: \"You are an assistant named Nika. Always introduce yourself by name.\" (Ты — ассистент по имени Ника. Всегда представляйся по имени.)\n3.  **Determine the Response Content:** The response must be a self-introduction, stating the name \"Nika\" and the role (assistant).\n4.  **Formulate the Response (Russian):**\n    *   *Greeting/Introduction:* Я Ника. (I am Nika.)\n    *   *Role:* Я твой ассистент. (I am your assistant.)\n    *   *Polite closing/Offer of help:* Чем я могу тебе помочь? (How can I help you?)\n5.  **Final Polish:** Combine the elements into a natural, friendly response. (Я Ника, твой ассистент. Чем я могу тебе помочь?)",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 37,
+        "cached_tokens": 4,
+        "completion_tokens": 242,
+        "reasoning_tokens": 223
+      },
+      "ms": 50844.262,
+      "ttft_ms": 823.196
+    },
+    {
+      "id": "ru-short",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Восстановление организма, консолидация памяти и эмоциональная регуляция.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 22,
+        "cached_tokens": 2,
+        "completion_tokens": 16,
+        "reasoning_tokens": 0
+      },
+      "ms": 2582.808,
+      "ttft_ms": 508.21
+    },
+    {
+      "id": "ru-short",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Для физического и умственного восстановления, а также для обработки информации.",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user is asking \"Why do people sleep?\" (зачем людям сон?).\n2.  **Constraint:** The answer must be no longer than ten words (Ответь не длиннее десяти слов).\n3.  **Determine the Core Answer (Scientific/Biological):** Sleep is essential for physical and mental restoration, memory consolidation, and brain repair.\n4.  **Draft Potential Answers (in Russian):**\n    *   Для восстановления организма и мозга. (For the restoration of the body and brain.) - 5 words.\n    *   Чтобы восстановить силы, консолидировать память и отдохнуть. (To restore strength, consolidate memory, and rest.) - 7 words.\n    *   Для физического и умственного восстановления. (For physical and mental restoration.) - 5 words.\n5.  **Select the Best/Most Concise Answer:** \"Для физического и умственного восстановления\" is accurate, concise, and meets the constraint.\n\n6.  **Final Check:**\n    *   Answer: Для физического и умственного восстановления.\n    *   Word count: 5 words.\n    *   Constraint met: Yes (\u003c= 10 words).",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 29,
+        "cached_tokens": 2,
+        "completion_tokens": 280,
+        "reasoning_tokens": 264
+      },
+      "ms": 55635.536,
+      "ttft_ms": 669.752
+    },
+    {
+      "id": "ru-format-phone",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "+7 (916) 123-45-67",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 51,
+        "cached_tokens": 2,
+        "completion_tokens": 17,
+        "reasoning_tokens": 0
+      },
+      "ms": 5373.902,
+      "ttft_ms": 1749.999
+    },
+    {
+      "id": "ru-format-phone",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "+7 (916) 123-45-67",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 58,
+        "cached_tokens": 2,
+        "completion_tokens": 17,
+        "reasoning_tokens": 0
+      },
+      "ms": 5172.648,
+      "ttft_ms": 1502.962
+    },
+    {
+      "id": "ru-yes-no",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "answer": "Да",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 37,
+        "cached_tokens": 2,
+        "completion_tokens": 1,
+        "reasoning_tokens": 0
+      },
+      "ms": 1159.619,
+      "ttft_ms": 865.457
+    },
+    {
+      "id": "ru-yes-no",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "answer": "Да.",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user is asking a factual question: \"Does water boil at 100 degrees Celsius at sea level?\"\n2.  **Identify the Core Concept:** Boiling point of water, standard atmospheric pressure (sea level).\n3.  **Determine the Answer:** Yes, under standard atmospheric pressure (1 atm), pure water boils at 100°C.\n4.  **Format the Output:** The user explicitly requested the answer to be \"да\" (yes) or \"нет\" (no).\n5.  **Final Answer Generation:** Да. (Yes.)",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 44,
+        "cached_tokens": 2,
+        "completion_tokens": 137,
+        "reasoning_tokens": 133
+      },
+      "ms": 25031.537,
+      "ttft_ms": 1379.204
+    },
+    {
+      "id": "ru-sum-json-free",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"четыре\"",
+      "answer": "Четыре",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 23,
+        "cached_tokens": 2,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 934.627,
+      "ttft_ms": 500.661
+    },
+    {
+      "id": "ru-sum-json-free",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"четыре\"",
+      "answer": "Четыре",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 30,
+        "cached_tokens": 2,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1052.253,
+      "ttft_ms": 796.074
+    },
+    {
+      "id": "ru-name-greeting",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"Анна\"",
+      "answer": "Здравствуйте, Анна!",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 27,
+        "cached_tokens": 2,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2597.305,
+      "ttft_ms": 606.733
+    },
+    {
+      "id": "ru-name-greeting",
+      "lang": "ru",
+      "capability": "ru-instructions",
+      "thinking": true,
+      "pass": true,
+      "detail": "contains \"Анна\"",
+      "answer": "Здравствуйте, Анна! Рада с вами познакомиться.",
+      "reasoning": "Thinking Process:\n\n1.  **Analyze the Request:** The user (Anna) wants me to greet her by name in a single sentence.\n2.  **Identify the Key Information:** Name = Анна (Anna). Constraint = One sentence.\n3.  **Determine the Tone/Style:** Friendly, polite, direct (standard greeting).\n4.  **Formulate the Greeting (Drafting):**\n    *   *Option 1 (Simple):* Привет, Анна. (Too short, maybe not a full sentence in the formal sense, but acceptable.)\n    *   *Option 2 (Polite/Formal):* Здравствуйте, Анна. (Good, but maybe too brief.)\n    *   *Option 3 (Engaging/Complete):* Приятно познакомиться, Анна. (Nice to meet you, Anna.)\n    *   *Option 4 (Direct Greeting):* Здравствуйте, Анна, как ваши дела? (Hello, Anna, how are you?) - *This is a full sentence and meets the criteria.*\n5.  **Select the Best Option:** Option 4 is robust, polite, and clearly fulfills the \"greet by name in one sentence\" requirement. A slightly simpler, universally friendly option is often best.\n\n6.  **Final Polish (Russian):** Здравствуйте, Анна! (Hello, Anna!) or Привет, Анна! (Hi, Anna!)\n\n*(Self-Correction: Since the request is simple, a direct, warm greeting is sufficient.)*\n\n**Final Output Generation.**",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 34,
+        "cached_tokens": 2,
+        "completion_tokens": 334,
+        "reasoning_tokens": 321
+      },
+      "ms": 61168.926,
+      "ttft_ms": 827.928
+    }
+  ],
+  "summary": {
+    "ru-instructions": {
+      "n": 15,
+      "pass": 15,
+      "rate": 1
+    },
+    "ru-instructions+thinking": {
+      "n": 15,
+      "pass": 15,
+      "rate": 1
+    }
+  },
+  "by_lang": {
+    "ru": {
+      "n": 30,
+      "pass": 30,
+      "rate": 1
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 823.196,
+    "ttft_ms_p95": 1646.027
+  }
+}
