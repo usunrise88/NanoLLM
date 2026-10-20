@@ -10,15 +10,17 @@
 #   3. the capability gate of repack off (thinking off and on) and of KV cache
 #      q8_0 on the long-context suite.
 #
-#   scripts/stage2-final-checks.sh        # waits for "=== HH:MM:SS done" in the night log
+#   [SKIP_MTP=1] scripts/stage2-final-checks.sh   # waits for "=== HH:MM:SS done" in the night log
 set -uo pipefail
 cd "$(dirname "$0")/.."
 export PATH=$HOME/.local/go/bin:$HOME/go/bin:$PATH
 until grep -q "=== [0-9:]* done" ~/nanollm-data/sweep/night-hdd.log; do sleep 120; done
 echo "=== $(date +%T) night queue done; post-night starts"
 export NANOLLM_DEV_SERIES=$(tr -d '[:space:]' < .cache/next.commit)
-echo "=== $(date +%T) MTP sweep on the next series"
-NANOLLM=./dist/nanollm-next scripts/hyper-exclusive.sh -- scripts/mtp-sweep.sh mtp-next ~/nanollm-data/next.yaml
+if [[ -z ${SKIP_MTP-} ]]; then
+	echo "=== $(date +%T) MTP sweep on the next series"
+	NANOLLM=./dist/nanollm-next scripts/hyper-exclusive.sh -- scripts/mtp-sweep.sh mtp-next ~/nanollm-data/next.yaml
+fi
 for c in ref-next ref-next-ngram; do
 	echo "=== $(date +%T) eval of $c, thinking off and on"
 	THINKING=both NANOLLM=./dist/nanollm-next scripts/hyper-exclusive.sh --max-load 99 -- scripts/quality-gate.sh $c

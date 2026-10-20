@@ -30,7 +30,8 @@ for s in "${SUITES[@]}"; do
 	ref=$D/eval/ref-$s.json
 	cand=$D/eval/$CFG-$s.json
 	off=$(mktemp --suffix=.json)
-	if [[ ! -f $cand ]]; then
+	# A report from an interrupted run has no summary: it is not done.
+	if ! jq -e '.summary != null' "$cand" >/dev/null 2>&1; then
 		echo "=== $(date +%T) eval $s with $CFG (thinking $THINK)"
 		nice -n 10 "$BIN" eval --config "$D/$CFG.yaml" --suite "$s" --thinking "$THINK" --out "$cand" 2>&1 | tail -3 || rc=1
 	fi
