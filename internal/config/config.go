@@ -143,6 +143,12 @@ type ModelOverride struct {
 	// short ID, M1…M10.
 	Mode   string `yaml:"mode"`
 	KVType string `yaml:"kv_type"`
+	// Repack is "" (the planner decides: on where the CPU backend has kernels
+	// for the repacked layout), "on" or "off". Off keeps the weights as the
+	// file has them and runs the generic kernels; it is the fallback for a CPU
+	// without repack kernels and a knob for the autotuner (docs/QUALITY-STAGE2.md:
+	// KLD within the noise of another kernel variant).
+	Repack string `yaml:"repack"`
 	// NCtx and Slots take "auto": what the preset leaves after weights, down
 	// to a floor of 4096 tokens and one slot.
 	NCtx        Auto        `yaml:"n_ctx"`

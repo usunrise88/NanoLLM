@@ -51,6 +51,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		Model: model, Preset: preset, Mode: mode, KVType: ov.KVType, Proven: plan.ProvenFor(runtime.GOOS),
 		NCtx: ov.NCtx.N, Slots: ov.Slots.N,
 		NoMTP: ov.Speculative.Type == config.SpecNone, DraftMax: ov.Speculative.NMax, DraftPMin: ov.Speculative.PMin,
+		NoRepack: ov.Repack == "off",
 	}
 	// MTP is off by default on the CPU: the stage 2 sweep (docs/STAGE2.md 2.7)
 	// found at best 1.04x on a 16-core EPYC (threshold 1.2x), and the drafter
@@ -88,6 +89,12 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	}
 	if spec.Stream != nil {
 		spec.Stream.Ahead, spec.Stream.Keep, spec.Stream.Evict = ov.Stream.Ahead, ov.Stream.Keep, ov.Stream.Evict
+	}
+	switch ov.Repack {
+	case "on":
+		spec.Repack = true
+	case "off":
+		spec.Repack = false
 	}
 	spec.Threads, spec.ThreadsBatch = req.Threads, req.ThreadsBatch
 	spec = spec.WithDefaultThreads()

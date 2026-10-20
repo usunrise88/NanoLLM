@@ -256,3 +256,37 @@ func TestPlannerPlacerCarriesTheStreamSettings(t *testing.T) {
 		t.Errorf("ram-2g stream spec %+v, want ahead 3, keep 5, evict, with ranges", st)
 	}
 }
+
+// models.overrides.<id>.repack: off keeps the weights as the file has them in
+// every CPU mode (the quality gate of docs/QUALITY-STAGE2.md needs it), on
+// forces the repacked layout, and no key leaves it to the planner.
+func TestPlannerPlacerRepackKey(t *testing.T) {
+	m := defaultModel(t)
+	for _, preset := range []string{"ram-8g", "ram-4g"} {
+		req := cpuRequest(m)
+		req.Override.Preset = preset
+		def, err := PlannerPlacer(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !def.Spec.Repack {
+			t.Fatalf("%s: the planner's own choice is not repack", preset)
+		}
+		req.Override.Repack = "off"
+		off, err := PlannerPlacer(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if off.Spec.Repack {
+			t.Errorf("%s: repack: off still repacks", preset)
+		}
+		req.Override.Repack = "on"
+		on, err := PlannerPlacer(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !on.Spec.Repack {
+			t.Errorf("%s: repack: on does not repack", preset)
+		}
+	}
+}

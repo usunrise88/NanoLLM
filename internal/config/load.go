@@ -341,6 +341,11 @@ func (o ModelOverride) validate() error {
 	default:
 		return fmt.Errorf("kv_type must be %s or %s, got %q", KVF16, KVQ8_0, o.KVType)
 	}
+	switch o.Repack {
+	case "", "on", "off":
+	default:
+		return fmt.Errorf("repack must be on or off, got %q", o.Repack)
+	}
 	switch o.Speculative.Type {
 	case "", SpecMTP, SpecNone, SpecNGram:
 	default:
