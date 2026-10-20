@@ -10,9 +10,12 @@
 # jobs queue instead of overlapping. Jobs that do not measure time (builds,
 # KLD, eval) do not take it.
 #
-# Before running, the script waits until the 1-minute load average, minus what
-# the lock holders themselves could add, drops under --max-load (default 6),
-# or gives up after --wait seconds (default 6 h) with status 75.
+# The script first waits, WITHOUT the lock, until the 1-minute load average
+# drops under --max-load (default 6); only then does it queue for the lock, and
+# once it has it checks the load again (it may have changed while queued). A
+# job that waited for a quiet host while holding the lock would keep every
+# other job out, including those that accept any load (--max-load 99). It
+# gives up after --wait seconds (default 6 h) with status 75.
 set -euo pipefail
 
 MAX_LOAD=6
@@ -29,22 +32,27 @@ done
 
 LOCK=${NANOLLM_BENCH_LOCK:-$HOME/nanollm-data/hyper-bench.lock}
 mkdir -p "$(dirname "$LOCK")"
-exec 9>"$LOCK"
-if ! flock -w "$WAIT" 9; then
-  echo "hyper-exclusive: could not take $LOCK in ${WAIT}s" >&2
-  exit 75
-fi
-echo "hyper-exclusive: lock taken ($*)" >&2
+load() { cut -d' ' -f1 /proc/loadavg; }
+quiet() { awk -v l="$(load)" -v m="$MAX_LOAD" 'BEGIN{exit !(l < m)}'; }
 
 deadline=$((SECONDS + WAIT))
 while :; do
-  load=$(cut -d' ' -f1 /proc/loadavg)
-  if awk -v l="$load" -v m="$MAX_LOAD" 'BEGIN{exit !(l < m)}'; then break; fi
-  if ((SECONDS >= deadline)); then
-    echo "hyper-exclusive: load $load stayed above $MAX_LOAD" >&2
+  until quiet; do
+    if ((SECONDS >= deadline)); then
+      echo "hyper-exclusive: load $(load) stayed above $MAX_LOAD" >&2
+      exit 75
+    fi
+    sleep 20
+  done
+  exec 9>"$LOCK"
+  left=$((deadline - SECONDS))
+  ((left >= 1)) || left=1
+  if ! flock -w "$left" 9; then
+    echo "hyper-exclusive: could not take $LOCK in ${WAIT}s" >&2
     exit 75
   fi
-  sleep 20
+  quiet && break
+  exec 9>&- # the load rose while queued: let the others go and wait again
 done
-echo "hyper-exclusive: load $load, running" >&2
+echo "hyper-exclusive: lock taken, load $(load), running ($*)" >&2
 "$@"
