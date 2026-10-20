@@ -67,8 +67,9 @@ jobs:
         if: ${{ !matrix.win }}
         run: |
           if [ "${{ matrix.cpu }}" = true ]; then
+            # `ggml` pulls in every CPU variant; "all" would also build the llama app.
             CPU_FLAGS="-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON"
-            TARGETS=""
+            TARGETS="--target llama ggml-base ggml"
           else
             CPU_FLAGS="-DGGML_CPU=OFF"
             TARGETS="--target llama ggml-base"
@@ -97,6 +98,9 @@ jobs:
           find build -type f -o -type l | grep -E '/(lib)?(llama|ggml-base|ggml-cpu-[0-9a-z_]+|omp)[.0-9a-z]*\.(so|dylib|dll)[.0-9]*$' | while read -r f; do cp -P "$f" out/; done
           ls -l out
           test -n "$(ls out)" || { echo "no libraries were built" >&2; exit 1; }
+          if [ "${{ matrix.cpu }}" = true ]; then
+            ls out | grep -q '^\(lib\)\?ggml-cpu-' || { echo "no CPU variants were built" >&2; exit 1; }
+          fi
           tar -czf "nanollm-libs-${{ matrix.target }}.tar.gz" -C out .
 
       - uses: actions/upload-artifact@v4
