@@ -6,10 +6,10 @@ name: libs-build
 # hash against scripts/llama.cpp.commit). ggml_commit() lives in libggml-base,
 # so the commit check sees our commit.
 #
-# Patches 0002 and 0003 live in the CPU backend (ggml-cpu), so a target marked
-# `cpu` in the matrix also builds the CPU variants (GGML_CPU_ALL_VARIANTS, the
-# flags of upstream's release job) and ships them in the same archive; a target
-# without it keeps upstream's CPU variants, which run the same model with the
+# Patches 0002-0004 live in the CPU backend (ggml-cpu), so a target marked
+# `cpu` in the matrix also builds the CPU backend (GGML_CPU_ALL_VARIANTS where
+# upstream's release job uses it) and ships it in the same archive; a target
+# without it keeps upstream's CPU backend, which runs the same model with the
 # unpatched kernels. The Vulkan and CUDA backends are always upstream's.
 # fetch-libs.sh lays what the archive holds over upstream's.
 #
@@ -50,12 +50,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: linux_amd64, os: ubuntu-22.04, rpath: '$ORIGIN', cpu: true }
-          - { target: linux_arm64, os: ubuntu-24.04-arm, rpath: '$ORIGIN' }
-          - { target: darwin_arm64, os: macos-15, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3' }
-          - { target: darwin_amd64, os: macos-15-intel, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3' }
-          - { target: windows_amd64, os: windows-2025-vs2026, win: x64 }
-          - { target: windows_arm64, os: windows-2025-vs2026, win: arm64 }
+          # cpuflags/targets: the CPU backend is part of the build (patches 0002-0004 live in it).
+          # `ggml` pulls in every variant of GGML_CPU_ALL_VARIANTS (Linux and x86 only upstream),
+          # `ggml-cpu` is the one library of the other targets; "all" would also build the llama app.
+          # darwin_arm64 keeps upstream's CPU backend: upstream builds it without GGML_BACKEND_DL, so its
+          # libggml.dylib links libggml-cpu.0.dylib, which a module of ours would not replace (n4 native test).
+          - { target: linux_amd64, os: ubuntu-22.04, rpath: '$ORIGIN', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
+          - { target: linux_arm64, os: ubuntu-24.04-arm, rpath: '$ORIGIN', extra: '-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
+          - { target: darwin_arm64, os: macos-15, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3', cpu: false, cpuflags: '-DGGML_CPU=OFF', targets: 'llama ggml-base' }
+          - { target: darwin_amd64, os: macos-15-intel, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
+          - { target: windows_amd64, os: windows-2025-vs2026, win: x64, cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
+          - { target: windows_arm64, os: windows-2025-vs2026, win: arm64, cpu: true, cpuflags: '-DGGML_CPU=ON', targets: 'llama ggml-base ggml-cpu' }
     steps:
       - uses: actions/checkout@v4
 
@@ -63,21 +68,18 @@ jobs:
         shell: bash
         run: ./scripts/build-libs.sh --prepare-only
 
+      # The armv9.2 variants use -march=...+sme, which GCC 13 (the runner's) does not know.
+      - name: GCC 14 (linux_arm64)
+        if: ${{ matrix.target == 'linux_arm64' }}
+        run: sudo apt-get install -y gcc-14 g++-14
+
       - name: Build (Unix)
         if: ${{ !matrix.win }}
         run: |
-          if [ "${{ matrix.cpu }}" = true ]; then
-            # `ggml` pulls in every CPU variant; "all" would also build the llama app.
-            CPU_FLAGS="-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON"
-            TARGETS="--target llama ggml-base ggml"
-          else
-            CPU_FLAGS="-DGGML_CPU=OFF"
-            TARGETS="--target llama ggml-base"
-          fi
           cmake -S .cache/llama.cpp/src -B build -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_RPATH='${{ matrix.rpath }}' -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
-            ${{ matrix.extra }} $CMAKE_FLAGS $CPU_FLAGS
-          cmake --build build --config Release $TARGETS -j 4
+            ${{ matrix.extra }} $CMAKE_FLAGS ${{ matrix.cpuflags }}
+          cmake --build build --config Release --target ${{ matrix.targets }} -j 4
 
       - name: Build (Windows)
         if: ${{ matrix.win }}
@@ -87,19 +89,19 @@ jobs:
           call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.win == 'x64' && 'x64' || 'amd64_arm64' }}
           cmake -S .cache/llama.cpp/src -B build -G "Ninja Multi-Config" ^
             -D CMAKE_TOOLCHAIN_FILE=cmake/${{ matrix.win }}-windows-llvm.cmake ^
-            -DGGML_OPENMP=ON -DGGML_OPENMP_FETCH=ON -DGGML_CPU=OFF ^
+            -DGGML_OPENMP=ON -DGGML_OPENMP_FETCH=ON ${{ matrix.cpuflags }} ^
             %CMAKE_FLAGS%
-          cmake --build build --config Release --target llama ggml-base
+          cmake --build build --config Release --target ${{ matrix.targets }}
 
       - name: Collect
         shell: bash
         run: |
           mkdir -p out
-          find build -type f -o -type l | grep -E '/(lib)?(llama|ggml-base|ggml-cpu-[0-9a-z_]+|omp)[.0-9a-z]*\.(so|dylib|dll)[.0-9]*$' | while read -r f; do cp -P "$f" out/; done
+          find build -type f -o -type l | grep -E '/(lib)?(llama|ggml-base|ggml-cpu[-.0-9a-z_]*|omp)[.0-9a-z]*\.(so|dylib|dll)[.0-9]*$' | while read -r f; do cp -P "$f" out/; done
           ls -l out
           test -n "$(ls out)" || { echo "no libraries were built" >&2; exit 1; }
           if [ "${{ matrix.cpu }}" = true ]; then
-            ls out | grep -q '^\(lib\)\?ggml-cpu-' || { echo "no CPU variants were built" >&2; exit 1; }
+            ls out | grep -q '^\(lib\)\?ggml-cpu' || { echo "no CPU variants were built" >&2; exit 1; }
           fi
           tar -czf "nanollm-libs-${{ matrix.target }}.tar.gz" -C out .
 
