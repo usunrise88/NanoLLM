@@ -262,9 +262,9 @@ ru-instruct, en-instruct, json-tools, thinking выключен. Отчёты:
 Дополнение 2026-10-20 (набор long-context, «иголка» в контексте 1…16 тыс. токенов
 в трёх позициях, thinking выключен, `scripts/quality-gate.sh ref-kvq8 long-context`):
 **12/12 против 12/12, вердикт same, все 12 ответов, причины остановки и числа токенов
-идентичны эталону с KV f16.** Это согласуется с механизмом из AUTOTUNE.md («Точность
-проверки пачкой»): у KV cache q8_0 нет split-KV, V копится в float, и decode не
-расходится с проверкой пачкой. Отчёт: `~/nanollm-data/eval/ref-kvq8-long-context.json`.
+идентичны эталону с KV f16.** Это сравнение q8_0 с f16, а не decode с проверкой
+пачкой на q8_0 (гипотеза из AUTOTUNE.md «Точность проверки пачкой», что там разницы
+нет, по-прежнему не измерена). Отчёт: `~/nanollm-data/eval/ref-kvq8-long-context.json`.
 
 Как читать:
 
