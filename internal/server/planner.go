@@ -111,8 +111,11 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	if spec.Stream != nil {
 		spec.Stream.Ahead, spec.Stream.Keep, spec.Stream.Evict = ov.Stream.Ahead, ov.Stream.Keep, ov.Stream.Evict
 	}
-	if ov.Repack == "off" {
+	switch ov.Repack {
+	case "off":
 		spec.Repack = false
+	case "on":
+		spec.Repack = true // an expert setting: the budget of the modes that keep weights in the file is not kept
 	}
 	spec.Threads, spec.ThreadsBatch = req.Threads, req.ThreadsBatch
 	spec = spec.WithDefaultThreads()

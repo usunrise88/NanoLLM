@@ -286,6 +286,14 @@ func TestPlannerPlacerRepackKey(t *testing.T) {
 		if off.Spec.Repack {
 			t.Errorf("%s: repack: off still repacks", preset)
 		}
+		req.Override.Repack = "on"
+		on, err := PlannerPlacer(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !on.Spec.Repack {
+			t.Errorf("%s: repack: on does not repack", preset)
+		}
 	}
 }
 

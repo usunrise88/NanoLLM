@@ -148,12 +148,14 @@ type ModelOverride struct {
 	Mode   string `yaml:"mode"`
 	KVType string `yaml:"kv_type"`
 	// Repack is "" or "auto" (the planner decides: the CPU's repacked layout
-	// wherever the mode has kernels for it) or "off": the weights stay as the
-	// file has them and the generic kernels run. Off is the fallback for a CPU
-	// without repack kernels and a knob for the autotuner (docs/QUALITY-STAGE2.md:
-	// KLD within the noise of another kernel variant). There is no "on": forcing
-	// the repack on in the modes that keep weights in the file would load every
-	// tensor into memory and break the budget.
+	// wherever the mode has kernels for it), "off" (the weights stay as the file
+	// has them and the generic kernels run: the fallback for a CPU without
+	// repack kernels, and a knob for the autotuner; docs/QUALITY-STAGE2.md: KLD
+	// within the noise of another kernel variant) or "on" (the repacked layout
+	// even where the planner keeps weights in the file: every tensor is loaded
+	// into memory, so the memory budget is not kept; for a machine with room
+	// to spare and for experiments, the ram-2g / 1.5g runs of docs/AUTOTUNE.md
+	// show what happens under a tight budget).
 	Repack string `yaml:"repack"`
 	// NCtx and Slots take "auto": what the preset leaves after weights, down
 	// to a floor of 4096 tokens and one slot.

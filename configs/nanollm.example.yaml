@@ -43,7 +43,8 @@ models:
       preset: vram-3g     # SPEC §4; or mode: + explicit placement
       mode: auto          # auto = planner picks M1..M9 within the preset
       kv_type: f16        # f16 | q8_0
-      # repack: off       # auto | off: off keeps the weights as the file has them (generic kernels)
+      # repack: off       # auto | off | on: off keeps the weights as the file has them (generic kernels);
+      #                   # on repacks even where the planner keeps them in the file (breaks that mode's memory budget)
       n_ctx: auto         # auto = what the preset leaves, floor 4096
       slots: auto
       speculative:

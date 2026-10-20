@@ -91,7 +91,7 @@ func TestValidateRefuses(t *testing.T) {
 			c.Models.Overrides = map[string]ModelOverride{"m": {KVType: "q4_0"}}
 		},
 		"bad repack": func(c *Config) {
-			c.Models.Overrides = map[string]ModelOverride{"m": {Repack: "on"}}
+			c.Models.Overrides = map[string]ModelOverride{"m": {Repack: "sometimes"}}
 		},
 		"more preloads than slots in the pool": func(c *Config) {
 			c.Models.Preload = []string{"a", "b"}
