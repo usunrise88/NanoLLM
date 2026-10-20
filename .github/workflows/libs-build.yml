@@ -54,7 +54,7 @@ jobs:
           # `ggml` pulls in every variant of GGML_CPU_ALL_VARIANTS (Linux and x86 only upstream),
           # `ggml-cpu` is the one library of the other targets; "all" would also build the llama app.
           - { target: linux_amd64, os: ubuntu-22.04, rpath: '$ORIGIN', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
-          - { target: linux_arm64, os: ubuntu-24.04-arm, rpath: '$ORIGIN', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
+          - { target: linux_arm64, os: ubuntu-24.04-arm, rpath: '$ORIGIN', extra: '-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
           - { target: darwin_arm64, os: macos-15, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3', cpu: true, cpuflags: '-DGGML_CPU=ON', targets: 'llama ggml-base ggml-cpu' }
           - { target: darwin_amd64, os: macos-15-intel, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
           - { target: windows_amd64, os: windows-2025-vs2026, win: x64, cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
@@ -65,6 +65,11 @@ jobs:
       - name: The patched source
         shell: bash
         run: ./scripts/build-libs.sh --prepare-only
+
+      # The armv9.2 variants use -march=...+sme, which GCC 13 (the runner's) does not know.
+      - name: GCC 14 (linux_arm64)
+        if: ${{ matrix.target == 'linux_arm64' }}
+        run: sudo apt-get install -y gcc-14 g++-14
 
       - name: Build (Unix)
         if: ${{ !matrix.win }}
