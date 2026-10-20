@@ -1,0 +1,57 @@
+# 2026-10-20T03:24:40+00:00 scripts/kernel-bench/run.sh gemv 3 (KB_ROUNDS=25), commit e44947b
+hyper-exclusive: lock taken (scripts/kernel-bench/run.sh gemv 3)
+hyper-exclusive: load 4.48, running
+correctness: all variants bit-identical to old
+multi-row correctness: bit-identical to the old kernel called per row
+L1  n=2560 nc=16  (160 blocks/call)
+  old                 3.60 us/call    22.49 ns/block  1.00x
+  real                1.94 us/call    12.10 ns/block  1.86x
+  u8-haddd            1.95 us/call    12.21 ns/block  1.84x
+  u8-shuf             1.95 us/call    12.16 ns/block  1.85x
+  u8-phaddw           1.93 us/call    12.07 ns/block  1.86x
+  u8-ng2              1.95 us/call    12.19 ns/block  1.84x
+  u8-pf4              2.03 us/call    12.69 ns/block  1.77x
+  u8-pf8              2.03 us/call    12.69 ns/block  1.77x
+  u8-ng2-pf4          1.98 us/call    12.40 ns/block  1.81x
+  u8-noxor*           1.92 us/call    12.01 ns/block  1.87x
+  ik-mix*             1.94 us/call    12.14 ns/block  1.85x
+  u8-noprepass*       1.72 us/call    10.76 ns/block  2.09x
+L2  n=2560 nc=256 (2560 blocks/call)
+  old                57.41 us/call    22.43 ns/block  1.00x
+  real               28.37 us/call    11.08 ns/block  2.02x
+  u8-haddd           28.53 us/call    11.14 ns/block  2.01x
+  u8-shuf            28.45 us/call    11.11 ns/block  2.02x
+  u8-phaddw          28.19 us/call    11.01 ns/block  2.04x
+  u8-ng2             28.72 us/call    11.22 ns/block  2.00x
+  u8-pf4             29.81 us/call    11.64 ns/block  1.93x
+  u8-pf8             29.65 us/call    11.58 ns/block  1.94x
+  u8-ng2-pf4         29.17 us/call    11.40 ns/block  1.97x
+  u8-noxor*          27.87 us/call    10.89 ns/block  2.06x
+  ik-mix*            28.32 us/call    11.06 ns/block  2.03x
+  u8-noprepass*      27.38 us/call    10.69 ns/block  2.10x
+mem n=2560 nc=8192 (81920 blocks/call)
+  old              1937.13 us/call    23.65 ns/block  1.00x
+  real             1012.83 us/call    12.36 ns/block  1.91x
+  u8-haddd         1015.71 us/call    12.40 ns/block  1.91x
+  u8-shuf          1014.42 us/call    12.38 ns/block  1.91x
+  u8-phaddw        1007.20 us/call    12.29 ns/block  1.92x
+  u8-ng2           1041.02 us/call    12.71 ns/block  1.86x
+  u8-pf4            996.86 us/call    12.17 ns/block  1.94x
+  u8-pf8            991.58 us/call    12.10 ns/block  1.95x
+  u8-ng2-pf4       1059.03 us/call    12.93 ns/block  1.83x
+  u8-noxor*        1006.21 us/call    12.28 ns/block  1.93x
+  ik-mix*          1015.06 us/call    12.39 ns/block  1.91x
+  u8-noprepass*     991.20 us/call    12.10 ns/block  1.95x
+mem n=10240 nc=2560 (102400 blocks/call)
+  old              2401.95 us/call    23.46 ns/block  1.00x
+  real             1265.82 us/call    12.36 ns/block  1.90x
+  u8-haddd         1269.69 us/call    12.40 ns/block  1.89x
+  u8-shuf          1268.92 us/call    12.39 ns/block  1.89x
+  u8-phaddw        1259.50 us/call    12.30 ns/block  1.91x
+  u8-ng2           1247.06 us/call    12.18 ns/block  1.93x
+  u8-pf4           1246.08 us/call    12.17 ns/block  1.93x
+  u8-pf8           1235.24 us/call    12.06 ns/block  1.94x
+  u8-ng2-pf4       1243.58 us/call    12.14 ns/block  1.93x
+  u8-noxor*        1259.06 us/call    12.30 ns/block  1.91x
+  ik-mix*          1268.05 us/call    12.38 ns/block  1.89x
+  u8-noprepass*    1245.88 us/call    12.17 ns/block  1.93x

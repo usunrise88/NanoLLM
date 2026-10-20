@@ -1,1 +1,10 @@
 # 2026-10-20T00:56:34+00:00 /dev/md3 ext4
+# /home/ubuntu/nanollm-data/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf region 1024 MiB at 2100 MiB, chunk 4096 KiB
+O_DIRECT, 1 stream(s)                  113 MB/s  (9.52 s)
+O_DIRECT, 4 stream(s)                  144 MB/s  (7.45 s)
+O_DIRECT, 16 stream(s)                 185 MB/s  (5.79 s)
+mmap page faults, 1 thread(s)          120 MB/s  (8.98 s)
+mmap page faults, 4 thread(s)          197 MB/s  (5.46 s)
+mmap page faults, 16 thread(s)         231 MB/s  (4.65 s)
+madvise(WILLNEED), one call             59 MB/s  (0.14 s, only 8 of 1024 MiB read)
+madvise(WILLNEED), 8192 KiB calls      108 MB/s  (9.91 s)

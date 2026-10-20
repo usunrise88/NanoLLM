@@ -1,0 +1,27 @@
+# tn-curve 2026-10-20T02:36:56+00:00 gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf tools /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/F2
+## strong: 16 threads, all nodes
+| model                          |       size |     params | backend    | threads | n_batch | n_ubatch |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | ------: | -------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp1 |         24.02 ± 0.26 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp2 |         47.38 ± 1.80 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp3 |         64.76 ± 0.74 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp4 |         70.54 ± 6.50 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp5 |         72.21 ± 4.72 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp6 |        83.64 ± 11.99 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp7 |         90.24 ± 4.22 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |       8 |        8 |   1 |             pp8 |        102.23 ± 4.82 |
+
+build: 11f98ed (3)
+## weak: 4 cores of node 0 (cpus 0,1,2,3)
+| model                          |       size |     params | backend    | threads | n_batch | n_ubatch |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | ------: | -------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp1 |         11.61 ± 0.25 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp2 |         20.20 ± 0.07 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp3 |         25.41 ± 0.14 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp4 |         28.63 ± 0.11 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp5 |         29.61 ± 0.45 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp6 |         31.03 ± 0.45 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp7 |         32.30 ± 1.95 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |       8 |        8 |   1 |             pp8 |         35.58 ± 0.14 |
+
+build: 11f98ed (3)

@@ -1,0 +1,252 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "json-tools",
+    "sha256": "cb809e42cc6a5f10f8a703c4a4f716e52752354e6b8c9437c0012f774a435137",
+    "items": 10
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "14677a5a3911444e3d4c78414c9fe6a8c6ed2598",
+    "device": "cpu",
+    "kv": "f16",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "false",
+    "numa": "auto",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "16"
+  },
+  "date": "2026-10-20",
+  "results": [
+    {
+      "id": "tool-weather-ru",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "answer": "",
+      "tool_calls": [
+        {
+          "id": "call_3b8cfe69d6c7953ac42406a3",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Казань\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 82,
+        "cached_tokens": 0,
+        "completion_tokens": 16,
+        "reasoning_tokens": 0
+      },
+      "ms": 56601.087,
+      "ttft_ms": 1516.894
+    },
+    {
+      "id": "tool-weather-en",
+      "lang": "en",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "answer": "",
+      "tool_calls": [
+        {
+          "id": "call_4d49fbebf471461bb3911707",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Paris\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 83,
+        "cached_tokens": 68,
+        "completion_tokens": 14,
+        "reasoning_tokens": 0
+      },
+      "ms": 2538.541,
+      "ttft_ms": 336.547
+    },
+    {
+      "id": "tool-book",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "answer": "",
+      "tool_calls": [
+        {
+          "id": "call_c9b0d75b4788e8bd4b550768",
+          "name": "book_appointment",
+          "arguments": "{\"date\":\"2026-11-03\",\"name\":\"Иван Петров\",\"time\":\"14:30\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 187,
+        "cached_tokens": 63,
+        "completion_tokens": 42,
+        "reasoning_tokens": 0
+      },
+      "ms": 9605.903,
+      "ttft_ms": 2074.507
+    },
+    {
+      "id": "tool-reminder",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "answer": "",
+      "tool_calls": [
+        {
+          "id": "call_f8c140ac2b663a4cf804c619",
+          "name": "set_reminder",
+          "arguments": "{\"date\":\"2026-11-05\",\"text\":\"оплатить интернет\",\"time\":\"09:00\"}"
+        }
+      ],
+      "finish": "tool_calls",
+      "usage": {
+        "prompt_tokens": 208,
+        "cached_tokens": 7,
+        "completion_tokens": 42,
+        "reasoning_tokens": 0
+      },
+      "ms": 8728.078,
+      "ttft_ms": 2783.447
+    },
+    {
+      "id": "tool-none-needed",
+      "lang": "ru",
+      "capability": "tools",
+      "thinking": false,
+      "pass": true,
+      "detail": "contains \"четыре\"",
+      "answer": "Два плюс два будет четыре.",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 80,
+        "cached_tokens": 7,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 1275.893,
+      "ttft_ms": 919.563
+    },
+    {
+      "id": "json-person-ru",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n  \"name\": \"Иван\",\n  \"age\": 34,\n  \"city\": \"Самара\"\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 36,
+        "cached_tokens": 2,
+        "completion_tokens": 35,
+        "reasoning_tokens": 0
+      },
+      "ms": 3920.921,
+      "ttft_ms": 471.009
+    },
+    {
+      "id": "json-person-en",
+      "lang": "en",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n  \"name\": \"Maria\",\n  \"age\": 28,\n  \"city\": \"Lisbon\"\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 28,
+        "cached_tokens": 4,
+        "completion_tokens": 34,
+        "reasoning_tokens": 0
+      },
+      "ms": 3602.935,
+      "ttft_ms": 366.733
+    },
+    {
+      "id": "json-list",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n  \"fruits\": [\n    \"яблоко\",\n    \"банан\",\n    \"апельсин\"\n  ]\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 26,
+        "cached_tokens": 4,
+        "completion_tokens": 37,
+        "reasoning_tokens": 0
+      },
+      "ms": 4175.122,
+      "ttft_ms": 378.288
+    },
+    {
+      "id": "json-sentiment",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\"sentiment\": \"negative\"}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 44,
+        "cached_tokens": 4,
+        "completion_tokens": 11,
+        "reasoning_tokens": 0
+      },
+      "ms": 1521.679,
+      "ttft_ms": 561.521
+    },
+    {
+      "id": "json-intent",
+      "lang": "ru",
+      "capability": "json",
+      "thinking": false,
+      "pass": true,
+      "answer": "{\n  \"intent\": \"reschedule\"\n}",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 38,
+        "cached_tokens": 4,
+        "completion_tokens": 17,
+        "reasoning_tokens": 0
+      },
+      "ms": 1982.251,
+      "ttft_ms": 480.122
+    }
+  ],
+  "summary": {
+    "json": {
+      "n": 5,
+      "pass": 5,
+      "rate": 1
+    },
+    "tools": {
+      "n": 5,
+      "pass": 5,
+      "rate": 1
+    }
+  },
+  "by_lang": {
+    "en": {
+      "n": 2,
+      "pass": 2,
+      "rate": 1
+    },
+    "ru": {
+      "n": 8,
+      "pass": 8,
+      "rate": 1
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 561.521,
+    "ttft_ms_p95": 2783.447
+  }
+}

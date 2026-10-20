@@ -1,0 +1,337 @@
+# 2026-10-20T03:27:35+00:00 /home/ubuntu/nanollm-data/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf
+## round 1 threads 8: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         82.65 ± 0.40 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         18.28 ± 0.08 |
+
+build: 9266a65 (4)
+## round 1 threads 8: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         82.14 ± 0.32 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         18.58 ± 0.02 |
+
+build: 9266a65 (4)
+## round 1 threads 8: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         79.99 ± 0.90 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         22.87 ± 0.03 |
+
+build: 9266a65 (4)
+## round 1 threads 8: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         79.39 ± 2.72 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         17.39 ± 0.17 |
+
+build: 9266a65 (4)
+## round 1 threads 16: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |       132.60 ± 14.85 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.66 ± 0.21 |
+
+build: 9266a65 (4)
+## round 1 threads 16: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |       142.03 ± 11.31 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.59 ± 0.10 |
+
+build: 9266a65 (4)
+## round 1 threads 16: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        146.32 ± 0.79 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         30.01 ± 0.84 |
+
+build: 9266a65 (4)
+## round 1 threads 16: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        148.93 ± 1.66 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         11.18 ± 1.68 |
+
+build: 9266a65 (4)
+## round 1 threads 24: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        145.24 ± 0.81 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         22.79 ± 1.12 |
+
+build: 9266a65 (4)
+## round 1 threads 24: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        147.43 ± 1.31 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         22.70 ± 0.36 |
+
+build: 9266a65 (4)
+## round 1 threads 24: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        125.10 ± 3.47 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         28.83 ± 0.67 |
+
+build: 9266a65 (4)
+## round 1 threads 24: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        125.53 ± 1.46 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         11.77 ± 0.36 |
+
+build: 9266a65 (4)
+## round 1 threads 32: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        151.03 ± 1.65 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |          9.42 ± 1.46 |
+
+build: 9266a65 (4)
+## round 1 threads 32: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        147.39 ± 0.92 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |         12.02 ± 2.49 |
+
+build: 9266a65 (4)
+## round 1 threads 32: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        153.22 ± 0.24 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |         19.58 ± 0.30 |
+
+build: 9266a65 (4)
+## round 1 threads 32: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        148.22 ± 5.23 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |          9.83 ± 3.96 |
+
+build: 9266a65 (4)
+## round 2 threads 8: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         82.73 ± 0.00 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         18.51 ± 0.01 |
+
+build: 9266a65 (4)
+## round 2 threads 8: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         81.80 ± 0.98 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         18.33 ± 0.01 |
+
+build: 9266a65 (4)
+## round 2 threads 8: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         81.64 ± 0.79 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         23.31 ± 0.13 |
+
+build: 9266a65 (4)
+## round 2 threads 8: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         79.34 ± 2.86 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         17.51 ± 0.24 |
+
+build: 9266a65 (4)
+## round 2 threads 16: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        141.19 ± 8.27 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.41 ± 0.10 |
+
+build: 9266a65 (4)
+## round 2 threads 16: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        144.98 ± 8.36 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.71 ± 0.00 |
+
+build: 9266a65 (4)
+## round 2 threads 16: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        148.34 ± 2.15 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         30.22 ± 1.13 |
+
+build: 9266a65 (4)
+## round 2 threads 16: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        146.95 ± 2.51 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         11.97 ± 2.76 |
+
+build: 9266a65 (4)
+## round 2 threads 24: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        146.27 ± 1.91 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         23.79 ± 0.22 |
+
+build: 9266a65 (4)
+## round 2 threads 24: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        143.74 ± 1.79 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         22.46 ± 0.32 |
+
+build: 9266a65 (4)
+## round 2 threads 24: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        124.72 ± 2.06 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         27.03 ± 0.16 |
+
+build: 9266a65 (4)
+## round 2 threads 24: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        123.84 ± 0.40 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         11.89 ± 0.13 |
+
+build: 9266a65 (4)
+## round 2 threads 32: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |       129.24 ± 17.28 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |          8.87 ± 1.89 |
+
+build: 9266a65 (4)
+## round 2 threads 32: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        144.20 ± 6.77 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |         12.61 ± 0.54 |
+
+build: 9266a65 (4)
+## round 2 threads 32: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |       153.54 ± 12.50 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |         21.21 ± 0.62 |
+
+build: 9266a65 (4)
+## round 2 threads 32: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        156.04 ± 0.89 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |          9.72 ± 4.04 |
+
+build: 9266a65 (4)
+## round 3 threads 8: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         82.20 ± 0.38 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         18.29 ± 0.08 |
+
+build: 9266a65 (4)
+## round 3 threads 8: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         82.58 ± 0.08 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         18.51 ± 0.01 |
+
+build: 9266a65 (4)
+## round 3 threads 8: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         81.65 ± 0.72 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         23.03 ± 0.23 |
+
+build: 9266a65 (4)
+## round 3 threads 8: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           pp512 |         79.91 ± 2.65 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       8 |   1 |           tg128 |         17.46 ± 0.13 |
+
+build: 9266a65 (4)
+## round 3 threads 16: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        154.81 ± 2.97 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.51 ± 0.19 |
+
+build: 9266a65 (4)
+## round 3 threads 16: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |       145.72 ± 14.47 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.50 ± 0.33 |
+
+build: 9266a65 (4)
+## round 3 threads 16: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        146.87 ± 3.16 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         30.18 ± 0.27 |
+
+build: 9266a65 (4)
+## round 3 threads 16: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        145.28 ± 5.21 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         12.02 ± 1.45 |
+
+build: 9266a65 (4)
+## round 3 threads 24: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        144.60 ± 2.86 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         22.67 ± 0.41 |
+
+build: 9266a65 (4)
+## round 3 threads 24: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        144.59 ± 1.70 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         23.53 ± 0.35 |
+
+build: 9266a65 (4)
+## round 3 threads 24: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        124.74 ± 2.50 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         27.36 ± 0.14 |
+
+build: 9266a65 (4)
+## round 3 threads 24: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           pp512 |        124.22 ± 1.23 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      24 |   1 |           tg128 |         11.60 ± 0.14 |
+
+build: 9266a65 (4)
+## round 3 threads 32: interleave, repack 1 thread (the current default)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |       140.63 ± 10.19 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |         11.13 ± 0.31 |
+
+build: 9266a65 (4)
+## round 3 threads 32: interleave, parallel repack
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        139.01 ± 8.26 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |         11.12 ± 0.98 |
+
+build: 9266a65 (4)
+## round 3 threads 32: distribute, repack threads = decode threads (node-local weights)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        153.33 ± 3.34 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |         21.02 ± 1.23 |
+
+build: 9266a65 (4)
+## round 3 threads 32: distribute, serial repack (all weights on one node)
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           pp512 |        150.04 ± 6.51 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      32 |   1 |           tg128 |          9.32 ± 3.49 |
+
+build: 9266a65 (4)

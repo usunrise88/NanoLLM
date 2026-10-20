@@ -1,0 +1,218 @@
+# 2026-10-20T02:37:17+00:00 mode=decode rounds=2 profiles=weak,strong variants: base=/home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE gemv-hadd=/home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2@Q4K_GEMV=2 gemv-shuf=/home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2@Q4K_GEMV=3 gemv-phaddw=/home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2@Q4K_GEMV=1 gemv-ng2-phaddw=/home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2@Q4K_GEMV=4 gemv-pf8-phaddw=/home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2@Q4K_GEMV=5
+# host: hyper 7.0.0-30-generic, load at start: 5.31 10.25 10.48, model: /home/ubuntu/nanollm-data/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf
+### variant=base profile=weak mode=decode round=1 env=none load=5.31 2026-10-20T02:37:17+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |          8.05 ± 0.01 |
+
+build: ace20f679 (11600)
+### end load=4.92
+### variant=gemv-hadd profile=weak mode=decode round=1 env=Q4K_GEMV=2 load=4.92 2026-10-20T02:38:42+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         11.47 ± 0.02 |
+
+build: 634e30b (3)
+### end load=4.04
+### variant=gemv-shuf profile=weak mode=decode round=1 env=Q4K_GEMV=3 load=4.04 2026-10-20T02:39:43+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         11.46 ± 0.01 |
+
+build: 634e30b (3)
+### end load=4.15
+### variant=gemv-phaddw profile=weak mode=decode round=1 env=Q4K_GEMV=1 load=4.15 2026-10-20T02:40:44+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         11.52 ± 0.01 |
+
+build: 634e30b (3)
+### end load=4.13
+### variant=gemv-ng2-phaddw profile=weak mode=decode round=1 env=Q4K_GEMV=4 load=4.13 2026-10-20T02:41:44+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         11.34 ± 0.00 |
+
+build: 634e30b (3)
+### end load=3.99
+### variant=gemv-pf8-phaddw profile=weak mode=decode round=1 env=Q4K_GEMV=5 load=3.99 2026-10-20T02:42:46+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         12.18 ± 0.01 |
+
+build: 634e30b (3)
+### end load=4.14
+### variant=base profile=strong mode=decode round=1 env=none load=4.14 2026-10-20T02:43:43+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         21.12 ± 0.22 |
+
+build: ace20f679 (11600)
+### end load=9.06
+### variant=gemv-hadd profile=strong mode=decode round=1 env=Q4K_GEMV=2 load=9.06 2026-10-20T02:44:19+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.39 ± 0.20 |
+
+build: 634e30b (3)
+### end load=11.22
+### variant=gemv-shuf profile=strong mode=decode round=1 env=Q4K_GEMV=3 load=11.22 2026-10-20T02:44:51+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.37 ± 0.17 |
+
+build: 634e30b (3)
+### end load=10.77
+### variant=gemv-phaddw profile=strong mode=decode round=1 env=Q4K_GEMV=1 load=10.77 2026-10-20T02:45:23+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.34 ± 0.34 |
+
+build: 634e30b (3)
+### end load=12.48
+### variant=gemv-ng2-phaddw profile=strong mode=decode round=1 env=Q4K_GEMV=4 load=12.48 2026-10-20T02:45:55+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.78 ± 0.12 |
+
+build: 634e30b (3)
+### end load=12.39
+### variant=gemv-pf8-phaddw profile=strong mode=decode round=1 env=Q4K_GEMV=5 load=12.39 2026-10-20T02:46:26+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         25.47 ± 0.26 |
+
+build: 634e30b (3)
+### end load=13.08
+### variant=base profile=weak mode=decode round=2 env=none load=13.08 2026-10-20T02:46:57+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |          8.07 ± 0.00 |
+
+build: ace20f679 (11600)
+### end load=6.28
+### variant=gemv-hadd profile=weak mode=decode round=2 env=Q4K_GEMV=2 load=6.28 2026-10-20T02:48:21+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         11.51 ± 0.01 |
+
+build: 634e30b (3)
+### end load=4.80
+### variant=gemv-shuf profile=weak mode=decode round=2 env=Q4K_GEMV=3 load=4.80 2026-10-20T02:49:22+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         11.50 ± 0.00 |
+
+build: 634e30b (3)
+### end load=4.16
+### variant=gemv-phaddw profile=weak mode=decode round=2 env=Q4K_GEMV=1 load=4.16 2026-10-20T02:50:23+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         11.52 ± 0.01 |
+
+build: 634e30b (3)
+### end load=4.36
+### variant=gemv-ng2-phaddw profile=weak mode=decode round=2 env=Q4K_GEMV=4 load=4.36 2026-10-20T02:51:23+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         11.33 ± 0.01 |
+
+build: 634e30b (3)
+### end load=4.26
+### variant=gemv-pf8-phaddw profile=weak mode=decode round=2 env=Q4K_GEMV=5 load=4.26 2026-10-20T02:52:25+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           tg128 |         12.18 ± 0.00 |
+
+build: 634e30b (3)
+### end load=4.27
+### variant=base profile=strong mode=decode round=2 env=none load=4.27 2026-10-20T02:53:22+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/BASE/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         21.11 ± 0.32 |
+
+build: ace20f679 (11600)
+### end load=9.62
+### variant=gemv-hadd profile=strong mode=decode round=2 env=Q4K_GEMV=2 load=9.62 2026-10-20T02:53:58+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.36 ± 0.13 |
+
+build: 634e30b (3)
+### end load=10.57
+### variant=gemv-shuf profile=strong mode=decode round=2 env=Q4K_GEMV=3 load=10.57 2026-10-20T02:54:30+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.44 ± 0.18 |
+
+build: 634e30b (3)
+### end load=11.10
+### variant=gemv-phaddw profile=strong mode=decode round=2 env=Q4K_GEMV=1 load=11.10 2026-10-20T02:55:02+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.60 ± 0.11 |
+
+build: 634e30b (3)
+### end load=12.83
+### variant=gemv-ng2-phaddw profile=strong mode=decode round=2 env=Q4K_GEMV=4 load=12.83 2026-10-20T02:55:33+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.81 ± 0.21 |
+
+build: 634e30b (3)
+### end load=13.41
+### variant=gemv-pf8-phaddw profile=strong mode=decode round=2 env=Q4K_GEMV=5 load=13.41 2026-10-20T02:56:05+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/.claude/worktrees/agent-a55b5c36648e0b08d/.cache/devab/D2/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         25.54 ± 0.10 |
+
+build: 634e30b (3)
+### end load=14.08

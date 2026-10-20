@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 16 -t 16",
+    "name": "next-0002-0003"
+  },
+  "date": "2026-10-20",
+  "extra": {
+    "kld_max": 0.000068,
+    "kld_mean": -0,
+    "kld_median": 0,
+    "kld_p99": 0.000038,
+    "ppl_ratio": 1.009078,
+    "top1_pct": 100
+  },
+  "model": "gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}

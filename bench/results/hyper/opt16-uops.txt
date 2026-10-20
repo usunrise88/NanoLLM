@@ -1,0 +1,27 @@
+# 2026-10-20T03:28:46+00:00 scripts/kernel-bench/run.sh uops (cpu 3)
+hyper-exclusive: lock taken (scripts/kernel-bench/run.sh uops maddubs maddwd addw and srlw pshufb phaddd phaddw pshufd shufps blendd bcastq bcastd cvtph2ps mulps fma subd xor load xorm maddubsm perm2i permq)
+hyper-exclusive: load 4.39, running
+ins           cyc/ins uops/ins       p0       p1       p2       p3
+maddubs          2.05     2.00     2.00     0.00     0.00     0.00
+maddwd           2.05     2.00     2.00     0.00     0.00     0.00
+addw             0.71     2.00     0.67     0.67     0.00     0.67
+and              0.54     2.01     0.50     0.50     0.50     0.50
+srlw             2.05     2.00     0.00     0.00     2.00     0.00
+pshufb           1.04     2.00     0.00     1.00     1.00     0.00
+phaddd           3.05     6.00     1.00     2.50     2.00     0.50
+phaddw           3.06     6.00     1.00     2.50     2.00     0.50
+pshufd           1.04     2.00     0.00     1.00     1.00     0.00
+shufps           1.05     2.01     0.00     1.00     1.01     0.00
+blendd           0.70     2.00     0.67     0.67     0.00     0.67
+bcastq           0.54     0.23     0.00     0.09     0.14     0.00
+bcastd           0.54     0.24     0.00     0.00     0.24     0.00
+cvtph2ps         2.05     4.01     0.00     1.00     1.01     2.00
+mulps            1.04     2.00     1.00     1.00     0.00     0.00
+fma              1.04     2.00     1.00     1.00     0.00     0.00
+subd             0.70     2.00     0.67     0.67     0.00     0.67
+xor              0.54     2.00     0.50     0.50     0.50     0.50
+load             1.04     0.99     0.00     0.00     0.99     0.00
+xorm             1.04     2.00     0.50     0.50     0.50     0.50
+maddubsm         2.05     2.00     2.00     0.00     0.00     0.00
+perm2i           3.05     6.00     3.00     1.50     0.00     1.50
+permq            2.05     3.00     0.25     1.25     1.25     0.25

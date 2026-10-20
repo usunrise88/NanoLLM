@@ -1,0 +1,21 @@
+# 2026-10-20T03:27:50+00:00 scripts/kernel-bench/run.sh multi 3 (KB_ROUNDS=25), commit e44947b
+hyper-exclusive: lock taken (scripts/kernel-bench/run.sh multi 3)
+hyper-exclusive: load 4.75, running
+correctness: all variants bit-identical to old
+multi-row correctness: bit-identical to the old kernel called per row
+L2  n=2560 nc=160 (weights in L2)
+  nr=1  old per row   23.75   patch per row   11.08   patch one call   11.08  ns per row-block   (2.14x old, 1.00x patch per row)
+  nr=2  old per row   23.75   patch per row   11.08   patch one call   10.26  ns per row-block   (2.31x old, 1.08x patch per row)
+  nr=3  old per row   23.74   patch per row   11.08   patch one call   10.01  ns per row-block   (2.37x old, 1.11x patch per row)
+  nr=4  old per row   23.75   patch per row   11.08   patch one call   10.27  ns per row-block   (2.31x old, 1.08x patch per row)
+  nr=5  old per row   23.75   patch per row   11.08   patch one call   10.09  ns per row-block   (2.35x old, 1.10x patch per row)
+  nr=6  old per row   23.74   patch per row   11.08   patch one call    9.99  ns per row-block   (2.38x old, 1.11x patch per row)
+  nr=7  old per row   23.74   patch per row   11.08   patch one call   10.16  ns per row-block   (2.34x old, 1.09x patch per row)
+n=10240 nc=64
+  nr=1  old per row   23.69   patch per row   11.17   patch one call   11.16  ns per row-block   (2.12x old, 1.00x patch per row)
+  nr=2  old per row   23.69   patch per row   11.18   patch one call   10.36  ns per row-block   (2.29x old, 1.08x patch per row)
+  nr=3  old per row   23.69   patch per row   11.18   patch one call   10.11  ns per row-block   (2.34x old, 1.10x patch per row)
+  nr=4  old per row   23.71   patch per row   11.17   patch one call   10.39  ns per row-block   (2.28x old, 1.07x patch per row)
+  nr=5  old per row   23.69   patch per row   11.17   patch one call   10.23  ns per row-block   (2.32x old, 1.09x patch per row)
+  nr=6  old per row   23.70   patch per row   11.17   patch one call   10.13  ns per row-block   (2.34x old, 1.10x patch per row)
+  nr=7  old per row   23.70   patch per row   11.17   patch one call   10.27  ns per row-block   (2.31x old, 1.09x patch per row)
