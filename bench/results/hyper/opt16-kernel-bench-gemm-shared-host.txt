@@ -1,0 +1,51 @@
+# 2026-10-20T00:01:34+00:00 scripts/kernel-bench/run.sh gemm 11, KB_ROUNDS=25, commit 225f7d3
+# host NOT exclusive (load 31.58 33.31 33.54): one thread, minimum of 25 interleaved rounds; ratios are meaningful, absolute ns are not
+gemm correctness: all variants bit-identical to old
+n=2560 nc=64 nr=16  (10240 row-blocks/call)
+  old               215.72 us/call    21.07 ns/row-block  1.00x
+  real              108.90 us/call    10.63 ns/row-block  1.98x
+  g-r4              118.02 us/call    11.53 ns/row-block  1.83x
+  g-r4-shuf         119.31 us/call    11.65 ns/row-block  1.81x
+  g-r4-phaddw       114.89 us/call    11.22 ns/row-block  1.88x
+  g-r8              112.38 us/call    10.97 ns/row-block  1.92x
+  g-r8-shuf         103.13 us/call    10.07 ns/row-block  2.09x
+  g-r8-phaddw       107.40 us/call    10.49 ns/row-block  2.01x
+  g-r12-phaddw      109.38 us/call    10.68 ns/row-block  1.97x
+  g-r16-phaddw      105.09 us/call    10.26 ns/row-block  2.05x
+  g-r8-noxor*       107.70 us/call    10.52 ns/row-block  2.00x
+n=2560 nc=160 nr=512 (819200 row-blocks/call)
+  old             17347.30 us/call    21.18 ns/row-block  1.00x
+  real             8653.25 us/call    10.56 ns/row-block  2.00x
+  g-r4             9383.82 us/call    11.45 ns/row-block  1.85x
+  g-r4-shuf        9503.95 us/call    11.60 ns/row-block  1.83x
+  g-r4-phaddw      9115.46 us/call    11.13 ns/row-block  1.90x
+  g-r8             8887.15 us/call    10.85 ns/row-block  1.95x
+  g-r8-shuf        8783.09 us/call    10.72 ns/row-block  1.98x
+  g-r8-phaddw      8538.86 us/call    10.42 ns/row-block  2.03x
+  g-r12-phaddw     8459.98 us/call    10.33 ns/row-block  2.05x
+  g-r16-phaddw     8338.29 us/call    10.18 ns/row-block  2.08x
+  g-r8-noxor*      8561.75 us/call    10.45 ns/row-block  2.03x
+n=10240 nc=64 nr=128 (327680 row-blocks/call)
+  old              6897.87 us/call    21.05 ns/row-block  1.00x
+  real             3499.63 us/call    10.68 ns/row-block  1.97x
+  g-r4             3768.85 us/call    11.50 ns/row-block  1.83x
+  g-r4-shuf        3813.85 us/call    11.64 ns/row-block  1.81x
+  g-r4-phaddw      3670.98 us/call    11.20 ns/row-block  1.88x
+  g-r8             3576.39 us/call    10.91 ns/row-block  1.93x
+  g-r8-shuf        3538.93 us/call    10.80 ns/row-block  1.95x
+  g-r8-phaddw      3426.87 us/call    10.46 ns/row-block  2.01x
+  g-r12-phaddw     3408.41 us/call    10.40 ns/row-block  2.02x
+  g-r16-phaddw     3352.51 us/call    10.23 ns/row-block  2.06x
+  g-r8-noxor*      3426.97 us/call    10.46 ns/row-block  2.01x
+n=2560 nc=32 nr=4   (1280 row-blocks/call)
+  old                32.10 us/call    25.08 ns/row-block  1.00x
+  real               14.37 us/call    11.23 ns/row-block  2.23x
+  g-r4               15.01 us/call    11.72 ns/row-block  2.14x
+  g-r4-shuf          15.17 us/call    11.85 ns/row-block  2.12x
+  g-r4-phaddw        14.57 us/call    11.38 ns/row-block  2.20x
+  g-r8               15.82 us/call    12.36 ns/row-block  2.03x
+  g-r8-shuf          15.05 us/call    11.76 ns/row-block  2.13x
+  g-r8-phaddw        14.66 us/call    11.45 ns/row-block  2.19x
+  g-r12-phaddw       14.94 us/call    11.67 ns/row-block  2.15x
+  g-r16-phaddw       15.22 us/call    11.89 ns/row-block  2.11x
+  g-r8-noxor*        14.49 us/call    11.32 ns/row-block  2.22x

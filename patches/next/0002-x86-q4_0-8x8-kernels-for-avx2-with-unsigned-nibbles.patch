@@ -1,0 +1,447 @@
+From 11f98ed03cb585af0cc2bae0d939de01d56360c4 Mon Sep 17 00:00:00 2001
+From: NanoLLM <nanollm@localhost>
+Date: Mon, 19 Oct 2026 13:00:00 +0000
+Subject: [PATCH] x86: Q4_0 8x8 GEMV and GEMM for AVX2 with unsigned nibbles
+ and int16 sums
+
+The decode of a Q4_0 model on AVX2 CPUs without VNNI (Zen 1-3, Haswell to
+Coffee Lake) spends 88% of its time in gemv_q4_b32_8x8_q8_0_lut_avx, the
+prefill 93% in the gemm of the same family. For every 32 quants of 8 rows they
+sign-extend the nibbles through a lookup table, shuffle and blend them into
+place and make the products with a vpsignb pair: about 90 vector operations
+per block.
+
+The new kernels do the same integer dot products with about half of them:
+
+- the stored nibbles (value xor 8) are made unsigned again and go straight to
+  vpmaddubsw as its first operand; the "- 8" of Q4_0 is one subtraction of
+  8 * sum(activation) per block, the sums come from one pass over the
+  activation rows before the loop
+- the activation is broadcast 8 bytes at a time to the four rows of a vector,
+  so the 8-byte pieces of the interleaved rows are used where they lie
+- the int16 products of the four pieces are added in int16 (at most
+  8 * 15 * 127 = 15240 per lane, 30480 after the pair sum), the two lanes of a
+  row are added by vphaddw and widened once by vpmaddwd
+- the GEMM does 8 activation rows per pass over the weights (4 for the last
+  odd group), so that the unpacked weights are used 8 times
+- the GEMV takes up to 3 rows of the activation in one call, so the 1 to 3
+  rows that the GEMM (4 rows at a time) leaves share the work on the weights
+  instead of being 3 separate calls; forward_mul_mat_one_chunk passes them in
+  one call for the kernels that say so (gemv_takes_rows)
+
+The integers are exactly those of the old kernels and the float scales are
+applied in the same order, so the output is bit for bit the same. The GEMV is
+used with AVX2 and neither AVX-VNNI nor AVX512-VNNI, the GEMM also without
+AVX512BW (those builds keep the old kernels and their dpbusd or AVX512 paths).
+---
+ ggml/src/ggml-cpu/arch/x86/repack.cpp | 307 +++++++++++++++++++++++++-
+ ggml/src/ggml-cpu/repack.cpp          |  29 ++-
+ ggml/src/ggml-cpu/repack.h            |   6 +
+ 3 files changed, 336 insertions(+), 6 deletions(-)
+
+diff --git a/ggml/src/ggml-cpu/arch/x86/repack.cpp b/ggml/src/ggml-cpu/arch/x86/repack.cpp
+index af1ceba..53d4266 100644
+--- a/ggml/src/ggml-cpu/arch/x86/repack.cpp
++++ b/ggml/src/ggml-cpu/arch/x86/repack.cpp
+@@ -636,6 +636,303 @@ static void gemv_q4_b32_8x8_q8_0_lut_avx(int n, float * GGML_RESTRICT s, size_t
+     }
+ }
+ 
++#if defined(GGML_REPACK_Q4_0_GEMV_U8)
++// Q4_0 8x8 kernels for AVX2 without VNNI. They give the same result bit for bit as the lut kernels
++// above and below with about half of the vector operations:
++// - the nibbles are unsigned (stored as value xor 8, so xor 8 again) and go to vpmaddubsw as the first
++//   operand, the Q8_0 values as the second: no lookup table, no vpsignb pair. The "- 8" of Q4_0 is
++//   subtracted per block as 8 * sum(q8 values), computed once per activation row
++// - the 8 byte pieces of the interleaved rows are used as they are: an activation piece is broadcast
++//   to the 4 rows of a vector, so the weights need no shuffling or blending
++// - the int16 sums of the 4 pieces of a block stay in int16 (8 products of at most 15 * 127 per lane,
++//   and 2 lanes added by vphaddw, 30480 at most) and are widened once; the lanes come out in the order
++//   0 1 4 5 2 3 6 7 and are put back at the end
++#if !defined(__AVX512BW__)
++// with AVX512BW the lut GEMM above has its own AVX512 path
++#define GGML_REPACK_Q4_0_GEMM_U8
++#endif
++
++struct q8_0_pre {
++    float   d;
++    int32_t sum8;
++};
++
++// scale as float and 8 * sum of the 32 values, for each block of a Q8_0 row
++static inline void q8_0_prepare(const block_q8_0 * GGML_RESTRICT a, int nb, q8_0_pre * GGML_RESTRICT pre) {
++    const __m256i ones8  = _mm256_set1_epi8(1);
++    const __m256i ones16 = _mm256_set1_epi16(1);
++    for (int b = 0; b < nb; b++) {
++        const __m256i sums = _mm256_madd_epi16(_mm256_maddubs_epi16(ones8, _mm256_loadu_si256((const __m256i *) a[b].qs)), ones16);
++        __m128i s4 = _mm_add_epi32(_mm256_castsi256_si128(sums), _mm256_extracti128_si256(sums, 1));
++        s4 = _mm_add_epi32(s4, _mm_shuffle_epi32(s4, 0x4E));
++        s4 = _mm_add_epi32(s4, _mm_shuffle_epi32(s4, 0xB1));
++        pre[b].d    = GGML_CPU_FP16_TO_FP32(a[b].d);
++        pre[b].sum8 = 8 * _mm_cvtsi128_si32(s4);
++    }
++}
++
++// the same for a row group of block_q8_0x4: 4 scales and 4 sums per block
++struct q8_0x4_pre {
++    float   d[4];
++    int32_t sum8[4];
++};
++
++static inline void q8_0x4_prepare(const block_q8_0x4 * GGML_RESTRICT a, int nb, q8_0x4_pre * GGML_RESTRICT pre) {
++    const __m256i ones8  = _mm256_set1_epi8(1);
++    const __m256i ones16 = _mm256_set1_epi16(1);
++    for (int b = 0; b < nb; b++) {
++        // 32 bytes hold 8 values of each of the 4 rows
++        const __m256i * q = (const __m256i *) a[b].qs;
++        const __m256i t0 = _mm256_madd_epi16(_mm256_maddubs_epi16(ones8, _mm256_loadu_si256(q + 0)), ones16);
++        const __m256i t1 = _mm256_madd_epi16(_mm256_maddubs_epi16(ones8, _mm256_loadu_si256(q + 1)), ones16);
++        const __m256i t2 = _mm256_madd_epi16(_mm256_maddubs_epi16(ones8, _mm256_loadu_si256(q + 2)), ones16);
++        const __m256i t3 = _mm256_madd_epi16(_mm256_maddubs_epi16(ones8, _mm256_loadu_si256(q + 3)), ones16);
++        __m256i t = _mm256_add_epi32(_mm256_add_epi32(t0, t1), _mm256_add_epi32(t2, t3)); // lanes 2r and 2r+1 belong to row r
++        t = _mm256_hadd_epi32(t, t);
++        const __m128i rows = _mm_unpacklo_epi64(_mm256_castsi256_si128(t), _mm256_extracti128_si256(t, 1));
++        _mm_storeu_si128((__m128i *) pre[b].sum8, _mm_slli_epi32(rows, 3));
++        _mm_storeu_ps(pre[b].d, _mm_cvtph_ps(_mm_loadl_epi64((const __m128i *) a[b].d)));
++    }
++}
++
++// f(std::integral_constant<int, I>) for I = 0 .. N-1, unrolled at compile time: the accumulators of the rows stay in registers
++template<int I, int N, typename F>
++static inline void q4_0_u8_unroll(F && f) {
++    if constexpr (I < N) {
++        f(std::integral_constant<int, I>{});
++        q4_0_u8_unroll<I + 1, N>(f);
++    }
++}
++
++// NR rows of the Q8_0 activation (one after the other, nb blocks each) against all the weights; the unpacked
++// weights are used for all NR rows
++template<int NR>
++static void gemv_q4_0_8x8_q8_0_u8_avx_rows(float * GGML_RESTRICT s, size_t bs, const block_q4_0x8 * GGML_RESTRICT b_ptr_start,
++        const block_q8_0 * GGML_RESTRICT a_ptr_start, q8_0_pre * GGML_RESTRICT pre, int nb, int nc) {
++    const __m256i m4b    = _mm256_set1_epi8(0x0F);
++    const __m256i m88    = _mm256_set1_epi8((char) 0x88);
++    const __m256i ones16 = _mm256_set1_epi16(1);
++    // the column scales in the order of the lanes after the horizontal add: rows 0 1 4 5 2 3 6 7
++    const __m128i scale_order = _mm_set_epi8(15, 14, 13, 12, 7, 6, 5, 4, 11, 10, 9, 8, 3, 2, 1, 0);
++    const __m256i lane_to_row = _mm256_setr_epi32(0, 1, 4, 5, 2, 3, 6, 7);
++
++    for (int r = 0; r < NR; r++) {
++        q8_0_prepare(a_ptr_start + r * nb, nb, pre + r * nb);
++    }
++
++    // Take group of eight rows at each pass of the loop
++    for (int64_t x = 0; x < nc / 8; x++) {
++        const block_q4_0x8 * b_ptr = b_ptr_start + (x * nb);
++
++        // Master FP accumulators
++        __m256 acc_rows[NR];
++        q4_0_u8_unroll<0, NR>([&](auto ic) { acc_rows[decltype(ic)::value] = _mm256_setzero_ps(); });
++
++        for (int64_t b = 0; b < nb; b++) {
++            // 4 x 32 bytes: bytes 0-7 (then 8-15) of the 8 rows, 4 rows to a vector, nibbles xor 8
++            const __m256i raw_0123_0 = _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(b_ptr[b].qs)),     m88);
++            const __m256i raw_4567_0 = _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(b_ptr[b].qs) + 1), m88);
++            const __m256i raw_0123_1 = _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(b_ptr[b].qs) + 2), m88);
++            const __m256i raw_4567_1 = _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(b_ptr[b].qs) + 3), m88);
++
++            // unsigned values of rows 0-3 and 4-7: 0-7, 8-15, 16-23, 24-31
++            const __m256i rhs_0123_0 = _mm256_and_si256(raw_0123_0, m4b);
++            const __m256i rhs_4567_0 = _mm256_and_si256(raw_4567_0, m4b);
++            const __m256i rhs_0123_1 = _mm256_and_si256(raw_0123_1, m4b);
++            const __m256i rhs_4567_1 = _mm256_and_si256(raw_4567_1, m4b);
++            const __m256i rhs_0123_2 = _mm256_and_si256(_mm256_srli_epi16(raw_0123_0, 4), m4b);
++            const __m256i rhs_4567_2 = _mm256_and_si256(_mm256_srli_epi16(raw_4567_0, 4), m4b);
++            const __m256i rhs_0123_3 = _mm256_and_si256(_mm256_srli_epi16(raw_0123_1, 4), m4b);
++            const __m256i rhs_4567_3 = _mm256_and_si256(_mm256_srli_epi16(raw_4567_1, 4), m4b);
++
++            const __m256 col_scale_f32 = _mm256_cvtph_ps(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) b_ptr[b].d), scale_order));
++
++            q4_0_u8_unroll<0, NR>([&](auto ic) {
++                constexpr int r = decltype(ic)::value;
++                // values 0-7, 8-15, 16-23, 24-31 of the activation, each broadcast to 4 rows
++                const block_q8_0 * a = a_ptr_start + r * nb + b;
++                int64_t a0, a1, a2, a3;
++                memcpy(&a0, a->qs,      sizeof(int64_t));
++                memcpy(&a1, a->qs + 8,  sizeof(int64_t));
++                memcpy(&a2, a->qs + 16, sizeof(int64_t));
++                memcpy(&a3, a->qs + 24, sizeof(int64_t));
++                const __m256i lhs_0 = _mm256_set1_epi64x(a0);
++                const __m256i lhs_1 = _mm256_set1_epi64x(a1);
++                const __m256i lhs_2 = _mm256_set1_epi64x(a2);
++                const __m256i lhs_3 = _mm256_set1_epi64x(a3);
++
++                // low nibbles are values 0-7 and 8-15 of a row, high nibbles 16-23 and 24-31
++                __m256i iacc_0123 = _mm256_maddubs_epi16(rhs_0123_0, lhs_0);
++                __m256i iacc_4567 = _mm256_maddubs_epi16(rhs_4567_0, lhs_0);
++                iacc_0123 = _mm256_add_epi16(iacc_0123, _mm256_maddubs_epi16(rhs_0123_1, lhs_1));
++                iacc_4567 = _mm256_add_epi16(iacc_4567, _mm256_maddubs_epi16(rhs_4567_1, lhs_1));
++                iacc_0123 = _mm256_add_epi16(iacc_0123, _mm256_maddubs_epi16(rhs_0123_2, lhs_2));
++                iacc_4567 = _mm256_add_epi16(iacc_4567, _mm256_maddubs_epi16(rhs_4567_2, lhs_2));
++                iacc_0123 = _mm256_add_epi16(iacc_0123, _mm256_maddubs_epi16(rhs_0123_3, lhs_3));
++                iacc_4567 = _mm256_add_epi16(iacc_4567, _mm256_maddubs_epi16(rhs_4567_3, lhs_3));
++
++                // add the 2 int16 lanes of each row, widen, take off the 8 of Q4_0
++                __m256i iacc = _mm256_madd_epi16(_mm256_hadd_epi16(iacc_0123, iacc_4567), ones16);
++                iacc = _mm256_sub_epi32(iacc, _mm256_set1_epi32(pre[r * nb + b].sum8));
++
++                const __m256 row_scale_f32 = _mm256_set1_ps(pre[r * nb + b].d);
++
++                // Accumulated values multiplied with appropriate scales
++                acc_rows[r] = _mm256_fmadd_ps(_mm256_cvtepi32_ps(iacc), _mm256_mul_ps(col_scale_f32, row_scale_f32), acc_rows[r]);
++            });
++        }
++
++        // Accumulated output values permuted so as to be stored in appropriate order post accumulation
++        q4_0_u8_unroll<0, NR>([&](auto ic) {
++            constexpr int r = decltype(ic)::value;
++            _mm256_storeu_ps(s + (r * bs + x * 8), _mm256_permutevar8x32_ps(acc_rows[r], lane_to_row));
++        });
++    }
++}
++
++// GEMV for 8x blocks of 32 4-bit quants with a single scale factor per block (Q4_0). nr rows of the activation,
++// one after the other, go to nr rows of dst, bs floats apart
++template<typename block_tx8>
++static void gemv_q4_0_8x8_q8_0_u8_avx(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
++    static_assert(std::is_same_v<block_tx8, block_q4_0x8>, "Unsupported block type");
++
++    const int qk = QK8_0;
++    const int nb = n / qk;
++
++    q8_0_pre   pre_stack[3 * 384];
++    q8_0_pre * pre = nb <= 384 ? pre_stack : (q8_0_pre *) malloc(sizeof(q8_0_pre) * 3 * nb);
++
++    const block_tx8  * b_ptr_start = (const block_tx8  *)vx;
++    const block_q8_0 * a_ptr_start = (const block_q8_0 *)vy;
++
++    int64_t y = 0;
++    for (; y + 3 <= nr; y += 3) {
++        gemv_q4_0_8x8_q8_0_u8_avx_rows<3>(s + y * bs, bs, b_ptr_start, a_ptr_start + y * nb, pre, nb, nc);
++    }
++    if (y + 2 == nr) {
++        gemv_q4_0_8x8_q8_0_u8_avx_rows<2>(s + y * bs, bs, b_ptr_start, a_ptr_start + y * nb, pre, nb, nc);
++    } else if (y + 1 == nr) {
++        gemv_q4_0_8x8_q8_0_u8_avx_rows<1>(s + y * bs, bs, b_ptr_start, a_ptr_start + y * nb, pre, nb, nc);
++    }
++
++    if (pre != pre_stack) {
++        free(pre);
++    }
++}
++
++#if defined(GGML_REPACK_Q4_0_GEMM_U8)
++// NG groups of 4 activation rows (block_q8_0x4) against all the weights; the unpacked weights are used by all 4 * NG rows
++template<int NG>
++static void gemm_q4_0_8x8_q8_0_u8_avx_rows(float * GGML_RESTRICT s, size_t bs, const block_q4_0x8 * GGML_RESTRICT b_ptr_start,
++        const block_q8_0x4 * GGML_RESTRICT a_ptr_start, q8_0x4_pre * GGML_RESTRICT pre, int nb, int nc) {
++    const __m256i m4b    = _mm256_set1_epi8(0x0F);
++    const __m256i m88    = _mm256_set1_epi8((char) 0x88);
++    const __m256i ones16 = _mm256_set1_epi16(1);
++    // the column scales in the order of the lanes after the horizontal add: rows 0 1 4 5 2 3 6 7
++    const __m128i scale_order = _mm_set_epi8(15, 14, 13, 12, 7, 6, 5, 4, 11, 10, 9, 8, 3, 2, 1, 0);
++    const __m256i lane_to_row = _mm256_setr_epi32(0, 1, 4, 5, 2, 3, 6, 7);
++
++    const block_q8_0x4 * a_ptr[NG];
++    for (int g = 0; g < NG; g++) {
++        a_ptr[g] = a_ptr_start + g * nb;
++        q8_0x4_prepare(a_ptr[g], nb, pre + g * nb);
++    }
++
++    // Take group of eight rows of the weights at each pass of the loop
++    for (int64_t x = 0; x < nc / 8; x++) {
++        const block_q4_0x8 * b_ptr = b_ptr_start + (x * nb);
++
++        // Master FP accumulators
++        __m256 acc_rows[4 * NG];
++        q4_0_u8_unroll<0, 4 * NG>([&](auto ic) { acc_rows[decltype(ic)::value] = _mm256_setzero_ps(); });
++
++        for (int64_t b = 0; b < nb; b++) {
++            const __m256i raw_0123_0 = _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(b_ptr[b].qs)),     m88);
++            const __m256i raw_4567_0 = _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(b_ptr[b].qs) + 1), m88);
++            const __m256i raw_0123_1 = _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(b_ptr[b].qs) + 2), m88);
++            const __m256i raw_4567_1 = _mm256_xor_si256(_mm256_loadu_si256((const __m256i *)(b_ptr[b].qs) + 3), m88);
++
++            // unsigned values of rows 0-3 and 4-7: 0-7, 8-15, 16-23, 24-31
++            const __m256i rhs_0123_0 = _mm256_and_si256(raw_0123_0, m4b);
++            const __m256i rhs_4567_0 = _mm256_and_si256(raw_4567_0, m4b);
++            const __m256i rhs_0123_1 = _mm256_and_si256(raw_0123_1, m4b);
++            const __m256i rhs_4567_1 = _mm256_and_si256(raw_4567_1, m4b);
++            const __m256i rhs_0123_2 = _mm256_and_si256(_mm256_srli_epi16(raw_0123_0, 4), m4b);
++            const __m256i rhs_4567_2 = _mm256_and_si256(_mm256_srli_epi16(raw_4567_0, 4), m4b);
++            const __m256i rhs_0123_3 = _mm256_and_si256(_mm256_srli_epi16(raw_0123_1, 4), m4b);
++            const __m256i rhs_4567_3 = _mm256_and_si256(_mm256_srli_epi16(raw_4567_1, 4), m4b);
++
++            const __m256 col_scale_f32 = _mm256_cvtph_ps(_mm_shuffle_epi8(_mm_loadu_si128((const __m128i *) b_ptr[b].d), scale_order));
++
++            // The block_q8_0x4 holds 8 byte pieces: row i, values 8j to 8j+7 at byte 32 * j + 8 * i
++            q4_0_u8_unroll<0, 4 * NG>([&](auto ic) {
++                constexpr int i = decltype(ic)::value;
++                constexpr int r = i % 4;
++                const block_q8_0x4 * a = a_ptr[i / 4] + b;
++                int64_t a0, a1, a2, a3;
++                memcpy(&a0, a->qs +      8 * r, sizeof(int64_t));
++                memcpy(&a1, a->qs + 32 + 8 * r, sizeof(int64_t));
++                memcpy(&a2, a->qs + 64 + 8 * r, sizeof(int64_t));
++                memcpy(&a3, a->qs + 96 + 8 * r, sizeof(int64_t));
++                const __m256i lhs_0 = _mm256_set1_epi64x(a0);
++                const __m256i lhs_1 = _mm256_set1_epi64x(a1);
++                const __m256i lhs_2 = _mm256_set1_epi64x(a2);
++                const __m256i lhs_3 = _mm256_set1_epi64x(a3);
++
++                __m256i iacc_0123 = _mm256_maddubs_epi16(rhs_0123_0, lhs_0);
++                __m256i iacc_4567 = _mm256_maddubs_epi16(rhs_4567_0, lhs_0);
++                iacc_0123 = _mm256_add_epi16(iacc_0123, _mm256_maddubs_epi16(rhs_0123_1, lhs_1));
++                iacc_4567 = _mm256_add_epi16(iacc_4567, _mm256_maddubs_epi16(rhs_4567_1, lhs_1));
++                iacc_0123 = _mm256_add_epi16(iacc_0123, _mm256_maddubs_epi16(rhs_0123_2, lhs_2));
++                iacc_4567 = _mm256_add_epi16(iacc_4567, _mm256_maddubs_epi16(rhs_4567_2, lhs_2));
++                iacc_0123 = _mm256_add_epi16(iacc_0123, _mm256_maddubs_epi16(rhs_0123_3, lhs_3));
++                iacc_4567 = _mm256_add_epi16(iacc_4567, _mm256_maddubs_epi16(rhs_4567_3, lhs_3));
++
++                __m256i iacc = _mm256_madd_epi16(_mm256_hadd_epi16(iacc_0123, iacc_4567), ones16);
++                iacc = _mm256_sub_epi32(iacc, _mm256_set1_epi32(pre[(i / 4) * nb + b].sum8[r]));
++
++                const __m256 row_scale_f32 = _mm256_set1_ps(pre[(i / 4) * nb + b].d[r]);
++                acc_rows[i] = _mm256_fmadd_ps(_mm256_cvtepi32_ps(iacc), _mm256_mul_ps(col_scale_f32, row_scale_f32), acc_rows[i]);
++            });
++        }
++
++        // Store the accumulated values
++        q4_0_u8_unroll<0, 4 * NG>([&](auto ic) {
++            constexpr int i = decltype(ic)::value;
++            _mm256_storeu_ps((float *)(s + (i * bs + x * 8)), _mm256_permutevar8x32_ps(acc_rows[i], lane_to_row));
++        });
++    }
++}
++
++// GEMM for 8x blocks of 32 4-bit quants with a single scale factor per block (Q4_0), 8 activation rows at a time
++template<typename block_tx8>
++static void gemm_q4_0_8x8_q8_0_u8_avx(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
++    static_assert(std::is_same_v<block_tx8, block_q4_0x8>, "Unsupported block type");
++
++    const int qk = QK8_0;
++    const int nb = n / qk;
++
++    q8_0x4_pre   pre_stack[2 * 256];
++    q8_0x4_pre * pre = nb <= 256 ? pre_stack : (q8_0x4_pre *) malloc(sizeof(q8_0x4_pre) * 2 * nb);
++
++    const block_tx8    * b_ptr_start = (const block_tx8    *)vx;
++    const block_q8_0x4 * a_ptr_start = (const block_q8_0x4 *)vy;
++
++    int64_t y = 0;
++    for (; y + 1 < nr / 4; y += 2) {
++        gemm_q4_0_8x8_q8_0_u8_avx_rows<2>(s + (y * 4) * bs, bs, b_ptr_start, a_ptr_start + y * nb, pre, nb, nc);
++    }
++    if (y < nr / 4) {
++        gemm_q4_0_8x8_q8_0_u8_avx_rows<1>(s + (y * 4) * bs, bs, b_ptr_start, a_ptr_start + y * nb, pre, nb, nc);
++    }
++
++    if (pre != pre_stack) {
++        free(pre);
++    }
++}
++#endif // GGML_REPACK_Q4_0_GEMM_U8
++#endif // AVX2 without VNNI
++
+ // GEMM for 8x blocks of 32 4-bit quants with a single scale factor per block
+ template<typename block_tx8>
+ static void gemm_q4_b32_8x8_q8_0_lut_avx(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc, __m256i signextendlut) {
+@@ -1446,7 +1743,10 @@ static void gemm_q4_b32_8x8_q8_0_lut_avx(int n, float * GGML_RESTRICT s, size_t
+ #endif // defined(__AVX2__) || defined(__AVX512F__)
+ 
+ void ggml_gemv_q4_0_8x8_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
+-#if defined(__AVX2__) || defined(__AVX512F__)
++#if defined(GGML_REPACK_Q4_0_GEMV_U8)
++    gemv_q4_0_8x8_q8_0_u8_avx<block_q4_0x8>(n, s, bs, vx, vy, nr, nc);
++    return;
++#elif defined(__AVX2__) || defined(__AVX512F__)
+     {
+         // Lookup table to convert signed nibbles to signed bytes
+         __m256i signextendlut = _mm256_castsi128_si256(_mm_set_epi8(-1, -2, -3, -4, -5, -6, -7, -8, 7, 6, 5, 4, 3, 2, 1, 0));
+@@ -2024,7 +2324,10 @@ void ggml_gemv_q2_K_8x8_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const vo
+ }
+ 
+ void ggml_gemm_q4_0_8x8_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc) {
+-#if defined(__AVX2__) || defined(__AVX512F__)
++#if defined(GGML_REPACK_Q4_0_GEMM_U8)
++    gemm_q4_0_8x8_q8_0_u8_avx<block_q4_0x8>(n, s, bs, vx, vy, nr, nc);
++    return;
++#elif defined(__AVX2__) || defined(__AVX512F__)
+     {
+         // Lookup table to convert signed nibbles to signed bytes
+         __m256i signextendlut = _mm256_castsi128_si256(_mm_set_epi8(-1, -2, -3, -4, -5, -6, -7, -8, 7, 6, 5, 4, 3, 2, 1, 0));
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index 2632ae3..ff42532 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -15,6 +15,7 @@
+ #include <cstring>
+ #include <cassert>
+ #include <cstdio>  // for GGML_ASSERT
++#include <type_traits>
+ 
+ #include "repack.h"
+ 
+@@ -4341,6 +4342,16 @@ template <> int repack<block_q2_K, 1, 16>(struct ggml_tensor * t, const void * d
+ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PARAM_TYPE>
+ void gemv(int, float *, size_t, const void *, const void *, int, int);
+ 
++// the gemv kernels that take several rows of the activation in one call; the others are called once per row
++template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PARAM_TYPE>
++constexpr bool gemv_takes_rows() {
++#if defined(GGML_REPACK_Q4_0_GEMV_U8)
++    return std::is_same_v<BLOC_TYPE, block_q4_0> && INTER_SIZE == 8 && NB_COLS == 8 && PARAM_TYPE == GGML_TYPE_Q8_0;
++#else
++    return false;
++#endif
++}
++
+ template <> void gemv<block_q1_0, 4, 4, GGML_TYPE_Q8_0>(int n, float * s, size_t bs, const void * vx, const void * vy, int nr, int nc) {
+     ggml_gemv_q1_0_4x4_q8_0(n, s, bs, vx, vy, nr, nc);
+ }
+@@ -4640,10 +4651,20 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PAR
+                                                              src0_ptr + src0_start * nb01, src1_ptr,
+                                                              nrows - (nrows % 4), ncols);
+         }
+-        for (int iter = nrows - (nrows % 4); iter < nrows; iter++) {
+-            gemv<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>(ne00, (float *) (dst_ptr + (iter * nb1)) + src0_start,
+-                                                             ne01, src0_ptr + src0_start * nb01,
+-                                                             src1_ptr + (src1_col_stride * iter), 1 /* nrows */, ncols);
++        if constexpr (gemv_takes_rows<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>()) {
++            // the 1 to 3 rows left share the work on the weights
++            const int64_t iter = nrows - (nrows % 4);
++            if (iter < nrows) {
++                gemv<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>(ne00, (float *) (dst_ptr + (iter * nb1)) + src0_start,
++                                                                 nb1 / nb0, src0_ptr + src0_start * nb01,
++                                                                 src1_ptr + (src1_col_stride * iter), nrows - iter, ncols);
++            }
++        } else {
++            for (int iter = nrows - (nrows % 4); iter < nrows; iter++) {
++                gemv<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>(ne00, (float *) (dst_ptr + (iter * nb1)) + src0_start,
++                                                                 ne01, src0_ptr + src0_start * nb01,
++                                                                 src1_ptr + (src1_col_stride * iter), 1 /* nrows */, ncols);
++            }
+         }
+     }
+ 
+diff --git a/ggml/src/ggml-cpu/repack.h b/ggml/src/ggml-cpu/repack.h
+index fc6715c..1ccf11a 100644
+--- a/ggml/src/ggml-cpu/repack.h
++++ b/ggml/src/ggml-cpu/repack.h
+@@ -10,6 +10,12 @@
+ 
+ ggml_backend_buffer_type_t ggml_backend_cpu_repack_buffer_type(void);
+ 
++// x86 with AVX2 and without VNNI: the Q4_0 8x8 kernels of arch/x86/repack.cpp for unsigned nibbles.
++// Their gemv takes several rows of the activation in one call (rows one after the other, bs floats apart in dst).
++#if defined(__AVX2__) && !defined(__AVXVNNI__) && !defined(__AVX512VNNI__)
++#define GGML_REPACK_Q4_0_GEMV_U8
++#endif
++
+ template <int K> constexpr int QK_0() {
+     if constexpr (K == 1) {
+         return QK1_0;
+-- 
+2.53.0
+

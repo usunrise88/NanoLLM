@@ -1,4 +1,4 @@
-From 6327e1995a3fc46f4cd6038777a75389dde6bf92 Mon Sep 17 00:00:00 2001
+From f3da9dd4f9770077c985242e0bfca6a5b48d6bcf Mon Sep 17 00:00:00 2001
 From: NanoLLM <nanollm@localhost>
 Date: Mon, 19 Oct 2026 13:00:00 +0000
 Subject: [PATCH] ggml-cpu: repack a tensor on several threads while the model
@@ -64,10 +64,10 @@ index 5428d51..d4f10e7 100644
      int n_tasks = 0;
  
 diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
-index 2632ae3..8190823 100644
+index ff42532..1e47474 100644
 --- a/ggml/src/ggml-cpu/repack.cpp
 +++ b/ggml/src/ggml-cpu/repack.cpp
-@@ -11,10 +11,15 @@
+@@ -11,11 +11,16 @@
  
  #include "arch-fallback.h"
  
@@ -79,11 +79,12 @@ index 2632ae3..8190823 100644
  #include <cassert>
  #include <cstdio>  // for GGML_ASSERT
 +#include <thread>
+ #include <type_traits>
 +#include <vector>
  
  #include "repack.h"
  
-@@ -5147,13 +5152,84 @@ static enum ggml_status ggml_backend_cpu_repack_buffer_init_tensor(ggml_backend_
+@@ -5168,13 +5173,84 @@ static enum ggml_status ggml_backend_cpu_repack_buffer_init_tensor(ggml_backend_
      return GGML_STATUS_SUCCESS;
  }
  
