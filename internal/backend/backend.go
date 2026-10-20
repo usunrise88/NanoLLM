@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -48,7 +49,23 @@ type Device struct {
 	MemoryTotal int64 `json:"memory_total"`
 	MemoryFree  int64 `json:"memory_free"`
 	Unified     bool  `json:"unified,omitempty"`
+	// Features names what the loaded build can do that changes how to run it
+	// (the Feature constants); empty when it says nothing.
+	Features []string `json:"features,omitempty"`
 }
+
+// Has reports whether the device lists the feature.
+func (d Device) Has(feature string) bool { return slices.Contains(d.Features, feature) }
+
+// Device features.
+const (
+	// FeatureMultiRowQ4_0 means the CPU kernels for Q4_0 take several rows of
+	// the activation in one matrix-vector call, so checking the 2-3 tokens of
+	// a draft costs about one token (patches/next/0002, the feature
+	// REPACK_Q4_0_ROWS of the CPU backend). Without it speculative decoding
+	// on the CPU does not pay (docs/AUTOTUNE.md, the cost of a batch).
+	FeatureMultiRowQ4_0 = "multirow-q4_0"
+)
 
 // Selector is how configuration and requests name this device.
 func (d Device) Selector() string { return d.Backend + ":" + d.ID }

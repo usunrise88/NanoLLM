@@ -120,6 +120,7 @@ func (b *llamaBackend) Devices(context.Context) ([]backend.Device, error) {
 		switch props.Type {
 		case GgmlBackendDeviceTypeCpu:
 			d.Type = backend.CPU
+			d.Features = cpuFeatures(llamaPrintSystemInfo())
 		case GgmlBackendDeviceTypeGpu:
 			d.Type = backend.GPU
 		case GgmlBackendDeviceTypeIgpu:
@@ -194,4 +195,14 @@ func (b *llamaBackend) cpuRepackBuft() (GgmlBackendBufferType, error) {
 		}
 	}
 	return 0, errors.New("no repacked buffer type on this CPU")
+}
+
+// cpuFeatures reads the device features out of llama_print_system_info, which
+// lists what each backend registry reports as "CPU : AVX2 = 1 | ... |".
+func cpuFeatures(info string) []string {
+	var out []string
+	if strings.Contains(info, "REPACK_Q4_0_ROWS = 1") {
+		out = append(out, backend.FeatureMultiRowQ4_0)
+	}
+	return out
 }

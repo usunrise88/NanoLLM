@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/usunrise88/nanollm/internal/backend"
 )
 
 func TestCheckCommit(t *testing.T) {
@@ -170,5 +172,18 @@ func TestMachOLoaderPaths(t *testing.T) {
 		if err := checkMachO(f); err != nil {
 			t.Error(err)
 		}
+	}
+}
+
+func TestCPUFeatures(t *testing.T) {
+	const info = "CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | REPACK_Q4_0_ROWS = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 |"
+	if got := cpuFeatures(info); len(got) != 1 || got[0] != backend.FeatureMultiRowQ4_0 {
+		t.Errorf("features of %q: %v", info, got)
+	}
+	if got := cpuFeatures(strings.Replace(info, "REPACK_Q4_0_ROWS = 1 |", "", 1)); len(got) != 0 {
+		t.Errorf("a build without the marker has features: %v", got)
+	}
+	if got := cpuFeatures(""); len(got) != 0 {
+		t.Errorf("no information, but features %v", got)
 	}
 }
