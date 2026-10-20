@@ -53,9 +53,11 @@ jobs:
           # cpuflags/targets: the CPU backend is part of the build (patches 0002-0004 live in it).
           # `ggml` pulls in every variant of GGML_CPU_ALL_VARIANTS (Linux and x86 only upstream),
           # `ggml-cpu` is the one library of the other targets; "all" would also build the llama app.
+          # darwin_arm64 keeps upstream's CPU backend: upstream builds it without GGML_BACKEND_DL, so its
+          # libggml.dylib links libggml-cpu.0.dylib, which a module of ours would not replace (n4 native test).
           - { target: linux_amd64, os: ubuntu-22.04, rpath: '$ORIGIN', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
           - { target: linux_arm64, os: ubuntu-24.04-arm, rpath: '$ORIGIN', extra: '-DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
-          - { target: darwin_arm64, os: macos-15, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3', cpu: true, cpuflags: '-DGGML_CPU=ON', targets: 'llama ggml-base ggml-cpu' }
+          - { target: darwin_arm64, os: macos-15, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3', cpu: false, cpuflags: '-DGGML_CPU=OFF', targets: 'llama ggml-base' }
           - { target: darwin_amd64, os: macos-15-intel, rpath: '@loader_path', extra: '-DCMAKE_OSX_DEPLOYMENT_TARGET=13.3', cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
           - { target: windows_amd64, os: windows-2025-vs2026, win: x64, cpu: true, cpuflags: '-DGGML_CPU=ON -DGGML_CPU_ALL_VARIANTS=ON', targets: 'llama ggml-base ggml' }
           - { target: windows_arm64, os: windows-2025-vs2026, win: arm64, cpu: true, cpuflags: '-DGGML_CPU=ON', targets: 'llama ggml-base ggml-cpu' }
