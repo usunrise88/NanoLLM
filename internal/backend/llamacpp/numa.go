@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/ebitengine/purego"
+
+	"github.com/usunrise88/nanollm/internal/numa"
 )
 
 // EnvNUMA selects ggml's own NUMA strategy, which pins its compute threads:
@@ -20,7 +22,7 @@ import (
 // decode thread count) every thread reads weights on its own node. Without
 // the variable the memory policy of internal/numa decides (interleave).
 // Experimental: docs/AUTOTUNE.md has the measurements.
-const EnvNUMA = "NANOLLM_GGML_NUMA"
+const EnvNUMA = numa.EnvGGML
 
 // ggml_numa_strategy.
 var numaStrategies = map[string]uintptr{"distribute": 1, "isolate": 2, "numactl": 3}

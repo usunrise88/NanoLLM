@@ -10,6 +10,8 @@ import (
 //
 //	off          the kernel's default (first touch, with automatic balancing)
 //	interleave   pages spread round-robin over the nodes the worker may use
+//	distribute   ggml pins its threads to the nodes in turn and the repack
+//	             threads put each weight slab on the node of its reader
 //	node:N       the worker's CPUs and memory on node N alone
 type NUMA struct {
 	Policy string // "", off, interleave, node
@@ -23,6 +25,8 @@ func ParseNUMA(s string) (NUMA, error) {
 		return NUMA{Policy: "off"}, nil
 	case s == "interleave":
 		return NUMA{Policy: "interleave"}, nil
+	case s == "distribute":
+		return NUMA{Policy: "distribute"}, nil
 	case strings.HasPrefix(s, "node:"):
 		n, err := strconv.Atoi(strings.TrimPrefix(s, "node:"))
 		if err != nil || n < 0 {
@@ -30,7 +34,7 @@ func ParseNUMA(s string) (NUMA, error) {
 		}
 		return NUMA{Policy: "node", Node: n}, nil
 	}
-	return NUMA{}, fmt.Errorf("numa %q: want off, interleave or node:N", s)
+	return NUMA{}, fmt.Errorf("numa %q: want off, interleave, distribute or node:N", s)
 }
 
 func (n NUMA) String() string {

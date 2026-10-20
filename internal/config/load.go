@@ -409,15 +409,16 @@ func IsLoopback(addr string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// ValidNUMA accepts devices.numa: empty or auto, off, interleave, node:N.
+// ValidNUMA accepts devices.numa: empty or auto, off, interleave, distribute,
+// node:N.
 func ValidNUMA(s string) error {
 	switch {
-	case s == "", s == "auto", s == "off", s == "interleave":
+	case s == "", s == "auto", s == "off", s == "interleave", s == "distribute":
 		return nil
 	case strings.HasPrefix(s, "node:"):
 		if n, err := strconv.Atoi(strings.TrimPrefix(s, "node:")); err == nil && n >= 0 {
 			return nil
 		}
 	}
-	return fmt.Errorf("%q is not auto, off, interleave or node:N", s)
+	return fmt.Errorf("%q is not auto, off, interleave, distribute or node:N", s)
 }

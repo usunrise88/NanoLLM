@@ -6,6 +6,9 @@ import (
 	"errors"
 	"os"
 	"runtime"
+	"slices"
+	"strconv"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -66,7 +69,7 @@ func Enter(s Spec, nodes []int) error {
 	if s.IsZero() || os.Getenv(EnvApplied) != "" {
 		return nil
 	}
-	if s.Mode != "off" && s.Mode != "" && !Default() {
+	if s.Mode != "off" && s.Mode != "" && s.Mode != "distribute" && !Default() {
 		return nil // already under a policy someone chose
 	}
 	exe, err := os.Executable()
@@ -78,6 +81,29 @@ func Enter(s Spec, nodes []int) error {
 		runtime.UnlockOSThread()
 		return err
 	}
-	env := append(os.Environ(), EnvApplied+"=1")
-	return syscall.Exec(exe, os.Args, env)
+	return syscall.Exec(exe, os.Args, execEnv(s, os.Environ()))
+}
+
+// execEnv is the environment of the re-executed process: the marker that it
+// has been placed and, for "distribute", ggml's strategy and the repack thread
+// count unless the person who started it set them.
+func execEnv(s Spec, env []string) []string {
+	has := func(k string) bool {
+		for _, e := range env {
+			if strings.HasPrefix(e, k+"=") {
+				return true
+			}
+		}
+		return false
+	}
+	out := append(slices.Clone(env), EnvApplied+"=1")
+	if s.Mode == "distribute" {
+		if !has(EnvGGML) {
+			out = append(out, EnvGGML+"=distribute")
+		}
+		if s.Threads > 0 && !has(EnvRepackThreads) {
+			out = append(out, EnvRepackThreads+"="+strconv.Itoa(s.Threads))
+		}
+	}
+	return out
 }

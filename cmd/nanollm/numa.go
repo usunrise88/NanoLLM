@@ -12,9 +12,11 @@ import (
 // placeProcess places this process on the machine's NUMA nodes and CPUs and
 // re-executes it under that placement (internal/numa). raw is a numa.Parse
 // spec, or "auto": interleave over every node when the machine has several,
-// nothing otherwise. It returns when there is nothing to do, and never
-// returns after a successful placement: the process image is replaced.
-func placeProcess(raw string) error {
+// nothing otherwise. threads is the decode thread count, which "distribute"
+// gives the repack (a ";threads=N" in raw wins). It returns when there is
+// nothing to do, and never returns after a successful placement: the process
+// image is replaced.
+func placeProcess(raw string, threads int) error {
 	topo := hwinfo.NUMATopology()
 	if raw == "auto" {
 		raw = "off"
@@ -26,13 +28,16 @@ func placeProcess(raw string) error {
 	if err != nil {
 		return err
 	}
+	if sp.Threads == 0 {
+		sp.Threads = threads
+	}
 	var nodes []int
 	for _, n := range topo {
 		if len(sp.CPUs) == 0 || intersects(n.CPUs, sp.CPUs) {
 			nodes = append(nodes, n.ID)
 		}
 	}
-	if sp.Mode == "interleave" && len(nodes) < 2 {
+	if (sp.Mode == "interleave" || sp.Mode == "distribute") && len(nodes) < 2 {
 		sp.Mode = "off" // one node: nothing to spread over
 	}
 	if sp.Mode == "node" && len(topo) == 0 {
@@ -45,7 +50,7 @@ func placeProcess(raw string) error {
 // workers; a failure is logged and the process runs unplaced.
 func placeFromEnv() {
 	if raw := os.Getenv(numa.EnvPlace); raw != "" {
-		if err := placeProcess(raw); err != nil {
+		if err := placeProcess(raw, hwinfo.DefaultThreads()); err != nil {
 			slog.Warn("NUMA placement failed; running without it", "place", raw, "err", err)
 		}
 	}

@@ -390,7 +390,12 @@ func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (
 			cmd.Env = append(cmd.Env, k+"="+val)
 		}
 		if !ws.Place.IsZero() {
-			cmd.Env = append(cmd.Env, numa.EnvPlace+"="+ws.Place.Spec())
+			spec := ws.Place.Spec()
+			if ws.Place.NUMA == "distribute" && ws.Load.Threads > 0 {
+				// The repack threads must be the decode threads (internal/numa).
+				spec += ";threads=" + strconv.Itoa(ws.Load.Threads)
+			}
+			cmd.Env = append(cmd.Env, numa.EnvPlace+"="+spec)
 		}
 	}
 	cmd.Stdin = bytes.NewReader(in)

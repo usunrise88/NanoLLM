@@ -90,13 +90,13 @@ func TestParseSets(t *testing.T) {
 }
 
 func TestParseNUMA(t *testing.T) {
-	for in, want := range map[string]string{"": "off", "off": "off", "interleave": "interleave", "node:2": "node:2"} {
+	for in, want := range map[string]string{"": "off", "off": "off", "interleave": "interleave", "distribute": "distribute", "node:2": "node:2"} {
 		n, err := ParseNUMA(in)
 		if err != nil || n.String() != want {
 			t.Errorf("%q: %v %v", in, n, err)
 		}
 	}
-	for _, in := range []string{"node:", "node:x", "all", "distribute"} {
+	for _, in := range []string{"node:", "node:x", "all", "spread"} {
 		if _, err := ParseNUMA(in); err == nil {
 			t.Errorf("%q should be refused", in)
 		}

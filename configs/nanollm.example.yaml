@@ -31,7 +31,9 @@ devices:
   fallback: true
   cpu_threads: 0          # 0 = physical cores
   cpu_threads_batch: 0    # prompt processing; 0 = cpu_threads
-  numa: auto              # auto | off | interleave | node:N (several-node machines)
+  numa: auto              # auto | off | interleave | distribute | node:N (several-node machines);
+                          # distribute: threads pinned across the nodes, weights repacked by the threads that read them
+                          # (30 against 25 tok/s on a 4-node EPYC at 16 threads; keep cpu_threads at the physical cores)
 
 models:
   default: gemma-4-e4b-qat

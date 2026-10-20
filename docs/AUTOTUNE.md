@@ -555,8 +555,11 @@ NUMA-раскладка `distribute` с весами на узле того по
 потоков нужны вместе. Больше 16 потоков (SMT) не помогает и при interleave рушит decode
 (9,4…12,0 при 32). Параллельный repack сам по себе на interleave скорость decode не меняет
 (24,5 → 24,6) и prefill тоже в пределах шума. Потолок полосы памяти 39 ток/с: 30,2 это 77 %.
-Включение в продукт: `devices.numa: distribute` → `NANOLLM_GGML_NUMA=distribute` и
-`GGML_REPACK_THREADS` = число потоков decode при повторном запуске (не сделано).
+В продукте: `devices.numa: distribute` (и `bench --numa distribute`) при повторном запуске
+процесса выставляет `NANOLLM_GGML_NUMA=distribute` и `GGML_REPACK_THREADS` = число потоков
+decode (`devices.cpu_threads`, по умолчанию физические ядра), без политики памяти; на
+машине с одним узлом ничего не делает. Умолчание `auto` остаётся interleave: `distribute`
+надо ещё проверить под нагрузкой сервера и на слабом профиле.
 
 **OPT-16 на модели (llama-bench, 2 раунда, A/B на одной машине).**
 

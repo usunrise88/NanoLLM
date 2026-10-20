@@ -23,6 +23,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/config"
 	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/httpx"
+	"github.com/usunrise88/nanollm/internal/hwinfo"
 	"github.com/usunrise88/nanollm/internal/queue"
 	"github.com/usunrise88/nanollm/internal/registry"
 	"github.com/usunrise88/nanollm/internal/server"
@@ -71,7 +72,11 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 	}
 
 	// Before anything is opened: a placement re-executes the process.
-	if err := placeProcess(cfg.Devices.NUMA); err != nil {
+	threads := cfg.Devices.CPUThreads
+	if threads == 0 {
+		threads = hwinfo.DefaultThreads()
+	}
+	if err := placeProcess(cfg.Devices.NUMA, threads); err != nil {
 		slog.Warn("devices.numa", "value", cfg.Devices.NUMA, "err", err)
 	}
 

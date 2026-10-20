@@ -117,8 +117,12 @@ type Devices struct {
 	CPUThreadsBatch int `yaml:"cpu_threads_batch"`
 	// NUMA is the memory placement on a machine with several NUMA nodes:
 	// auto (interleave when there are several nodes), off (the kernel's
-	// default), interleave, or node:N (memory and threads on one node). A
-	// process already started under numactl keeps its policy.
+	// default), interleave, distribute (ggml pins its threads to the nodes in
+	// turn and the weights are repacked by those threads, so each reads its own
+	// node: 30.2 against 24.6 tok/s of interleave on a 4-node EPYC at 16
+	// threads, docs/AUTOTUNE.md; wants decode threads at most the physical
+	// cores), or node:N (memory and threads on one node). A process already
+	// started under numactl keeps its policy.
 	NUMA string `yaml:"numa"`
 }
 

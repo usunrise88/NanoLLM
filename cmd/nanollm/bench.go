@@ -59,7 +59,7 @@ func benchCommand(args []string) error {
 	var sets multiFlag
 	fs.Var(&sets, "set", "dev suite: sweep key=a,b (repeatable; the product of all axes runs)\n"+bench.VariantKeys())
 	profile := fs.String("profile", "", "dev suite: strong, weak or <cpus>:<preset> (e.g. 0-3:ram-2g): where and with what budget to run")
-	numaFlag := fs.String("numa", "", "dev suite: off, interleave or node:N")
+	numaFlag := fs.String("numa", "", "dev suite: off, interleave, distribute or node:N")
 	cold := fs.Bool("cold", false, "evict the model file from the page cache before each run (a strict budget does it anyway)")
 	advisory := fs.Bool("advisory", false, "dev suite: plan for the budget but do not enforce it (no cgroup, no cold start): fast sweeps of compute settings")
 	timeout := fs.Duration("timeout", 25*time.Minute, "one run's time limit (a worker that has not finished is recorded as failed, too slow); 0 is none")
