@@ -248,7 +248,12 @@ func TestNativeCPUDevice(t *testing.T) {
 		t.Errorf("CPU device without memory or name: %+v", devs[0])
 	}
 	for _, d := range devs {
-		t.Logf("%s %s %q %d/%d unified=%v", d.Selector(), d.Type, d.Name, d.MemoryFree, d.MemoryTotal, d.Unified)
+		t.Logf("%s %s %q %d/%d unified=%v features=%v", d.Selector(), d.Type, d.Name, d.MemoryFree, d.MemoryTotal, d.Unified, d.Features)
+	}
+	// A series that has the multi-row Q4_0 kernels lists them; the test of a
+	// build that must have them sets NANOLLM_TEST_EXPECT_FEATURE.
+	if want := os.Getenv("NANOLLM_TEST_EXPECT_FEATURE"); want != "" && !devs[0].Has(want) {
+		t.Errorf("the CPU device does not list %q: %v", want, devs[0].Features)
 	}
 	for _, w := range b.Warnings() {
 		t.Logf("warning: %s", w)
