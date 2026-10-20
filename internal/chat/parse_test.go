@@ -58,15 +58,19 @@ func every(t *testing.T, opts ParseOptions, text string) parsed {
 }
 
 func TestParsePlain(t *testing.T) {
-	for in, want := range map[string]parsed{
-		"Hello <b>world</b>": {content: "Hello <b>world</b>"},
-		"<|turn>model\nHi":   {content: "Hi"},
-		"<|channel>thought\n  Let me think.<channel|>Answer.": {content: "Answer.", reasoning: "Let me think."},
-		"<|channel><|channel>thought x<channel|>A":            {content: "A", reasoning: "x"},
-		"Answer.<channel|>":                {content: "Answer."},
-		"A<|channel>thought\n<channel|>":   {content: "A"},
-		"<|tool_call>call:f{}<tool_call|>": {content: "<|tool_call>call:f{}<tool_call|>"},
+	for _, c := range []struct {
+		in   string
+		want parsed
+	}{
+		{"Hello <b>world</b>", parsed{content: "Hello <b>world</b>"}},
+		{"<|turn>model\nHi", parsed{content: "Hi"}},
+		{"<|channel>thought\n  Let me think.<channel|>Answer.", parsed{content: "Answer.", reasoning: "Let me think."}},
+		{"<|channel><|channel>thought x<channel|>A", parsed{content: "A", reasoning: "x"}},
+		{"Answer.<channel|>", parsed{content: "Answer."}},
+		{"A<|channel>thought\n<channel|>", parsed{content: "A"}},
+		{"<|tool_call>call:f{}<tool_call|>", parsed{content: "<|tool_call>call:f{}<tool_call|>"}},
 	} {
+		in, want := c.in, c.want
 		if got := every(t, ParseOptions{}, in); !reflect.DeepEqual(got, want) {
 			t.Errorf("%q: got %+v want %+v", in, got, want)
 		}
