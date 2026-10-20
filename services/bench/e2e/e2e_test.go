@@ -186,13 +186,13 @@ func TestEndToEnd(t *testing.T) {
 
 	// The result is visible on the pages and in the API.
 	for path, want := range map[string]string{
-		"/benchmarks":                                       "ASUS ROG Zephyrus M16",
-		"/benchmarks/s/" + rc.ID:                            "Intel Core i7-12700H",
+		"/benchmarks":            "ASUS ROG Zephyrus M16",
+		"/benchmarks/s/" + rc.ID: "Intel Core i7-12700H",
 		"/benchmarks/systems/asus-rog-zephyrus-m16":         "vram-8g",
 		"/benchmarks/gpu/nvidia-geforce-rtx-3070-ti-laptop": "58.2",
 		"/api/v1/results?system=asus-rog-zephyrus-m16":      `"installs": 1`,
-		"/api/v1/facets":                                    "intel-core-i7-12700h",
-		"/api/v1/submissions/" + rc.ID:                      "gemma-4-e4b-qat",
+		"/api/v1/facets":               "intel-core-i7-12700h",
+		"/api/v1/submissions/" + rc.ID: "gemma-4-e4b-qat",
 	} {
 		code, body, _ := get(t, base+path)
 		if code != http.StatusOK || !strings.Contains(body, want) {

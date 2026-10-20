@@ -258,8 +258,9 @@ func TestPlannerPlacerCarriesTheStreamSettings(t *testing.T) {
 }
 
 // models.overrides.<id>.repack: off keeps the weights as the file has them in
-// every CPU mode (the quality gate of docs/QUALITY-STAGE2.md needs it), on
-// forces the repacked layout, and no key leaves it to the planner.
+// every CPU mode (the quality gate of docs/QUALITY-STAGE2.md needs it); auto
+// and no key leave the planner's choice alone. The planner's own choice
+// depends on the platform, so only the off case is asserted outright.
 func TestPlannerPlacerRepackKey(t *testing.T) {
 	m := defaultModel(t)
 	for _, preset := range []string{"ram-8g", "ram-4g"} {
@@ -269,8 +270,13 @@ func TestPlannerPlacerRepackKey(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !def.Spec.Repack {
-			t.Fatalf("%s: the planner's own choice is not repack", preset)
+		req.Override.Repack = "auto"
+		auto, err := PlannerPlacer(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if auto.Spec.Repack != def.Spec.Repack {
+			t.Errorf("%s: repack: auto changed the planner's choice (%v → %v)", preset, def.Spec.Repack, auto.Spec.Repack)
 		}
 		req.Override.Repack = "off"
 		off, err := PlannerPlacer(context.Background(), req)
@@ -279,14 +285,6 @@ func TestPlannerPlacerRepackKey(t *testing.T) {
 		}
 		if off.Spec.Repack {
 			t.Errorf("%s: repack: off still repacks", preset)
-		}
-		req.Override.Repack = "on"
-		on, err := PlannerPlacer(context.Background(), req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !on.Spec.Repack {
-			t.Errorf("%s: repack: on does not repack", preset)
 		}
 	}
 }

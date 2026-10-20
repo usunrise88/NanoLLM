@@ -90,10 +90,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	if spec.Stream != nil {
 		spec.Stream.Ahead, spec.Stream.Keep, spec.Stream.Evict = ov.Stream.Ahead, ov.Stream.Keep, ov.Stream.Evict
 	}
-	switch ov.Repack {
-	case "on":
-		spec.Repack = true
-	case "off":
+	if ov.Repack == "off" {
 		spec.Repack = false
 	}
 	spec.Threads, spec.ThreadsBatch = req.Threads, req.ThreadsBatch
