@@ -288,3 +288,40 @@ func TestPlannerPlacerRepackKey(t *testing.T) {
 		}
 	}
 }
+
+// MTP on the CPU: on by default where the device lists the multi-row Q4_0 kernels
+// (draft_max 2, p_min 0.75), off elsewhere with the reason, and the configuration
+// wins either way.
+func TestPlannerPlacerMTPDefaultOnCPU(t *testing.T) {
+	m := defaultModel(t)
+	run := func(feat bool, typ string, nmax int) *plan.Plan {
+		t.Helper()
+		req := cpuRequest(m)
+		req.Override.Preset = "ram-8g"
+		req.Override.Speculative = config.Speculative{Type: typ, NMax: nmax}
+		if feat {
+			req.Device.Features = []string{backend.FeatureMultiRowQ4_0}
+		}
+		pl, err := PlannerPlacer(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return pl.Plan.(*plan.Plan)
+	}
+	if p := run(false, "", 0); p.MTP.Enabled || p.MTP.Reason == "" {
+		t.Errorf("no multi-row kernels: MTP %+v, want off with a reason", p.MTP)
+	}
+	p := run(true, "", 0)
+	if !p.MTP.Enabled || p.MTP.DraftMax != CPUMTPDraftMax || p.MTP.DraftPMin != CPUMTPDraftPMin {
+		t.Errorf("multi-row kernels: MTP %+v, want on with draft_max %d, p_min %v", p.MTP, CPUMTPDraftMax, CPUMTPDraftPMin)
+	}
+	if p := run(true, config.SpecNone, 0); p.MTP.Enabled {
+		t.Errorf("speculative.type: none with the kernels: MTP %+v", p.MTP)
+	}
+	if p := run(true, config.SpecMTP, 3); !p.MTP.Enabled || p.MTP.DraftMax != 3 {
+		t.Errorf("speculative.type: mtp, n_max 3: MTP %+v", p.MTP)
+	}
+	if p := run(false, config.SpecMTP, 0); !p.MTP.Enabled {
+		t.Errorf("speculative.type: mtp without the kernels: MTP %+v, want on (the configuration wins)", p.MTP)
+	}
+}
