@@ -1,0 +1,74 @@
+# 2026-10-20T16:29:50+00:00 mode=prefill rounds=2 profiles=weak,strong variants: A=dist/linux_amd64-next/tools B=dist/linux_amd64-next-v2/tools
+# host: hyper 7.0.0-30-generic, load at start: 5.73 6.10 3.46, model: /home/ubuntu/nanollm-data/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf
+### variant=A profile=weak mode=prefill round=1 env=none load=5.73 2026-10-20T16:29:50+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/dist/linux_amd64-next/tools/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/dist/linux_amd64-next/tools/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         43.69 ± 0.04 |
+
+build: 9266a65 (4)
+### end load=5.65
+### variant=B profile=weak mode=prefill round=1 env=none load=5.65 2026-10-20T16:31:04+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/dist/linux_amd64-next-v2/tools/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/dist/linux_amd64-next-v2/tools/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         43.69 ± 0.05 |
+
+build: aad9f95 (5)
+### end load=5.70
+### variant=A profile=strong mode=prefill round=1 env=none load=5.70 2026-10-20T16:32:19+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/dist/linux_amd64-next/tools/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/dist/linux_amd64-next/tools/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        142.55 ± 7.52 |
+
+build: 9266a65 (4)
+### end load=8.55
+### variant=B profile=strong mode=prefill round=1 env=none load=8.55 2026-10-20T16:32:44+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/dist/linux_amd64-next-v2/tools/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/dist/linux_amd64-next-v2/tools/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |       139.28 ± 12.44 |
+
+build: aad9f95 (5)
+### end load=11.09
+### variant=A profile=weak mode=prefill round=2 env=none load=11.09 2026-10-20T16:33:09+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/dist/linux_amd64-next/tools/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/dist/linux_amd64-next/tools/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         43.71 ± 0.03 |
+
+build: 9266a65 (4)
+### end load=6.15
+### variant=B profile=weak mode=prefill round=2 env=none load=6.15 2026-10-20T16:34:23+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/dist/linux_amd64-next-v2/tools/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/dist/linux_amd64-next-v2/tools/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         43.72 ± 0.03 |
+
+build: aad9f95 (5)
+### end load=4.65
+### variant=A profile=strong mode=prefill round=2 env=none load=4.65 2026-10-20T16:35:37+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/dist/linux_amd64-next/tools/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/dist/linux_amd64-next/tools/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |       139.28 ± 12.62 |
+
+build: 9266a65 (4)
+### end load=7.32
+### variant=B profile=strong mode=prefill round=2 env=none load=7.32 2026-10-20T16:36:03+00:00
+load_backend: loaded RPC backend from /home/ubuntu/nanollm/dist/linux_amd64-next-v2/tools/libggml-rpc.so
+load_backend: loaded CPU backend from /home/ubuntu/nanollm/dist/linux_amd64-next-v2/tools/libggml-cpu-haswell.so
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |       138.97 ± 12.83 |
+
+build: aad9f95 (5)
+### end load=8.85
