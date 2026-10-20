@@ -18,15 +18,12 @@ import (
 // measured inventory. The preset is models.overrides.<id>.preset; without
 // one it is derived from what the chosen device has free, so a default
 // installation uses the machine it is on without being told its size.
-// CPUMTPOffReason is the plan's reason for the default of MTP on the CPU.
-const CPUMTPOffReason = "off by default on the CPU: without the multi-row Q4_0 kernels the measured speed-up is at best 1.04x on a 16-core EPYC 7351P (threshold 1.2x, docs/STAGE2.md 2.7); models.<id>.speculative.type: mtp turns it on"
-
-// The MTP setting for a CPU with the multi-row kernels (docs/AUTOTUNE.md, "MTP на CPU
-// с ядрами OPT-16"): 1.36-1.41x on 16 threads and 1.21-1.25x on 4 cores for draft_max 2 and
-// p_min 0.5-0.75; 0.75 is the best of the worst.
+// The CPU default of MTP is in package plan, shared with the benchmark; these
+// are its names here.
 const (
-	CPUMTPDraftMax  = 2
-	CPUMTPDraftPMin = 0.75
+	CPUMTPOffReason = plan.CPUMTPOffReason
+	CPUMTPDraftMax  = plan.CPUMTPDraftMax
+	CPUMTPDraftPMin = plan.CPUMTPDraftPMin
 )
 
 // DefaultNGramDraftMax is how many tokens a prompt-lookup draft carries when
@@ -61,24 +58,11 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		NoMTP: ov.Speculative.Type == config.SpecNone, DraftMax: ov.Speculative.NMax, DraftPMin: ov.Speculative.PMin,
 		NoRepack: ov.Repack == "off",
 	}
-	// MTP on the CPU pays where checking a draft is cheap. The stage 2 sweep
-	// (docs/STAGE2.md 2.7, docs/AUTOTUNE.md) found at best 1.04x with the
-	// kernels that check 2-3 rows one by one, and 1.41x (16 threads) / 1.25x
-	// (4 cores) with the multi-row Q4_0 kernels (threshold 1.2x). So it is on by
-	// default where the device lists them, with the setting that passes on both
-	// profiles, and off elsewhere with the reason in the plan.
+	// MTP on the CPU: on by default where the device lists the multi-row Q4_0
+	// kernels, off elsewhere with the reason in the plan (plan.DefaultCPUMTP).
 	// speculative.type: mtp turns it on anywhere; none turns it off.
 	if ov.Speculative.Type == "" && req.Device.Type == backend.CPU {
-		if req.Device.Has(backend.FeatureMultiRowQ4_0) {
-			if r.DraftMax == 0 {
-				r.DraftMax = CPUMTPDraftMax
-			}
-			if r.DraftPMin == 0 {
-				r.DraftPMin = CPUMTPDraftPMin
-			}
-		} else {
-			r.NoMTP, r.NoMTPReason = true, CPUMTPOffReason
-		}
+		r.DefaultCPUMTP(req.Device.Has(backend.FeatureMultiRowQ4_0))
 	}
 	if ov.Speculative.Type == config.SpecNGram {
 		r.NoMTP, r.NoMTPReason = true, "prompt lookup (speculative.type: ngram) drafts instead"

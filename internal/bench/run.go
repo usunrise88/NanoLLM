@@ -283,8 +283,15 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		return run, WorkerSpec{}, true
 	}
 	req := plan.Request{Model: model, Preset: preset, Proven: plan.ProvenFor(runtime.GOOS), NoMTP: o.DrafterPath == ""}
+	onGPU := (preset.Budget.VRAM > 0 || preset.Budget.Unified > 0) && gpu != nil
+	if !onGPU && cpu != nil && o.DrafterPath != "" && !v.setsSpeculation() {
+		// What a server would run on this CPU by default. A variant that
+		// names a speculation setting (a sweep of draft_max, mtp=off, ngram)
+		// plans exactly what it says.
+		req.DefaultCPUMTP(cpu.Has(backend.FeatureMultiRowQ4_0))
+	}
 	v.Plan(&req)
-	if (preset.Budget.VRAM > 0 || preset.Budget.Unified > 0) && gpu != nil {
+	if onGPU {
 		req.Device = &plan.Device{
 			Selector: gpu.Selector(), Backend: strings.TrimRight(gpu.ID, "0123456789"),
 			Memory: gpu.MemoryTotal, Unified: gpu.Unified,

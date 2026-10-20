@@ -26,3 +26,14 @@ func TestVariantStreamKeys(t *testing.T) {
 		t.Error("stream_evict=maybe accepted")
 	}
 }
+
+func TestVariantSetsSpeculation(t *testing.T) {
+	if (Variant{}).setsSpeculation() || (Variant{"threads": "8", "kv": "q8_0"}).setsSpeculation() {
+		t.Error("a variant with no speculation key must get the CPU default")
+	}
+	for _, k := range []string{"draft_max", "draft_p_min", "mtp", "ngram"} {
+		if !(Variant{k: "1"}).setsSpeculation() {
+			t.Errorf("%s names a speculation setting", k)
+		}
+	}
+}

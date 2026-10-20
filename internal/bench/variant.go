@@ -262,3 +262,14 @@ func (v Variant) Load(spec *backend.LoadSpec) {
 		spec.Stream = &st
 	}
 }
+
+// setsSpeculation says whether the variant names a speculation setting, in
+// which case the CPU default of MTP (plan.DefaultCPUMTP) does not apply.
+func (v Variant) setsSpeculation() bool {
+	for _, k := range []string{"draft_max", "draft_p_min", "mtp", "ngram"} {
+		if _, ok := v[k]; ok {
+			return true
+		}
+	}
+	return false
+}
