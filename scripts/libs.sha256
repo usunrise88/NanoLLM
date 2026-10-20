@@ -18,3 +18,9 @@ e881051d0c28a2dfddbcee76a969aebaa61faee7ab80d2f5ef022cfacba56dfb  llama-b11600-b
 8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6  cudart-llama-bin-win-cuda-12.4-x64.zip
 
 # Our own libllama and libggml-base, built by .github/workflows/libs-build.yml (release scripts/libs.release)
+5826cf3bd8ae7d496c6854c4970e7396665502b64068507ffd96917a80157edf  nanollm-libs-darwin_amd64.tar.gz
+b291ef9e270c93df9b56f8a056945acad317913ac60787b9ace8d8cf7bf36e87  nanollm-libs-darwin_arm64.tar.gz
+319da67ceb29ed575586a87ea941811f2de678836b0820bff318eda0377643c8  nanollm-libs-linux_amd64.tar.gz
+cd31e4efd6c4ff979aaf291e4b69929f363bed3b69d1a73493035c81ee3cc252  nanollm-libs-linux_arm64.tar.gz
+b953af647d2b9f52bec23dc05a7edddeead058ab7e9cf2e5a7835765d98aee9f  nanollm-libs-windows_amd64.tar.gz
+70ce46c2260076de14e8f601c6d47c60e1e3159f60e8075bee9c40376deed377  nanollm-libs-windows_arm64.tar.gz
