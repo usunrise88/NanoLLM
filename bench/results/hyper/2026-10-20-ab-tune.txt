@@ -1,0 +1,113 @@
+# tune 2026-10-20T08:53:20+00:00 model gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf builds: dist/linux_amd64-next/tools dist/tune-znver1/tools dist/tune-lto/tools dist/tune-both/tools
+## round 1 strong 16 threads, all nodes: dist/linux_amd64-next/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |       145.13 ± 11.77 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.27 ± 0.22 |
+
+build: 9266a65 (4)
+## round 1 weak 4 cores of node 0 (cpus 0,1,2,3): dist/linux_amd64-next/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         43.66 ± 0.03 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |            tg64 |         11.62 ± 0.01 |
+
+build: 9266a65 (4)
+## round 1 strong 16 threads, all nodes: dist/tune-znver1/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |         77.61 ± 1.96 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         21.02 ± 0.28 |
+
+build: acdff81 (3)
+## round 1 weak 4 cores of node 0 (cpus 0,1,2,3): dist/tune-znver1/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         24.05 ± 0.01 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |            tg64 |          8.20 ± 0.01 |
+
+build: acdff81 (3)
+## round 1 strong 16 threads, all nodes: dist/tune-lto/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |         81.25 ± 3.11 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         21.40 ± 0.01 |
+
+build: acdff81 (3)
+## round 1 weak 4 cores of node 0 (cpus 0,1,2,3): dist/tune-lto/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         22.77 ± 0.01 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |            tg64 |          8.09 ± 0.03 |
+
+build: acdff81 (3)
+## round 1 strong 16 threads, all nodes: dist/tune-both/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |         79.13 ± 5.18 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         20.64 ± 0.35 |
+
+build: acdff81 (3)
+## round 1 weak 4 cores of node 0 (cpus 0,1,2,3): dist/tune-both/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         24.01 ± 0.01 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |            tg64 |          8.08 ± 0.01 |
+
+build: acdff81 (3)
+## round 2 strong 16 threads, all nodes: dist/linux_amd64-next/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |        150.21 ± 1.62 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         24.69 ± 0.27 |
+
+build: 9266a65 (4)
+## round 2 weak 4 cores of node 0 (cpus 0,1,2,3): dist/linux_amd64-next/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         43.50 ± 0.11 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |            tg64 |         11.58 ± 0.03 |
+
+build: 9266a65 (4)
+## round 2 strong 16 threads, all nodes: dist/tune-znver1/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |         82.38 ± 0.67 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         21.55 ± 0.10 |
+
+build: acdff81 (3)
+## round 2 weak 4 cores of node 0 (cpus 0,1,2,3): dist/tune-znver1/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         24.01 ± 0.02 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |            tg64 |          8.16 ± 0.02 |
+
+build: acdff81 (3)
+## round 2 strong 16 threads, all nodes: dist/tune-lto/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |         82.08 ± 2.31 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         21.16 ± 0.03 |
+
+build: acdff81 (3)
+## round 2 weak 4 cores of node 0 (cpus 0,1,2,3): dist/tune-lto/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         22.74 ± 0.03 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |            tg64 |          8.14 ± 0.01 |
+
+build: acdff81 (3)
+## round 2 strong 16 threads, all nodes: dist/tune-both/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           pp512 |         81.34 ± 4.56 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |      16 |   1 |           tg128 |         21.36 ± 0.35 |
+
+build: acdff81 (3)
+## round 2 weak 4 cores of node 0 (cpus 0,1,2,3): dist/tune-both/tools
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |           pp512 |         24.06 ± 0.01 |
+| gemma4 E4B Q4_0                |   3.91 GiB |     7.46 B | CPU        |       4 |   1 |            tg64 |          8.09 ± 0.01 |
+
+build: acdff81 (3)
