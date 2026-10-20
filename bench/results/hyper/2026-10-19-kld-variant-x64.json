@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 64 -t 16",
+    "name": "variant-x64"
+  },
+  "date": "2026-10-20",
+  "extra": {
+    "kld_max": 0.40386,
+    "kld_mean": 0.00135,
+    "kld_median": 0.00044,
+    "kld_p99": 0.011797,
+    "ppl_ratio": 1.009125,
+    "top1_pct": 98.438
+  },
+  "model": "gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}

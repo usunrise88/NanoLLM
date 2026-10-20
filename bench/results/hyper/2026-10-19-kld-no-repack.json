@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 64 -t 16 --no-repack",
+    "name": "no-repack"
+  },
+  "date": "2026-10-20",
+  "extra": {
+    "kld_max": 8.692978,
+    "kld_mean": 0.001901,
+    "kld_median": 0.000444,
+    "kld_p99": 0.011845,
+    "ppl_ratio": 1.009655,
+    "top1_pct": 98.591
+  },
+  "model": "gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}

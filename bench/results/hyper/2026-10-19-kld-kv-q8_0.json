@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 64 -t 16 -ctk q8_0 -ctv q8_0",
+    "name": "kv-q8_0"
+  },
+  "date": "2026-10-20",
+  "extra": {
+    "kld_max": 0.190897,
+    "kld_mean": 0.001457,
+    "kld_median": 0.000499,
+    "kld_p99": 0.012902,
+    "ppl_ratio": 1.010083,
+    "top1_pct": 98.346
+  },
+  "model": "gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}
