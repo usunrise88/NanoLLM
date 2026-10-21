@@ -1,0 +1,70 @@
+From b19a80bad9a9b0c99d67e7f45d569b9cebdb490c Mon Sep 17 00:00:00 2001
+From: NanoLLM <nanollm@localhost>
+Date: Wed, 21 Oct 2026 14:00:00 +0000
+Subject: [PATCH] vulkan: Intel iGPUs with the Windows driver use the large
+ mat-vec workgroup for every row count, and 4 rows per batch workgroup
+
+ggml_vk_get_dequantize_mul_mat_vec picked the 64-lane variant of the dequantizing mat-vec only for M <= 8192 on Intel
+(and NVIDIA), and the 16-lane subgroup variant above that. On an Iris Xe (UMA, Windows driver 32.0.101.7092) the
+16-lane one reads 28.6-29 GB/s on the shapes above the limit (the FFN gate and up, M = 10240, and the 262144-row
+output head) and the 64-lane one 31-34 GB/s. The ceiling of a compute shader on this GPU is 34 GB/s (a plain sum
+over a 1 GiB buffer, all workgroup sizes, chunk sizes and load widths: 32-34.4 GB/s).
+
+The batch kernels (2 to 8 columns, q8_1 activations: the verification of speculative drafts) were pinned to the
+subgroup variant with 2 rows per workgroup on every Intel GPU. Measured on the Iris Xe, the large workgroup with 4
+rows is faster: 3 columns +14%, 4 columns +21%, 6 columns +31%.
+
+Both changes apply to Intel GPUs that share memory with the host and run the Windows proprietary driver; other
+vendors, discrete Intel GPUs and the Mesa driver keep the old choices.
+
+i7-12700H Iris Xe, llama-bench, interleaved, 3 runs each (upstream -> patched, tok/s): tg32 10.38-10.53 ->
+11.74-11.78 (+12%), pp2 20.1-20.9 -> 23.0-23.4, pp3 29.8-30.2 -> 34.2-34.7, pp4 36.7-36.9 -> 44.0-45.3, pp6
+46.4-47.1 -> 60.8-62.6; pp512 unchanged (477-480).
+---
+ ggml/src/ggml-vulkan/ggml-vulkan.cpp | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index e8589dc0e..4cf049a25 100644
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -2875,6 +2875,9 @@ void ggml_vk_load_shaders(vk_device& device, vk_pipeline requested) {
+     } else if (device->vendor_id == VK_VENDOR_ID_INTEL) {
+         rm_stdq = 2;
+         rm_stdq_int = 2;
++        if (device->uma && device->driver_id == vk::DriverId::eIntelProprietaryWindows) {
++            rm_stdq_int = 4;
++        }
+     }
+     // RDNA3/4: above four columns, static 4 rows for all types bench faster than the default
+     const bool is_rdna3_or_4 = device->vendor_id == VK_VENDOR_ID_AMD && (device->architecture == AMD_RDNA3 || device->architecture == AMD_RDNA4);
+@@ -5587,6 +5590,11 @@ static vk_pipeline ggml_vk_get_dequantize_mul_mat_vec(ggml_backend_vk_context *
+             return nullptr;
+     }
+ 
++    // Iris Xe with the Windows driver: the large workgroup reads 31-34 GB/s whatever M is, the subgroup one 29 GB/s when
++    // M > 8192 (the FFN gate and up, the output head), and the batch (q8_1) kernels are faster with it as well
++    const bool intel_windows_igpu = ctx->device->vendor_id == VK_VENDOR_ID_INTEL && ctx->device->uma &&
++                                    ctx->device->driver_id == vk::DriverId::eIntelProprietaryWindows;
++
+     // heuristic to choose workgroup size
+     uint32_t dmmv_wg = DMMV_WG_SIZE_SUBGROUP;
+     if ((ctx->device->vendor_id == VK_VENDOR_ID_NVIDIA && ctx->device->architecture != vk_device_architecture::NVIDIA_PRE_TURING) || ctx->device->vendor_id == VK_VENDOR_ID_INTEL) {
+@@ -5598,7 +5606,7 @@ static vk_pipeline ggml_vk_get_dequantize_mul_mat_vec(ggml_backend_vk_context *
+                 dmmv_wg = DMMV_WG_SIZE_LARGE;
+             }
+         } else {
+-            if (m <= 8192 && k >= 1024) {
++            if ((m <= 8192 || intel_windows_igpu) && k >= 1024) {
+                 dmmv_wg = DMMV_WG_SIZE_LARGE;
+             }
+         }
+@@ -5606,7 +5614,7 @@ static vk_pipeline ggml_vk_get_dequantize_mul_mat_vec(ggml_backend_vk_context *
+ 
+     if (b_type == GGML_TYPE_Q8_1) {
+         if (ctx->device->vendor_id == VK_VENDOR_ID_INTEL) {
+-            dmmv_wg = DMMV_WG_SIZE_SUBGROUP;
++            dmmv_wg = intel_windows_igpu ? DMMV_WG_SIZE_LARGE : DMMV_WG_SIZE_SUBGROUP;
+         }
+         return ctx->device->pipeline_dequant_mul_mat_vec_q8_1_f32[dmmv_wg][a_type][num_cols-1];
+     }

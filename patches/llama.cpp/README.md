@@ -32,9 +32,14 @@ The series, in order:
   with upstream's lut kernels, prefill x1.4 and MTP on the CPU x1.9 on an i7-12700H; the decode of
   one token is at the memory ceiling and does not move). Windows build:
   `scripts/build-libs-windows.ps1`; kernels: `scripts/kernel-bench/run-windows.ps1`.
+- 0006 vulkan: on Intel GPUs that share memory with the host and run the Windows driver (Iris Xe), the large mat-vec
+  workgroup for every row count and 4 rows per workgroup in the batch kernels (host-side choices in `ggml-vulkan.cpp`;
+  decode +12%, verification of 2 to 3 speculative drafts +14 to +21%, prefill unchanged). The Windows build of the libs
+  ships our `ggml-vulkan.dll` for it; other vendors and drivers keep upstream's choices.
 
 0002 to 0005 change the CPU backend, so the targets marked `cpu` in
-`libs-build.yml` ship the CPU variants too (see there and `scripts/fetch-libs.sh`).
+`libs-build.yml` ship the CPU variants too (see there and `scripts/fetch-libs.sh`), and 0006 changes the
+Vulkan backend, which the `vulkan` targets ship (windows_amd64 for now).
 Without patches the build is upstream's.
 
 ## Patches under test: `patches/next`
