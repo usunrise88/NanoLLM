@@ -53,6 +53,11 @@ that commit and `NANOLLM_DEV_SERIES=<commit>`:
 
     go build -ldflags "-X github.com/usunrise88/nanollm/internal/backend/llamacpp.PinnedCommit=<commit>" ./cmd/nanollm
 
+In `next/` now: 0007 llama: `LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH`, flash attention on batches of up to 8 tokens and on
+sliding-window layers, the matmul attention for longer batches on the full-attention layers (libllama, plus `small_batch`
+for common's and llama-bench's `-fa`; prefill on an Iris Xe +23% at 4096 tokens of context, +42% at 8192, KLD below that
+of `-fa 0`). NanoLLM asks for it on GPUs listing `fa-small-batch`, which needs the release.
+
 When the owner agrees to a libs release, the patches move from `next/` into
 this directory, the new commit goes into `scripts/llama.cpp.commit`, the
 bindings are regenerated (`make bindgen`), and `libs-build.yml` publishes the

@@ -1,0 +1,175 @@
+From 9c268ceeb3a2500e4b4ef7414c915b2e2c75b7ea Mon Sep 17 00:00:00 2001
+From: NanoLLM <nanollm@localhost>
+Date: Wed, 21 Oct 2026 15:00:00 +0000
+Subject: [PATCH] llama: flash attention on small batches only
+ (LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH), the matmul attention for long ones
+
+A new llama_flash_attn_type value. The KV cache keeps the flash-attention layout; batches of up to 8 tokens
+(decoding, the verification of speculative drafts) and the sliding-window layers keep flash attention, and a longer
+batch on a full-attention layer goes through the matmul attention (KQ, softmax, KQV) with V transposed for it. It
+needs an unquantized cache; with a quantized one it is plain flash attention. The sliding-window layers stay on
+flash attention because it skips the masked blocks of a full-size SWA cache, which the matmul attention would
+compute in full. common's -fa and llama-bench's -fa take small_batch.
+
+The scalar flash-attention shader of the Vulkan backend is slow on an Iris Xe (no matrix cores, Windows driver
+32.0.101.7092) as the context grows: pp512 drops from 475 tok/s at an empty context to 331 at 4096 and 252 at
+8192, while llama-bench -fa 0 gives 462 / 409 / 355. None of the shader's host-side parameters closes the gap
+(block rows 8/16/32, block columns 32/64, workgroup 128/256, D split 4/8/16, row split 1/4, subgroups off/16/32,
+shared-memory staging: all within the noise or slower).
+
+i7-12700H Iris Xe, llama-bench pp512, flash attention -> small_batch, tok/s:
+- swa_full off (llama-bench's default): empty context 453-458 -> 433-455, at 512 408 -> 431, at 1024 368 -> 421,
+  at 2048 371-373 -> 405-418 (+12%), at 3072 339-342 -> 385-402 (+15%), at 4096 314 -> 385 (+23%), at 8192
+  240 -> 341 (+42%); tg32 unchanged (11.05 / 11.22, at 4096 10.40 / 10.29).
+- the full-size SWA cache NanoLLM runs (two interleaved rounds): empty context 416-458 -> 447-472, at 4096
+  315-319 -> 385-394 (+22%), at 8192 241-242 -> 346-347 (+43%). The matmul attention on the sliding-window layers
+  too: 300-305 at 4096, 223-228 at 8192, worse than flash attention.
+
+NanoLLM gemma.json on that iGPU (5 requests, prompts of 0.7k-4.6k tokens, MTP with 2 drafts), two interleaved
+rounds: wall 95.7-97.9 -> 90.0-92.1 s, prefill 40.3-41.9 -> 36.5-38.5 s. The compute buffer grows by the KQ
+matrix of one layer (peak GPU memory of the process 3.47-3.50 -> 3.62 GB at n_ctx 8192).
+
+KL divergence on Vulkan against flash attention everywhere (llama-perplexity -c 2048 -ub 512, 6 chunks of a
+local ru/en text): small_batch mean 0.00113, 99.9% 0.030, same top token 98.2%; flash attention off (the matmul
+attention everywhere) 0.00132 / 0.039 / 98.0%; the CPU backend 0.00238 / 0.043 / 98.0%.
+---
+ common/arg.cpp                    | 8 +++++---
+ include/llama.h                   | 3 +++
+ src/llama-context.cpp             | 2 ++
+ src/llama-cparams.h               | 1 +
+ src/llama-graph.cpp               | 7 ++++++-
+ src/llama.cpp                     | 2 ++
+ tools/llama-bench/llama-bench.cpp | 6 ++++--
+ tools/mtmd/mtmd.cpp               | 1 +
+ 8 files changed, 24 insertions(+), 6 deletions(-)
+
+diff --git a/common/arg.cpp b/common/arg.cpp
+index 6bc4a84e2..37c14506e 100644
+--- a/common/arg.cpp
++++ b/common/arg.cpp
+@@ -1754,11 +1754,13 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+             params.n_chunks = value;
+         }
+     ).set_examples({LLAMA_EXAMPLE_IMATRIX, LLAMA_EXAMPLE_PERPLEXITY, LLAMA_EXAMPLE_RETRIEVAL}));
+-    add_opt(common_arg({ "-fa", "--flash-attn" }, "[on|off|auto]",
+-                       string_format("set Flash Attention use ('on', 'off', or 'auto', default: '%s')",
++    add_opt(common_arg({ "-fa", "--flash-attn" }, "[on|off|auto|small_batch]",
++                       string_format("set Flash Attention use ('on', 'off', 'auto', or 'small_batch', default: '%s')",
+                                      llama_flash_attn_type_name(params.flash_attn_type)),
+                        [](common_params & params, const std::string & value) {
+-                           if (is_truthy(value)) {
++                           if (value == "small_batch") {
++                               params.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH;
++                           } else if (is_truthy(value)) {
+                                params.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
+                            } else if (is_falsey(value)) {
+                                params.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED;
+diff --git a/include/llama.h b/include/llama.h
+index f15ca9f75..a965d27cd 100644
+--- a/include/llama.h
++++ b/include/llama.h
+@@ -193,6 +193,9 @@ extern "C" {
+         LLAMA_FLASH_ATTN_TYPE_AUTO     = -1,
+         LLAMA_FLASH_ATTN_TYPE_DISABLED = 0,
+         LLAMA_FLASH_ATTN_TYPE_ENABLED  = 1,
++        // flash attention for batches of up to 8 tokens and on sliding-window layers; longer batches on the other
++        // layers use the matmul attention. The KV cache keeps the flash-attention layout (needs an unquantized cache).
++        LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH = 2,
+     };
+ 
+     LLAMA_API const char * llama_flash_attn_type_name(enum llama_flash_attn_type flash_attn_type);
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index 9ee64b566..993328dd1 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -314,6 +314,8 @@ llama_context::llama_context(
+     }
+ 
+     cparams.flash_attn = params.flash_attn_type != LLAMA_FLASH_ATTN_TYPE_DISABLED;
++    cparams.flash_attn_small_batch = params.flash_attn_type == LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH &&
++                                     !ggml_is_quantized(params.type_k) && !ggml_is_quantized(params.type_v);
+     cparams.auto_fa    = params.flash_attn_type == LLAMA_FLASH_ATTN_TYPE_AUTO;
+ 
+     cparams.fused_gdn_ar = true;
+diff --git a/src/llama-cparams.h b/src/llama-cparams.h
+index f4eb181a7..38947843f 100644
+--- a/src/llama-cparams.h
++++ b/src/llama-cparams.h
+@@ -38,6 +38,7 @@ struct llama_cparams {
+     bool causal_attn;
+     bool offload_kqv;
+     bool flash_attn;
++    bool flash_attn_small_batch; // the matmul attention for long batches on the full-attention layers
+     bool auto_fa;
+     bool fused_gdn_ar;       // use fused gated delta net (autoregressive)
+     bool fused_gdn_ch;       // use fused gated delta net (chunked)
+diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
+index f69fe63f8..249d9671a 100644
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -2880,7 +2880,12 @@ ggml_tensor * llm_graph_context::build_attn_mha(
+ 
+     ggml_tensor * cur;
+ 
+-    const bool use_flash_attn = cparams.flash_attn && kq_b == nullptr;
++    // LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH: a batch of more than 8 tokens on a layer without a sliding window goes through
++    // the matmul attention (V, stored in the flash-attention layout, is transposed for it). A sliding-window layer keeps
++    // flash attention, which skips the masked blocks of a full-size SWA cache.
++    const bool small_batch_mm = cparams.flash_attn_small_batch && q->ne[1] > 8 && !(il >= 0 && hparams.is_swa(il));
++
++    const bool use_flash_attn = cparams.flash_attn && kq_b == nullptr && !small_batch_mm;
+     if (use_flash_attn) {
+         GGML_ASSERT(kq_b == nullptr && "Flash attention does not support KQ bias yet");
+ 
+diff --git a/src/llama.cpp b/src/llama.cpp
+index 9beb14841..59d4d5e0d 100644
+--- a/src/llama.cpp
++++ b/src/llama.cpp
+@@ -43,6 +43,8 @@ const char * llama_flash_attn_type_name(enum llama_flash_attn_type flash_attn_ty
+             return "disabled";
+         case LLAMA_FLASH_ATTN_TYPE_ENABLED:
+             return "enabled";
++        case LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH:
++            return "small_batch";
+     }
+     GGML_ABORT("fatal error");
+ }
+diff --git a/tools/llama-bench/llama-bench.cpp b/tools/llama-bench/llama-bench.cpp
+index 96ae4870f..141112c50 100644
+--- a/tools/llama-bench/llama-bench.cpp
++++ b/tools/llama-bench/llama-bench.cpp
+@@ -475,7 +475,7 @@ static void print_usage(int /* argc */, char ** argv) {
+     printf("  -sm, --split-mode <none|layer|row|tensor>         (default: %s)\n", join(transform_to_str(cmd_params_defaults.split_mode, split_mode_str), ",").c_str());
+     printf("  -mg, --main-gpu <i>                               (default: %s)\n", join(cmd_params_defaults.main_gpu, ",").c_str());
+     printf("  -nkvo, --no-kv-offload <0|1>                      (default: %s)\n", join(cmd_params_defaults.no_kv_offload, ",").c_str());
+-    printf("  -fa, --flash-attn <on|off|auto>                   (default: %s)\n", join(transform_to_str(cmd_params_defaults.flash_attn, llama_flash_attn_type_name), ",").c_str());
++    printf("  -fa, --flash-attn <on|off|auto|small_batch>       (default: %s)\n", join(transform_to_str(cmd_params_defaults.flash_attn, llama_flash_attn_type_name), ",").c_str());
+     printf("  -dev, --device <dev0/dev1/...>                    (default: auto)\n");
+     printf("  -lm, --load-mode <auto|none|mmap|mlock|mmap+mlock|dio> (default: %s)\n", join(transform_to_str(cmd_params_defaults.load_mode, llama_load_mode_name), ",").c_str());
+     printf("  -lzm, --lazy-mode <on|auto|off>                   (default: %s)\n", join(transform_to_str(cmd_params_defaults.lazy_mode, lazy_mode_str), ",").c_str());
+@@ -872,7 +872,9 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
+                 std::vector<llama_flash_attn_type> types;
+                 for (const auto & v : p) {
+                     llama_flash_attn_type type;
+-                    if (common_arg_utils::is_truthy(v)) {
++                    if (v == "small_batch") {
++                        type = LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH;
++                    } else if (common_arg_utils::is_truthy(v)) {
+                         type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
+                     } else if (common_arg_utils::is_falsey(v)) {
+                         type = LLAMA_FLASH_ATTN_TYPE_DISABLED;
+diff --git a/tools/mtmd/mtmd.cpp b/tools/mtmd/mtmd.cpp
+index 2c2b06936..c17b6a56d 100644
+--- a/tools/mtmd/mtmd.cpp
++++ b/tools/mtmd/mtmd.cpp
+@@ -490,6 +490,7 @@ static clip_flash_attn_type mtmd_get_clip_flash_attn_type(enum llama_flash_attn_
+         case LLAMA_FLASH_ATTN_TYPE_AUTO:     return CLIP_FLASH_ATTN_TYPE_AUTO;
+         case LLAMA_FLASH_ATTN_TYPE_DISABLED: return CLIP_FLASH_ATTN_TYPE_DISABLED;
+         case LLAMA_FLASH_ATTN_TYPE_ENABLED:  return CLIP_FLASH_ATTN_TYPE_ENABLED;
++        case LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH: return CLIP_FLASH_ATTN_TYPE_ENABLED;
+     }
+     return CLIP_FLASH_ATTN_TYPE_AUTO;
+ }
+-- 
+2.51.2.windows.1
+
