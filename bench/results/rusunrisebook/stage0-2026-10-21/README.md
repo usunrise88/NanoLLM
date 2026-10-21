@@ -109,6 +109,58 @@ gemma.json (5 requests, 16.3k prompt tokens, 849 generated), whole run:
   drops 5-11%, the 40 s of prefill do not move. One surprise on the way: the first run with MTP showed no gain at all
   because the verification of 3 tokens goes through the q8_1 kernels, which the first change did not touch (the profile of
   a round: verification 107 ms of GPU time, two drafts 2 ms each).
+- Attention on the iGPU, the third look (afternoon of 2026-10-21; a stray `find` from an earlier session held one core
+  until 14:00, so the absolute numbers before then are a little low, the interleaved comparisons stand). Decode per
+  token at an empty context (profile): mat-vec 78 ms at 33-34 GB/s, flash attention 3.6 ms, norms 4.6 ms, the rest
+  ~1 ms; the batch kernels after 0006 make the verification of 3 tokens cost 87 ms against 85 for one. Prefill, though,
+  falls with the depth of the context, and only with flash attention: llama-bench pp512 at 0 / 2048 / 4096 / 8192 tokens
+  of context 475 / 386 / 331 / 252 with it, 462 / - / 409 / 355 with `-fa 0` (`vk_depth` runs in `raw/vk-depth*.txt`).
+  The scalar flash-attention shader is the slow path on this GPU, and none of its host-side parameters helps
+  (`vk-dev-fa.patch`, `vk_fa.ps1`, `raw/vk-fa-pp1.txt`: block rows 16 / 32, block columns 64, workgroup 256, D split 4
+  / 16, row split 1, subgroups 16 / 32, shared-memory staging: 140-310 tok/s at 4096 against 302-324 for the
+  default). Patch 0007 (released in b11600-n7): `LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH`, flash attention for batches
+  of up to 8 tokens and on the sliding-window layers, the matmul attention for longer batches on the full-attention
+  layers, the KV cache in the flash-attention layout. llama-bench pp512 (`raw/lb-0007*.txt`, `raw/vk-attnmm.txt`):
+  +9-14% at 1024-2048, +23% at 4096, +42% at 8192, even at an empty context, decode unchanged; the matmul attention on
+  the sliding-window layers too is worse than flash attention (the full-size SWA cache is computed in full). KLD on
+  Vulkan against flash attention everywhere (`kld_fa.ps1`): 0.00113 (99.9% 0.030), below `-fa 0` (0.00132) and the
+  CPU backend (0.00238).
+- gemma.json with flash attention on and off (`run_famatrix.ps1`, the n6 libraries with the 0007 llama.dll, two
+  interleaved rounds; the first CPU run with flash attention ran on a hot machine and is left out):
+
+  | | wall, s | prefill, s (tok/s) | decode, s (tokens, tok/s) | peak private, GB |
+  |---|---|---|---|---|
+  | CPU ram-6g, flash attention on | 125.5 | 81.0 (195) | 44.3 (835, 18.9) | 6.29 |
+  | CPU ram-6g, flash attention off | 131.4-133.7 | 86.2-87.9 (185-189) | 45.1-45.6 (980, 21.5-21.8) | 6.07 |
+  | iGPU uma-4g MTP-2, flash attention on | 94.7-95.7 | 39.7-40.4 (391-398) | 54.9-55.2 (845, 15.3-15.4) | 3.97 |
+  | iGPU uma-4g MTP-2, flash attention off | 160.1-163.3 | 40.7-42.4 (373-388) | 119.3-120.8 (984, 8.1-8.2) | 4.32-4.35 |
+  | iGPU uma-4g MTP-2, small (0007) | **89.0-89.1** | **35.5-35.8 (441-446)** | 53.1-53.4 (830, 15.6) | 4.08 |
+
+  The answers differ between the attention paths (another float order flips near ties), so the token counts differ:
+  compare the rates. On the iGPU flash attention must stay for decoding: without it the 35 sliding-window layers attend
+  over the whole full-size SWA cache at every token. On the CPU flash attention costs the decode 13% (18.9 against
+  21.8 tok/s with the same MTP) and saves 6% of the prefill. The cause (profiled below): the CPU's flash attention for
+  1-3 tokens walks K and V once per query head (no sharing across the 4 heads of a KV head), converting every row from
+  f16 and accumulating V in f16; the masked cells of the sliding-window layers are skipped one by one, cheaply.
+- That kernel change, tried and not shipped (`cpu-fa-gqa.patch`, `cpu_fa_gqa.ps1`, `cpu_fa_prof.ps1`, `kld_cpu_fa.ps1`,
+  `run_cpufa*.ps1`). A per-op timer in the CPU backend (llama-bench, 6 threads, 4096 tokens of context) put flash
+  attention at 12.5 ms per decoded token against 7.5 ms for the matmul attention, at 14 against 8 ms for a 3-token
+  verification; the K/V reads are ~3 ms, so the kernel is compute-bound (each query head converts every K and V row
+  from f16 and accumulates V in f16). The candidate walks the cache once per KV head for all the query heads and
+  tokens of a batch of up to 8, in tiles of 32 positions (scores, one softmax update per tile, V accumulated by a small
+  GEMM in f32). llama-bench against the n6 kernel: tg32 at 8192 +16-17%, pp3 (the verification shape) at 8192
+  +39-47%, at 4096 0-15%. KLD on decode shapes (llama-perplexity -ub 1 / -ub 3, against the n6 kernel): within the
+  noise of the project's rule only with Q rounded to f16 as the row path does (mean 0.0011, p99 0.0083, top-1 98.9%;
+  with f32 Q the p99 was 3.5x the noise). gemma.json (prompts up to 4.6k tokens) did not move: 133.7 against 133.8 s
+  (both CPU libraries built locally, order A B B A). And it breaks `TestNativePromptCacheRoundTrip`: the tiles and the
+  per-thread chunks follow the cache cells, so a prefix restored into other cells rounds differently and a near-tie
+  of the greedy continuation flips (the n6 kernel keeps it). To ship it, the tiles would have to be cut over the
+  unmasked positions, not over the cells. A side finding: the CPU backend built locally (VS clang 22) prefills 4-5%
+  slower than the CI build of the same source (clang 20.1.8): compare libraries from the same toolchain.
+- CPU and iGPU reading memory at once (`run_bwmix.ps1`, `raw/bwmix.txt`): membw with 4 / 6 / 8 / 14 threads gets
+  11.5 / 18.2 / 20.5 / 25.8 GB/s while the iGPU's shader drops from 33-34 to 22 / 20 / 17 / 13; the sum is 34-39 GB/s,
+  what the CPU reaches alone. The memory controller is the limit, so splitting a decode between the CPU and the iGPU
+  cannot raise its bandwidth.
 
 ## 4. Disk (streaming modes)
 
@@ -133,3 +185,41 @@ like the file; tests in `stream_windows_test.go`). What this machine can and can
   `tools/memhog` takes memory away but the commit limit of this machine (64 GB, 38 GB used) lets it leave only
   ~9 GB available. The next step for the streaming modes on Windows is OPT-9 (overlapped unbuffered reads at queue depth
   4 into a ring: 4.2 GB/s against 2.5 for prefetch and 1.1 for faults), measured on such a machine.
+
+## 5. Final runs: the best setting of each backend
+
+gemma.json once per backend, a minute apart, on a quiet machine (`run_final.ps1`, `gemma_table.py`; the n6 libraries
+with the 0007 llama.dll, which is what b11600-n7 ships). Input = prompt tokens (of them from the prompt cache), time =
+the whole request, peaks from the `mem.json` sampler of the run.
+
+CPU, preset ram-6g, planner defaults (6 / 20 threads, MTP 2 / p_min 0.5, flash attention on):
+
+| # | Input, tokens (cached) | Output, tokens | Time, s | Prefill, tok/s | Decode, tok/s | MTP acceptance |
+|---|---|---|---|---|---|---|
+| 1 | 4365 (0) | 149 | 31.5 | 199 | 15.6 | 0.63 |
+| 2 | 4625 (132) | 107 | 31.8 | 194 | 12.3 | 0.44 |
+| 3 | 4572 (132) | 124 | 31.2 | 192 | 15.2 | 0.59 |
+| 4 | 2010 (132) | 111 | 15.6 | 201 | 17.7 | 0.65 |
+| 5 | 726 (86) | 344 | 18.3 | 194 | 22.9 | 0.74 |
+| all | 15816 new | 835 | **128.4** | 196 | 17.6 | |
+
+Peak working set 6.02 GB, peak private bytes 6.29 GB, no GPU memory.
+
+iGPU, preset uma-4g, MTP 2, flash attention `small` (the planner's choice on this device):
+
+| # | Input, tokens (cached) | Output, tokens | Time, s | Prefill, tok/s | Decode, tok/s | MTP acceptance |
+|---|---|---|---|---|---|---|
+| 1 | 4365 (0) | 124 | 19.1 | 448 | 13.2 | 0.48 |
+| 2 | 4625 (132) | 107 | 20.4 | 435 | 10.6 | 0.31 |
+| 3 | 4572 (132) | 131 | 20.3 | 435 | 13.0 | 0.44 |
+| 4 | 2010 (132) | 124 | 12.6 | 451 | 14.6 | 0.42 |
+| 5 | 726 (86) | 344 | 17.9 | 455 | 20.9 | 0.69 |
+| all | 15816 new | 830 | **90.1** | 441 | 15.3 | |
+
+Peak working set 6.57 GB, peak private bytes 4.08 GB (the Vulkan buffers included), GPU shared 3.55 GB; the rest of the
+working set is file-backed pages of the mapped model, which the 6 GB limit does not count.
+
+Where the phase leaves the two backends: the CPU 213 -> 128 s (threads for the batch, patch 0005, MTP on the CPU),
+the iGPU 101 -> 90 s (patches 0006 and 0007). The iGPU wins by its prefill (2.2x); the CPU decodes faster (17.6
+against 15.3 tok/s, with higher MTP acceptance). Decode on both is at the memory controller's ceiling (CPU 37 GB/s,
+shader 34 GB/s, both together no more); what is left is prefill on the CPU (compute) and the acceptance of the drafts.

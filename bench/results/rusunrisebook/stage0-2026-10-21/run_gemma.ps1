@@ -17,6 +17,8 @@ param(
     [int]$Mask = 0,
     # NAME=VALUE pairs set in the server's environment.
     [string[]]$EnvPairs = @(),
+    # models.<id>.flash_attention: auto, on, off or small ('' leaves the key out).
+    [string]$FlashAttention = '',
     [string]$intelLuid = 'luid_0x00000000_0x0C4E07D4'
 )
 $ErrorActionPreference = 'Stop'
@@ -65,7 +67,7 @@ models:
   overrides:
     gemma-4-e4b-qat:
       preset: $Preset
-      mode: auto
+      mode: auto$(if ($FlashAttention) { "`n      flash_attention: $FlashAttention" })
       speculative:
         $(Spec $v)
 registry:

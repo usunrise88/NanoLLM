@@ -1,0 +1,87 @@
+diff --git a/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index 4cf049a25..40284d7e9 100644
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -1331,6 +1331,58 @@ static vk_fa_tuning_params get_fa_tuning_params_coopmat2(const vk_device& device
+     return result;
+ }
+ 
++// dev only: GGML_VK_DEV_FA_PP (n_rows > 8) / GGML_VK_DEV_FA_TG (n_rows <= 8) = "br=16,bc=32,wg=128,ds=8,rs=4,sg=0,st=0"
++static void ggml_vk_dev_fa_override(const vk_device& device, vk_fa_tuning_params& r, uint32_t hsk, uint32_t hsv, uint32_t n_rows,
++                                    ggml_type k_type, ggml_type v_type, bool f32acc) {
++    const char * ev = getenv(n_rows > 8 ? "GGML_VK_DEV_FA_PP" : "GGML_VK_DEV_FA_TG");
++    if (!ev || r.path != FA_SCALAR) {
++        return;
++    }
++    vk_fa_tuning_params t = r;
++    const std::string all(ev);
++    size_t pos = 0;
++    while (pos < all.size()) {
++        size_t end = all.find(',', pos);
++        if (end == std::string::npos) end = all.size();
++        const std::string item = all.substr(pos, end - pos);
++        pos = end + 1;
++        const size_t eq = item.find('=');
++        if (eq == std::string::npos) continue;
++        const std::string k = item.substr(0, eq);
++        const uint32_t v = (uint32_t) std::stoul(item.substr(eq + 1));
++        if (k == "br") t.block_rows = v;
++        else if (k == "bc") t.block_cols = v;
++        else if (k == "wg") t.workgroup_size = v;
++        else if (k == "ds") t.d_split = v;
++        else if (k == "rs") t.row_split = v;
++        else if (k == "sg") { t.disable_subgroups = v == 0; if (v) t.subgroup_size = v; }
++        else if (k == "st") t.shmem_staging = v != 0;
++    }
++    if (n_rows == 1) {
++        t.block_rows = 1;
++    }
++    const bool ok = t.row_split > 0 && t.d_split > 0 && t.block_rows % t.row_split == 0 &&
++                    t.workgroup_size % (t.d_split * t.row_split) == 0 &&
++                    t.block_cols % (t.workgroup_size / t.d_split / t.row_split) == 0 &&
++                    hsk % t.d_split == 0 && hsv % t.d_split == 0 &&
++                    (t.disable_subgroups || t.d_split <= t.subgroup_size) &&
++                    ggml_vk_flash_attn_scalar_shmem_support(device, t, hsk, hsv, f32acc, k_type, v_type);
++    static std::mutex m;
++    static std::set<std::string> seen;
++    const std::string key = std::to_string(n_rows) + "/" + std::to_string(hsk) + "/" + all + (ok ? "" : "/bad");
++    {
++        std::lock_guard<std::mutex> lock(m);
++        if (seen.insert(key).second) {
++            fprintf(stderr, "ggml_vulkan: dev FA n_rows=%u hsk=%u %s: br=%u bc=%u wg=%u ds=%u rs=%u sg=%u st=%d\n", n_rows, hsk,
++                    ok ? "override" : "INVALID, kept", t.block_rows, t.block_cols, t.workgroup_size, t.d_split, t.row_split,
++                    t.disable_subgroups ? 0 : t.subgroup_size, (int) t.shmem_staging);
++        }
++    }
++    if (ok) {
++        r = t;
++    }
++}
++
+ vk_fa_tuning_params get_fa_tuning_params(const vk_device& device, uint32_t hsk, uint32_t hsv, uint32_t n_rows, uint32_t n_kv, ggml_type k_type, ggml_type v_type, bool f32acc) {
+     FaCodePath path = device->coopmat2 ? FA_COOPMAT2 :
+                       device->coopmat1_fa_support ? FA_COOPMAT1 : FA_SCALAR;
+@@ -1364,8 +1416,11 @@ vk_fa_tuning_params get_fa_tuning_params(const vk_device& device, uint32_t hsk,
+     }
+ 
+     switch (path) {
+-    case FA_SCALAR:
+-        return get_fa_tuning_params_scalar(device, hsk, hsv, n_rows, n_kv, k_type, v_type, f32acc);
++    case FA_SCALAR: {
++        vk_fa_tuning_params r = get_fa_tuning_params_scalar(device, hsk, hsv, n_rows, n_kv, k_type, v_type, f32acc);
++        ggml_vk_dev_fa_override(device, r, hsk, hsv, n_rows, k_type, v_type, f32acc);
++        return r;
++    }
+     case FA_COOPMAT1:
+         return get_fa_tuning_params_coopmat1(device, hsk, hsv, n_rows, n_kv, k_type, v_type, f32acc);
+     case FA_COOPMAT2:
+@@ -8272,7 +8327,8 @@ void ggml_vk_flash_attn(ggml_backend_vk_context * ctx, vk_context& subctx, const
+     const uint32_t shader_core_count_multiplier = (ctx->device->vendor_id == VK_VENDOR_ID_INTEL && ctx->device->architecture != INTEL_XE2) ? 2 : 1;
+ 
+     // Use a placeholder core count if one isn't available. split_k is a big help for perf.
+-    const uint32_t shader_core_count = ctx->device->shader_core_count ? ctx->device->shader_core_count * shader_core_count_multiplier : 16;
++    static const uint32_t dev_fa_cores = getenv("GGML_VK_DEV_FA_CORES") ? (uint32_t) atoi(getenv("GGML_VK_DEV_FA_CORES")) : 16;
++    const uint32_t shader_core_count = ctx->device->shader_core_count ? ctx->device->shader_core_count * shader_core_count_multiplier : dev_fa_cores;
+ 
+     const uint32_t Br = fa_pipeline_state.Br;
+     const uint32_t Bc = fa_pipeline_state.Bc;
