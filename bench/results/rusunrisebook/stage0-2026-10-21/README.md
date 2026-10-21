@@ -93,10 +93,22 @@ gemma.json (5 requests, 16.3k prompt tokens, 849 generated), whole run:
   `raw/vk-grid.txt`: default 474-476 / 450; subgroup 16 or 32, 64-thread blocks, TM x TN 4x4: 472-477 / 447-452;
   TM x TN 4x2: 386; blocks of 256 or 512 threads with tiles 128 x 64 / 64 x 128 / 128 x 128: 402 / 426 / 325-330;
   BK 64: 472. The default tile is at the optimum of what the host-side parameters allow; more would need a new GLSL
-  kernel, which is not worth the risk for a few percent (the same device spends 83% of the prefill in these
+  kernel for the prefill, which is not worth the risk (the same device spends 83% of the prefill in these
   kernels, so even +10% of them is +8% of the prefill, ~3 s of the 101 s gemma.json run).
-- Decode on the iGPU: the Q4_0 mat-vec kernels read 29-34 GB/s (gate/up 29, down 34, head 28.6); at the best shape
-  all of them would give +6-8% of the token. Not worth a kernel either.
+- Decode on the iGPU, second look (after the user's objection that there must be room): a plain-sum Vulkan shader
+  (`vkbw/`) reads at most **34 GB/s** on this GPU whatever the workgroup size, chunk or load width, so the decode
+  ceiling is 12.6 tok/s, not the CPU's 37 GB/s. The profile (`GGML_VK_PERF_LOGGER`) showed the Q4_0 mat-vec kernels at
+  28.6-34 GB/s, the worst on the shapes with more than 8192 rows (FFN gate and up, the 262144-row head), which
+  ggml-vulkan sends to the 16-lane variant. Patch 0006 (`patches/llama.cpp`): the 64-lane variant for every row count
+  and, in the batch kernels (2-8 columns, q8_1: the verification of MTP drafts), the 64-lane variant with 4 rows per
+  workgroup instead of the pinned 16-lane one with 2 (`vk_dmmv.ps1`, `vk_mmvq.ps1`, `vk_ab.ps1`; interleaved, 3 rounds,
+  upstream -> patched, tok/s): tg32 10.38-10.53 -> 11.74-11.78 (+12%), pp2 20.1-20.9 -> 23.0-23.4, pp3 29.8-30.2 ->
+  34.2-34.7 (+14%), pp4 36.7-36.9 -> 44.0-45.3 (+21%), pp6 46.4-47.1 -> 60.8-62.6 (+31%); pp512 unchanged. Rows per
+  workgroup 1 and 2 are worse (pp3 25 and 31), 8 and 16 worse than 4. End to end (gemma.json, uma-4g, interleaved):
+  MTP-2 100.7 / 100.9 s upstream against 93.8 / 99.1 s patched, MTP-3 109.7 against 98.8 s; the time spent decoding
+  drops 5-11%, the 40 s of prefill do not move. One surprise on the way: the first run with MTP showed no gain at all
+  because the verification of 3 tokens goes through the q8_1 kernels, which the first change did not touch (the profile of
+  a round: verification 107 ms of GPU time, two drafts 2 ms each).
 
 ## 4. Disk (streaming modes)
 

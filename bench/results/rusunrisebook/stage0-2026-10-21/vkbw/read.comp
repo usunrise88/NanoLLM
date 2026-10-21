@@ -1,0 +1,23 @@
+#version 450
+#extension GL_EXT_control_flow_attributes : enable
+// Sums a contiguous chunk of the buffer per workgroup: WG threads, each step VEC consecutive 16-byte loads
+// per thread (spec constants), consecutive threads on consecutive 16-byte units.
+layout(local_size_x_id = 0) in;
+layout(constant_id = 1) const uint VEC = 1;
+layout(std430, binding = 0) readonly buffer A { uvec4 a[]; };
+layout(std430, binding = 1) buffer R { uint r[]; };
+layout(push_constant) uniform P { uint chunk; } p;
+
+void main() {
+    const uint wg = gl_WorkGroupID.x;
+    const uint lid = gl_LocalInvocationID.x;
+    const uint base = wg * p.chunk;
+    const uint step = gl_WorkGroupSize.x * VEC;
+    uvec4 acc = uvec4(0);
+    for (uint i = lid; i < p.chunk; i += step) {
+        [[unroll]] for (uint v = 0; v < VEC; v++) {
+            acc += a[base + i + v * gl_WorkGroupSize.x];
+        }
+    }
+    r[(wg * gl_WorkGroupSize.x + lid) & 0xFFFFF] = acc.x ^ acc.y ^ acc.z ^ acc.w;
+}
