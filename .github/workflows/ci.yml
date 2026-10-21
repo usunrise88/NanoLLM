@@ -189,8 +189,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: llama.cpp sources at the pinned tag
-        run: git clone --depth 1 --branch "$(tr -d '[:space:]' < scripts/llama.cpp.tag)" https://github.com/ggml-org/llama.cpp "$RUNNER_TEMP/llama.cpp"
+      # The binding is generated from the headers of the patched tree (a patch may add an enum or a function).
+      - name: llama.cpp sources at the pinned tag, with the patch series
+        run: ./scripts/build-libs.sh --prepare-only --src "$RUNNER_TEMP/llama.cpp"
       - name: zig
         run: pip install ziglang
       - name: struct layout on every target

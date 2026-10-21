@@ -154,7 +154,8 @@
   upstream `ace20f6`. Незакоммиченные правки запрещены.
 - `scripts/build-libs.sh` собирает в Docker с флагами upstream-релиза для
   `ubuntu-vulkan`; раскладка `dist/<target>/{lib,tools}` как у `fetch-libs.sh`.
-- CI `libs-build.yml` собирает шесть целей и два CUDA add-on; артефакты —
+- CI `libs-build.yml` собирает шесть целей и два CUDA add-on для Windows (наша `ggml-cuda.dll`, патч 0008:
+  CUDA 12.4 и 13.4; на Linux add-on остаётся upstream); артефакты —
   релиз `llama-b11600-nN` в этом репозитории; `libs.sha256`, `fetch-libs.sh` и
   `release.yml` переходят на них.
 - Сначала пустая серия: golden токен в токен, KLD около 0, `bench` в шуме.

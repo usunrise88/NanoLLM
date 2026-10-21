@@ -347,7 +347,9 @@ nvidia_present() {
 
 # install_cuda: the add-on is ggml-cuda and the CUDA runtime only, laid out
 # as lib/, and goes over the installation. It must come from the same
-# release as the binary: ggml-cuda is checked against the pinned commit.
+# release as the binary: the CUDA runtime is the one that ggml-cuda was built
+# with. (Upstream's ggml-cuda on Linux; the Windows add-ons carry ours, which
+# nothing checks against the pinned commit: it is ggml-base that does.)
 install_cuda() {
   [[ "$TARGET" == linux-amd64 ]] || { warn "the CUDA add-on is for Linux x86-64 only; skipped"; return; }
   if [[ -z "$CUDA_ARCHIVE" ]] && ! nvidia_present; then
