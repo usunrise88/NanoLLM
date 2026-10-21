@@ -1,6 +1,6 @@
-//go:build !linux
+//go:build !linux && !windows
 
-// Command diskbw is Linux-only (O_DIRECT, madvise, mincore).
+// Command diskbw is built for Linux (O_DIRECT, madvise, mincore) and Windows.
 package main
 
 import (
@@ -9,6 +9,6 @@ import (
 )
 
 func main() {
-	fmt.Fprintln(os.Stderr, "diskbw: Linux only")
+	fmt.Fprintln(os.Stderr, "diskbw: Linux and Windows only")
 	os.Exit(2)
 }
