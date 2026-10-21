@@ -346,6 +346,14 @@ func (o ModelOverride) validate() error {
 	default:
 		return fmt.Errorf("repack must be auto, on or off, got %q", o.Repack)
 	}
+	switch o.FlashAttention {
+	case "", "auto", "on", "off", "small":
+	default:
+		return fmt.Errorf("flash_attention must be auto, on, off or small, got %q", o.FlashAttention)
+	}
+	if o.FlashAttention == "off" && o.KVType == KVQ8_0 {
+		return fmt.Errorf("kv_type %s needs flash_attention on", KVQ8_0)
+	}
 	switch o.Speculative.Type {
 	case "", SpecMTP, SpecNone, SpecNGram:
 	default:

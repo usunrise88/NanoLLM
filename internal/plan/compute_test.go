@@ -21,28 +21,28 @@ func TestComputeMatchesLlamaLog(t *testing.T) {
 		measured float64 // MiB
 		tol      float64 // relative
 	}{
-		{"ub512", false, ComputeShape{512, 2048, 4096, true}, 563.03, 0.005},
-		{"ub256", false, ComputeShape{256, 2048, 4096, true}, 281.39, 0.005},
-		{"ub128 b128", false, ComputeShape{128, 128, 4096, true}, 140.70, 0.005},
-		{"c32768", false, ComputeShape{512, 2048, 32768, true}, 591.03, 0.005},
-		{"np4 c8192", false, ComputeShape{512, 2048, 2048, true}, 561.03, 0.005},
-		{"no FA", false, ComputeShape{512, 2048, 4096, false}, 576.02, 0.01},
-		{"no FA c32768", false, ComputeShape{512, 2048, 32768, false}, 658.02, 0.01},
-		{"mtp target", false, ComputeShape{512, 4, 4096, true}, 112.03, 0.02},
-		{"mtp target ub256", false, ComputeShape{256, 4, 4096, true}, 55.89, 0.02},
-		{"mtp target np4", false, ComputeShape{512, 16, 4096, true}, 112.03, 0.02},
-		{"mtp target ub128", false, ComputeShape{128, 4, 4096, true}, 27.94, 0.02},
-		{"mtp target c32768", false, ComputeShape{512, 4, 32768, true}, 140.03, 0.02},
-		{"mtp drafter", true, ComputeShape{512, 1, 4096, true}, 25.00, 0.06},
-		{"mtp drafter ub256", true, ComputeShape{256, 1, 4096, true}, 12.38, 0.06},
-		{"mtp drafter ub128", true, ComputeShape{128, 1, 4096, true}, 6.19, 0.15}, // 0.8 MiB high
-		{"mtp drafter c32768", true, ComputeShape{512, 1, 32768, true}, 53.00, 0.02},
-		{"mtp target no FA", false, ComputeShape{512, 4, 4096, false}, 154.02, 0.02},
-		{"mtp target no FA c32768", false, ComputeShape{512, 4, 32768, false}, 658.02, 0.02},
+		{"ub512", false, ComputeShape{512, 2048, 4096, true, false}, 563.03, 0.005},
+		{"ub256", false, ComputeShape{256, 2048, 4096, true, false}, 281.39, 0.005},
+		{"ub128 b128", false, ComputeShape{128, 128, 4096, true, false}, 140.70, 0.005},
+		{"c32768", false, ComputeShape{512, 2048, 32768, true, false}, 591.03, 0.005},
+		{"np4 c8192", false, ComputeShape{512, 2048, 2048, true, false}, 561.03, 0.005},
+		{"no FA", false, ComputeShape{512, 2048, 4096, false, false}, 576.02, 0.01},
+		{"no FA c32768", false, ComputeShape{512, 2048, 32768, false, false}, 658.02, 0.01},
+		{"mtp target", false, ComputeShape{512, 4, 4096, true, false}, 112.03, 0.02},
+		{"mtp target ub256", false, ComputeShape{256, 4, 4096, true, false}, 55.89, 0.02},
+		{"mtp target np4", false, ComputeShape{512, 16, 4096, true, false}, 112.03, 0.02},
+		{"mtp target ub128", false, ComputeShape{128, 4, 4096, true, false}, 27.94, 0.02},
+		{"mtp target c32768", false, ComputeShape{512, 4, 32768, true, false}, 140.03, 0.02},
+		{"mtp drafter", true, ComputeShape{512, 1, 4096, true, false}, 25.00, 0.06},
+		{"mtp drafter ub256", true, ComputeShape{256, 1, 4096, true, false}, 12.38, 0.06},
+		{"mtp drafter ub128", true, ComputeShape{128, 1, 4096, true, false}, 6.19, 0.15}, // 0.8 MiB high
+		{"mtp drafter c32768", true, ComputeShape{512, 1, 32768, true, false}, 53.00, 0.02},
+		{"mtp target no FA", false, ComputeShape{512, 4, 4096, false, false}, 154.02, 0.02},
+		{"mtp target no FA c32768", false, ComputeShape{512, 4, 32768, false, false}, 658.02, 0.02},
 		// The drafter's KQ peak carries less besides the matrix than the
 		// target's; the shared fit errs high by 13 MiB.
-		{"mtp drafter no FA", true, ComputeShape{512, 1, 4096, false}, 51.00, 0.30},
-		{"mtp drafter no FA c32768", true, ComputeShape{512, 1, 32768, false}, 331.00, 0.05},
+		{"mtp drafter no FA", true, ComputeShape{512, 1, 4096, false, false}, 51.00, 0.30},
+		{"mtp drafter no FA c32768", true, ComputeShape{512, 1, 32768, false, false}, 331.00, 0.05},
 	} {
 		h := target
 		if c.drafter {
@@ -55,10 +55,30 @@ func TestComputeMatchesLlamaLog(t *testing.T) {
 	}
 }
 
+// TestComputeSmallBatchFA: flash attention on small batches only keeps the
+// f16 mask of flash attention and adds the KQ peak of the matmul attention.
+func TestComputeSmallBatchFA(t *testing.T) {
+	h := e4b(t).Target.HParams
+	for _, nkv := range []int{4096, 32768} {
+		fa := ComputeShape{NUBatch: 512, NOutputsMax: 4, NKV: nkv, FlashAttention: true}
+		small := fa
+		small.FlashAttnSmallBatch = true
+		noFA := fa
+		noFA.FlashAttention = false
+		pf, ps, pn := cpuCoeffs.peaks(h, fa), cpuCoeffs.peaks(h, small), cpuCoeffs.peaks(h, noFA)
+		if pf.kq != 0 || ps.kq != pn.kq || ps.mask != pf.mask {
+			t.Errorf("n_kv %d: kq %d/%d/%d, mask %d/%d (flash attention / small batch / none)", nkv, pf.kq, ps.kq, pn.kq, pf.mask, ps.mask)
+		}
+		if cpuCoeffs.ComputeBytes(h, small) <= cpuCoeffs.ComputeBytes(h, fa) {
+			t.Errorf("n_kv %d: the small-batch buffer is not larger than flash attention's", nkv)
+		}
+	}
+}
+
 func TestCalibrate(t *testing.T) {
 	h := e4b(t).Target.HParams
 	// A GPU whose activations run 30% above the CPU fit, at each peak.
-	for _, s := range []ComputeShape{{512, 2048, 4096, true}, {512, 4, 4096, true}, {512, 4, 32768, false}} {
+	for _, s := range []ComputeShape{{512, 2048, 4096, true, false}, {512, 4, 4096, true, false}, {512, 4, 32768, false, false}} {
 		start := uncalibrated(cpuCoeffs)
 		p := start.peaks(h, s)
 		measured := int64(float64(max(p.tail, p.mid, p.kq))*1.3) + p.mask

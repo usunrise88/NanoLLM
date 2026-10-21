@@ -70,10 +70,19 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		r.DraftMax = cmp.Or(ov.Speculative.NMax, DefaultNGramDraftMax)
 	}
 	if req.Device.Type != backend.CPU {
+		r.FlashAttnSmallBatch = req.Device.Has(backend.FeatureFlashAttnSmallBatch)
 		r.Device = &plan.Device{
 			Selector: req.Device.Selector(), Backend: strings.TrimRight(req.Device.ID, "0123456789"),
 			Memory: plan.DeviceMemory(req.Device), Unified: req.Device.Unified,
 		}
+	}
+	switch ov.FlashAttention {
+	case "on":
+		r.FlashAttnSmallBatch = false
+	case "off":
+		r.NoFlashAttention = true
+	case "small":
+		r.FlashAttnSmallBatch = true
 	}
 	p, err := plan.Make(r)
 	if err != nil {

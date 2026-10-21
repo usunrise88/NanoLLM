@@ -290,6 +290,9 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		// plans exactly what it says.
 		req.DefaultCPUMTP(cpu.Has(backend.FeatureMultiRowQ4_0))
 	}
+	if onGPU {
+		req.FlashAttnSmallBatch = gpu.Has(backend.FeatureFlashAttnSmallBatch)
+	}
 	v.Plan(&req)
 	if onGPU {
 		req.Device = &plan.Device{

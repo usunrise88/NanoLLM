@@ -254,6 +254,37 @@ func TestRequestErrors(t *testing.T) {
 	}
 }
 
+// TestFlashAttnSmallBatch: the request carries through to the plan and the
+// load spec, the compute buffer of a fixed shape grows by the KQ matrix, and a
+// quantized cache or no flash attention drops it.
+func TestFlashAttnSmallBatch(t *testing.T) {
+	model := e4b(t)
+	base := Request{Model: model, Preset: preset(t, "uma-4g"), NCtx: 8192, Slots: 1}
+	small := base
+	small.FlashAttnSmallBatch = true
+	pf, ps := mustPlan(t, base), mustPlan(t, small)
+	if pf.FlashAttnSmallBatch || !ps.FlashAttnSmallBatch || !ps.FlashAttention {
+		t.Fatalf("flash attention %v/%v, small batch %v/%v", pf.FlashAttention, ps.FlashAttention, pf.FlashAttnSmallBatch, ps.FlashAttnSmallBatch)
+	}
+	if ps.Groups[gguf.G7].Total() <= pf.Groups[gguf.G7].Total() {
+		t.Errorf("compute %d with small batches, %d without", ps.Groups[gguf.G7].Total(), pf.Groups[gguf.G7].Total())
+	}
+	if ps.KV.Bytes != pf.KV.Bytes {
+		t.Errorf("KV %d with small batches, %d without: the layout is flash attention's either way", ps.KV.Bytes, pf.KV.Bytes)
+	}
+	spec, err := ps.LoadSpec("m.gguf", "d.gguf")
+	if err != nil || !spec.FlashAttnSmallBatch || !spec.FlashAttention {
+		t.Errorf("load spec %+v, %v", spec, err)
+	}
+	for name, r := range map[string]Request{"q8_0": {KVType: "q8_0"}, "no FA": {NoFlashAttention: true}} {
+		req := small
+		req.KVType, req.NoFlashAttention = r.KVType, r.NoFlashAttention
+		if p := mustPlan(t, req); p.FlashAttnSmallBatch {
+			t.Errorf("%s: small batch kept", name)
+		}
+	}
+}
+
 func TestSWAFullDecision(t *testing.T) {
 	model := e4b(t)
 	// ram-8g at 32k: the full SWA cache is 20 layers × 32768 cells × 2 KiB.

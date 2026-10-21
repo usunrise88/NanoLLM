@@ -64,6 +64,12 @@ type Request struct {
 	NGram int
 	// NoFlashAttention plans for a device without it.
 	NoFlashAttention bool
+	// FlashAttnSmallBatch plans for a device that lists
+	// backend.FeatureFlashAttnSmallBatch: flash attention on batches of up to
+	// 8 tokens, the matmul attention (its KQ matrix in the compute buffer) for
+	// longer ones on the full-attention layers. It needs flash attention and
+	// an unquantized cache; otherwise it is dropped.
+	FlashAttnSmallBatch bool
 	// NoRepack plans without the CPU's repacked weights where a mode would
 	// use them: M7 then range-locks the file mapping of its core (its
 	// behaviour before OPT-1), several times slower to decode.
@@ -131,7 +137,7 @@ func Make(req Request) (*Plan, error) {
 		return nil, errors.New("negative n_ctx or slots")
 	}
 
-	pl := &planner{req: req, h: h, kvType: kt, fa: fa}
+	pl := &planner{req: req, h: h, kvType: kt, fa: fa, faSmall: fa && req.FlashAttnSmallBatch && kt.BlockSize() == 1}
 	pl.dev = req.Device
 	if pl.dev == nil {
 		pl.dev = SyntheticDevice(req.Preset)
@@ -163,6 +169,7 @@ type planner struct {
 	h        gguf.HParams
 	kvType   gguf.Type
 	fa       bool
+	faSmall  bool // flash attention on small batches only (Request.FlashAttnSmallBatch)
 	dev      *Device
 	proven   ProvenModes
 	nBatch   int

@@ -93,6 +93,12 @@ func TestValidateRefuses(t *testing.T) {
 		"bad repack": func(c *Config) {
 			c.Models.Overrides = map[string]ModelOverride{"m": {Repack: "sometimes"}}
 		},
+		"bad flash attention": func(c *Config) {
+			c.Models.Overrides = map[string]ModelOverride{"m": {FlashAttention: "fast"}}
+		},
+		"q8_0 cache without flash attention": func(c *Config) {
+			c.Models.Overrides = map[string]ModelOverride{"m": {FlashAttention: "off", KVType: KVQ8_0}}
+		},
 		"more preloads than slots in the pool": func(c *Config) {
 			c.Models.Preload = []string{"a", "b"}
 		},

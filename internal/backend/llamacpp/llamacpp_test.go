@@ -187,3 +187,19 @@ func TestCPUFeatures(t *testing.T) {
 		t.Errorf("no information, but features %v", got)
 	}
 }
+
+func TestIGPUFeatures(t *testing.T) {
+	const iris = "Intel(R) Iris(R) Xe Graphics"
+	if got := igpuFeatures("vulkan0", iris, "windows"); len(got) != 1 || got[0] != backend.FeatureFlashAttnSmallBatch {
+		t.Errorf("Iris Xe on Windows: %v", got)
+	}
+	for _, c := range [][3]string{
+		{"vulkan0", iris, "linux"},                        // Mesa: not measured
+		{"vulkan0", "AMD Radeon(TM) Graphics", "windows"}, // another vendor
+		{"sycl0", iris, "windows"},                        // another backend
+	} {
+		if got := igpuFeatures(c[0], c[1], c[2]); len(got) != 0 {
+			t.Errorf("%v: %v", c, got)
+		}
+	}
+}

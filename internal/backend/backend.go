@@ -65,6 +65,13 @@ const (
 	// REPACK_Q4_0_ROWS of the CPU backend). Without it speculative decoding
 	// on the CPU does not pay (docs/AUTOTUNE.md, the cost of a batch).
 	FeatureMultiRowQ4_0 = "multirow-q4_0"
+	// FeatureFlashAttnSmallBatch means flash attention on this GPU is slow for
+	// long batches: the matmul attention prefills faster as the context grows
+	// (Iris Xe, Vulkan, Windows driver: pp512 at 4096 tokens of context 385
+	// against 315 tok/s, at 8192 346 against 241), so the planner asks for
+	// flash attention on batches of up to 8 tokens and on sliding-window layers
+	// only (patches/llama.cpp/0007, LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH).
+	FeatureFlashAttnSmallBatch = "fa-small-batch"
 )
 
 // Selector is how configuration and requests name this device.
@@ -215,6 +222,12 @@ type LoadSpec struct {
 	KVTypeV string
 	// FlashAttention is on unless the device cannot do it.
 	FlashAttention bool
+	// FlashAttnSmallBatch, with FlashAttention, keeps flash attention for
+	// batches of up to 8 tokens and on sliding-window layers and runs longer
+	// batches on the other layers through the matmul attention
+	// (FeatureFlashAttnSmallBatch). The KV cache layout is that of flash
+	// attention either way.
+	FlashAttnSmallBatch bool
 	// SWAFull keeps the full context in the sliding-window layers too, so the
 	// cache can be trimmed to any position; without it a trim further back
 	// than the window forces a fresh prefill.

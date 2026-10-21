@@ -150,7 +150,11 @@ type Plan struct {
 	NUBatch        int  `json:"n_ubatch"`
 	NOutputsMax    int  `json:"n_outputs_max"`
 	FlashAttention bool `json:"flash_attention"`
-	KV             KV   `json:"kv"`
+	// FlashAttnSmallBatch keeps flash attention for batches of up to 8 tokens
+	// and runs longer ones through the matmul attention on the full-attention
+	// layers (Request.FlashAttnSmallBatch).
+	FlashAttnSmallBatch bool `json:"flash_attn_small_batch,omitempty"`
+	KV                  KV   `json:"kv"`
 
 	LoadMode   backend.LoadMode         `json:"load_mode,omitempty"`
 	LazyMode   backend.LazyMode         `json:"lazy_mode,omitempty"`

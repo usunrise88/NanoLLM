@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/usunrise88/nanollm/internal/backend"
+	"github.com/usunrise88/nanollm/internal/plan"
 )
 
 func TestVariantStreamKeys(t *testing.T) {
@@ -35,5 +36,22 @@ func TestVariantSetsSpeculation(t *testing.T) {
 		if !(Variant{k: "1"}).setsSpeculation() {
 			t.Errorf("%s names a speculation setting", k)
 		}
+	}
+}
+
+func TestVariantFlashAttention(t *testing.T) {
+	vs, err := ParseSets([]string{"fa=on,off,small"})
+	if err != nil || len(vs) != 3 {
+		t.Fatalf("%v %v", vs, err)
+	}
+	for i, want := range []struct{ noFA, small bool }{{false, false}, {true, true}, {false, true}} {
+		req := plan.Request{FlashAttnSmallBatch: true} // a device that lists fa-small-batch
+		vs[i].Plan(&req)
+		if req.NoFlashAttention != want.noFA || req.FlashAttnSmallBatch != want.small {
+			t.Errorf("%v: no flash attention %v, small batch %v", vs[i], req.NoFlashAttention, req.FlashAttnSmallBatch)
+		}
+	}
+	if _, err := ParseSets([]string{"fa=maybe"}); err == nil {
+		t.Error("fa=maybe accepted")
 	}
 }

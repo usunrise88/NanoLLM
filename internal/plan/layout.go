@@ -161,7 +161,8 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 		backendKind = pl.dev.Backend
 	}
 	co := coeffsFor(backendKind)
-	cs := ComputeShape{NUBatch: pl.nUBatch, NOutputsMax: t.nOutputsMax, NKV: t.cells.Full, FlashAttention: pl.fa}
+	cs := ComputeShape{NUBatch: pl.nUBatch, NOutputsMax: t.nOutputsMax, NKV: t.cells.Full, FlashAttention: pl.fa,
+		FlashAttnSmallBatch: pl.faSmall}
 	compute := co.ComputeBytes(pl.h, cs)
 	vocab := int64(pl.h.VocabSize)
 	// The host output buffer holds the logits of every output.
@@ -169,7 +170,8 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 	if pl.mtp {
 		dh := pl.req.Model.Drafter.HParams
 		dcs := cs
-		dcs.NOutputsMax = s.slots // the draft context outputs one row per slot
+		dcs.NOutputsMax = s.slots       // the draft context outputs one row per slot
+		dcs.FlashAttnSmallBatch = false // and keeps flash attention throughout
 		compute += co.ComputeBytes(dh, dcs)
 		hostOut += vocab * 4 * int64(s.slots)
 	}
@@ -188,7 +190,7 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 			// Layers left on the CPU need a compute buffer of their own; it
 			// is sized like the device's, without the logits.
 			host += cpuCoeffs.ComputeBytes(pl.h, ComputeShape{NUBatch: pl.nUBatch, NOutputsMax: 1, NKV: t.cells.Full,
-				FlashAttention: pl.fa})
+				FlashAttention: pl.fa, FlashAttnSmallBatch: pl.faSmall})
 		}
 		add(gguf.G7, Bytes{VRAM: compute, RAMLocked: host})
 	}

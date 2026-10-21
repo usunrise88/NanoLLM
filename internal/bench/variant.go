@@ -33,7 +33,7 @@ var variantKeys = map[string]string{
 	"mode":          "memory mode: auto, M1…M10 or a name",
 	"load":          "none, mmap, mlock, mmap+mlock or dio",
 	"lazy":          "off, auto or on",
-	"fa":            "on or off: flash attention",
+	"fa":            "on, off or small: flash attention (small: on batches of up to 8 tokens only, the matmul attention for longer ones on the full-attention layers; the default where the GPU lists fa-small-batch)",
 	"swa_full":      "on or off: off keeps the sliding-window layers at their window even when the full cache fits (auto is on when it fits)",
 	"stream_ahead":  "layers read ahead of the compute in the file-backed modes M8, M9 (OPT-8); 0 is off",
 	"stream_keep":   "leading layers the streamer never evicts",
@@ -117,7 +117,11 @@ func checkValue(key, v string) error {
 		if v != "f16" && v != "q8_0" {
 			return fmt.Errorf("%q is not f16 or q8_0", v)
 		}
-	case "mtp", "repack", "fa", "swa_full", "stream_evict":
+	case "fa":
+		if v != "on" && v != "off" && v != "small" {
+			return fmt.Errorf("%q is not on, off or small", v)
+		}
+	case "mtp", "repack", "swa_full", "stream_evict":
 		if v != "on" && v != "off" {
 			return fmt.Errorf("%q is not on or off", v)
 		}
@@ -201,8 +205,13 @@ func (v Variant) Plan(req *plan.Request) {
 			req.DraftMax = 4
 		}
 	}
-	if v["fa"] == "off" {
+	switch v["fa"] {
+	case "off":
 		req.NoFlashAttention = true
+	case "on":
+		req.FlashAttnSmallBatch = false
+	case "small":
+		req.FlashAttnSmallBatch = true
 	}
 	if v["repack"] == "off" {
 		req.NoRepack = true

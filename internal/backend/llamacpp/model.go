@@ -374,6 +374,9 @@ func (b *llamaBackend) contextParams(spec backend.LoadSpec) (LlamaContextParams,
 	p.TypeK, p.TypeV = k, v
 	if spec.FlashAttention {
 		p.FlashAttnType = LlamaFlashAttnTypeEnabled
+		if spec.FlashAttnSmallBatch {
+			p.FlashAttnType = LlamaFlashAttnTypeSmallBatch
+		}
 	} else {
 		p.FlashAttnType = LlamaFlashAttnTypeDisabled
 		if v != GgmlTypeF16 && v != GgmlTypeF32 && v != GgmlTypeBf16 {

@@ -157,6 +157,12 @@ type ModelOverride struct {
 	// to spare and for experiments, the ram-2g / 1.5g runs of docs/AUTOTUNE.md
 	// show what happens under a tight budget).
 	Repack string `yaml:"repack"`
+	// FlashAttention is "" or "auto" (on; on a GPU that lists fa-small-batch,
+	// on batches of up to 8 tokens only), "on" (on for every batch), "off" (the
+	// matmul attention everywhere; a q8_0 cache needs flash attention) or
+	// "small" (on for small batches only, the matmul attention for long ones on
+	// the full-attention layers; needs libraries with patches/llama.cpp/0007).
+	FlashAttention string `yaml:"flash_attention"`
 	// NCtx and Slots take "auto": what the preset leaves after weights, down
 	// to a floor of 4096 tokens and one slot.
 	NCtx        Auto        `yaml:"n_ctx"`

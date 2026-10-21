@@ -98,6 +98,11 @@ func (m *model) loadDrafter(spec backend.LoadSpec, mp LlamaModelParams, cp Llama
 	d.nVocab = int(llamaVocabNTokens(llamaModelGetVocab(dmdl)))
 
 	dp := cp
+	// The drafter's batches are a token per slot: flash attention throughout
+	// (the cache layout is the same as the target's small-batch mode).
+	if dp.FlashAttnType == LlamaFlashAttnTypeSmallBatch {
+		dp.FlashAttnType = LlamaFlashAttnTypeEnabled
+	}
 	dp.CtxType = LlamaContextTypeMtp
 	dp.CtxOther = m.ctx
 	dp.NCtx = llamaNCtx(m.ctx)

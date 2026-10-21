@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"unsafe"
@@ -126,6 +127,7 @@ func (b *llamaBackend) Devices(context.Context) ([]backend.Device, error) {
 		case GgmlBackendDeviceTypeIgpu:
 			d.Type = backend.GPU
 			d.Unified = true
+			d.Features = igpuFeatures(d.ID, d.Name, runtime.GOOS)
 		default:
 			continue
 		}
@@ -195,6 +197,17 @@ func (b *llamaBackend) cpuRepackBuft() (GgmlBackendBufferType, error) {
 		}
 	}
 	return 0, errors.New("no repacked buffer type on this CPU")
+}
+
+// igpuFeatures are those of an integrated GPU. An Intel one on Vulkan with the
+// Windows driver gets the matmul attention for long batches: measured on an
+// Iris Xe, where the scalar flash-attention shader is the slow path; Mesa and
+// the GPUs with matrix cores are not measured and keep flash attention.
+func igpuFeatures(id, name, goos string) []string {
+	if goos == "windows" && strings.HasPrefix(id, "vulkan") && strings.Contains(name, "Intel") {
+		return []string{backend.FeatureFlashAttnSmallBatch}
+	}
+	return nil
 }
 
 // cpuFeatures reads the device features out of llama_print_system_info, which

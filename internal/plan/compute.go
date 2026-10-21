@@ -17,7 +17,7 @@ import (
 //
 //	tail   logits + n_ubatch · 4 · (n_ff + n_embd_per_layer·n_layer + Embd·n_embd + OutEmbd·n_embd_out)
 //	middle n_ubatch · 4 · MidFF · n_ff               an FFN block in flight
-//	KQ     n_head · n_kv · n_ubatch · 4              without flash attention only:
+//	KQ     n_head · n_kv · n_ubatch · 4              without flash attention (or with it on small batches only):
 //	       + n_ubatch · 4 · KQFF · n_ff              the f32 attention matrix
 //	mask   n_kv · n_ubatch · MaskFA                  with flash attention (f16)
 //	       n_kv · n_ubatch · MaskNoFA + MaskNoFABase without (f32)
@@ -82,6 +82,10 @@ type ComputeShape struct {
 	// NKV is the cells of the widest attention, the full-attention cache.
 	NKV            int
 	FlashAttention bool
+	// FlashAttnSmallBatch, with FlashAttention, runs a long batch through the
+	// matmul attention on the full-attention layers: the KQ peak of the case
+	// without flash attention, with its f16 mask.
+	FlashAttnSmallBatch bool
 }
 
 // ComputeBytes estimates one context's compute buffer.
@@ -120,9 +124,11 @@ func (c ComputeCoeffs) peaks(h gguf.HParams, s ComputeShape) peaks {
 	if s.FlashAttention {
 		p.mask = int64(c.MaskFA * cells)
 	} else {
+		p.mask = int64(c.MaskNoFA*cells) + c.MaskNoFABase
+	}
+	if !s.FlashAttention || s.FlashAttnSmallBatch {
 		p.kqFixed = float64(heads) * cells * 4
 		p.kq = int64(p.kqFixed + c.KQFF*p.perFF)
-		p.mask = int64(c.MaskNoFA*cells) + c.MaskNoFABase
 	}
 	return p
 }

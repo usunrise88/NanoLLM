@@ -45,6 +45,8 @@ models:
       kv_type: f16        # f16 | q8_0
       # repack: off       # auto | off | on: off keeps the weights as the file has them (generic kernels);
       #                   # on repacks even where the planner keeps them in the file (breaks that mode's memory budget)
+      # flash_attention: auto  # auto | on | off | small: small keeps flash attention for batches of up to 8 tokens and
+      #                   # prefills through the matmul attention (auto on an Intel iGPU with Vulkan on Windows)
       n_ctx: auto         # auto = what the preset leaves, floor 4096
       slots: auto
       speculative:

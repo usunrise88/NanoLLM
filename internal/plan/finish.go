@@ -18,8 +18,8 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 		Mode: t.mode, ModeID: info.ID,
 		NCtx: t.shape.nCtx, Slots: t.shape.slots,
 		NBatch: pl.nBatch, NUBatch: pl.nUBatch, NOutputsMax: t.nOutputsMax,
-		FlashAttention: pl.fa,
-		LoadMode:       t.spec.load, LazyMode: t.spec.lazy, Repack: t.spec.repack,
+		FlashAttention: pl.fa, FlashAttnSmallBatch: pl.faSmall,
+		LoadMode: t.spec.load, LazyMode: t.spec.lazy, Repack: t.spec.repack,
 		Groups: t.groups, Memory: t.mem, Target: target,
 	}
 	if !t.spec.gpu {
