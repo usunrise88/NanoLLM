@@ -179,6 +179,14 @@ var allowFuncs = []string{
 	"llama_sampler_init_logit_bias",
 	"llama_sampler_init_grammar",
 	"llama_sampler_init_grammar_lazy_patterns",
+
+	// backend sampling: the chain in the device graph, only its result copied
+	"llama_set_sampler",
+	"llama_get_sampled_token_ith",
+	"llama_get_sampled_logits_ith",
+	"llama_get_sampled_logits_count_ith",
+	"llama_get_sampled_candidates_ith",
+	"llama_get_sampled_candidates_count_ith",
 }
 
 // allowCxx are functions of the staging header, exported with C++ decorated

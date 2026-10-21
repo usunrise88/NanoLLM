@@ -41,10 +41,19 @@ The series, in order:
   common's and llama-bench's `-fa`; needs an unquantized KV cache, which keeps the flash-attention layout). Prefill on an
   Iris Xe +23% at 4096 tokens of context, +42% at 8192, KLD below that of `-fa 0`; gemma.json on the iGPU 95 -> 89-90 s.
   NanoLLM asks for it on GPUs listing `fa-small-batch` (Intel iGPUs under Vulkan on Windows).
+- 0008 cuda: kernels and CUDA graphs for Gemma 4 E4B decoding, with a switch (`GGML_CUDA_NANO_<NAME>`) for each change
+  (`ggml/src/ggml-cuda/nano.cuh`): a CUDA graph per batch shape, the block of the Q4_0 mat-vec per column count, a lighter
+  rms_norm, the q8_1 of an activation kept for the next mat-vec (and written by the norm), gelu*mul in one launch. On an RTX
+  3070 Ti Laptop the kernel time of a token goes from 9.62 to 8.45 ms (-12 %), of a draft's verification from 9.93 to
+  9.07 ms; a token verified in a batch gets the same bits as decoded alone (`tests/test-nano-batch-invariance.cpp`).
+  It touches only `ggml-cuda` and the tests, so it works beside the `ggml-base` of any series; `libs-build.yml` builds it
+  for two toolkits (CUDA 12.4 and 13.4) as `nanollm-libs-windows_amd64_cuda` and `..._cuda13`, and
+  `scripts/build-libs-windows.ps1 -Cuda` builds it locally. Results: docs/AUTOTUNE.md, "Своя ggml-cuda.dll".
 
 0002 to 0005 change the CPU backend, so the targets marked `cpu` in
-`libs-build.yml` ship the CPU variants too (see there and `scripts/fetch-libs.sh`), and 0006 changes the
-Vulkan backend, which the `vulkan` targets ship (windows_amd64 for now).
+`libs-build.yml` ship the CPU variants too (see there and `scripts/fetch-libs.sh`), 0006 changes the
+Vulkan backend, which the `vulkan` targets ship (windows_amd64 for now), and 0008 changes only the CUDA backend, which the
+`cuda` targets ship (windows_amd64_cuda and _cuda13; Linux keeps upstream's for now).
 Without patches the build is upstream's.
 
 ## Patches under test: `patches/next`

@@ -1,0 +1,1500 @@
+From c96d19c520cd770d76dda528d45e36ef4f77c77a Mon Sep 17 00:00:00 2001
+From: NanoLLM <nanollm@localhost>
+Date: Wed, 21 Oct 2026 16:00:00 +0000
+Subject: [PATCH] cuda: kernels and graphs for Gemma 4 E4B decoding, with a
+ switch for each change
+
+The CUDA decode of Gemma 4 E4B (Q4_0 weights, 42 layers, ~1100 kernels a token) spends 75 % of its time in the Q4_0
+mat-vec, which reads the weights at 78-95 % of the card's bandwidth, and 25 % in ~700 small kernels of 1-5 us each. These
+changes take the kernel time of a token on an RTX 3070 Ti Laptop (cc 8.6) from 9.62 to 8.45 ms (-12 %) and of a draft's
+verification from 9.93 to 9.07 ms (-9 %), with the same tokens as plain decoding (below). Every change has a switch,
+GGML_CUDA_NANO_<NAME> in the environment or ggml_backend_cuda_nano_set from the host program (nano.cuh), so the build with
+and without it is measured in one DLL; the backend's features list NANOLLM (the number of this patch) and the switches.
+
+- GRAPH_SHAPES: the CUDA graph is cached under the first node of the ggml graph, which every batch size of one model
+  shares, so a decode that alternates between batch sizes ran eagerly and captured again after every second call. The key
+  has the shape (node count, rows of the first and last node) too: one graph per batch size, at most 32 per context.
+  MTP with a minimum draft probability on the RTX: 130 -> 147 tok/s.
+- MMVQ_NWARPS, MMVQ_NWARPS_N: the block of the Q4_0 mat-vec as warps*10 + rows, per number of columns. One warp per row
+  for the wide K = 2560 matrices (the feed-forward's gate and up, the per-layer projection) takes the fused gate/up of one
+  token from 84 to 71 us (29 MB: 348 -> 413 GB/s) and the gate or up of four tokens from 41 to 38 us. The number of warps is
+  the same for every column count (the order of a row's partial sums depends on it, and a token verified in a batch must get
+  the bits it gets alone); rows per block are free. Only cc 8.6 is measured, other cards keep upstream's block.
+- vecdotq.cuh: the Q4_0 dot rounds its products and difference one by one. Which product of "a*b - c*d" a compiler fuses
+  depends on how it schedules the kernel around it, and the fused gate/up of one token and the two mat-vecs of a draft's
+  verification came out with other low bits once the blocks differed; the model's int8 activations make a rounding visible.
+- NORM_LEAN: rms_norm * weight (+ residual) (* the layer's output scale) of a row of up to 4096 columns in one block of one
+  float4 per thread, and the same for the channels of a 3-D input (the per-layer norms), so that a row is normalized by the
+  same kernel for one token and for four. -0.3 ms a token.
+- Q8_CACHE, NORM_Q8: the q8_1 of an activation is kept for the rest of the graph evaluation under its tensor (the context's
+  own 8 MiB, which never moves: a CUDA graph keeps the addresses it captured), so q, k and v quantize their input once,
+  and the input norms write it themselves (rms_norm_mul_lean_q8_1_f32: amax and the quants as quantize_q8_1 computes them).
+  132 of 302 quantize launches a token.
+- GELU_MUL: gelu(x) * y in one launch, Gemma 4's per-layer embedding gate.
+- FUSE_BATCH (off): the gate/up GEGLU fusion for 2-4 tokens; the fused kernel takes 156 us (89 with a one-warp block) against
+  87 for the two mat-vecs and the GEGLU launch it replaces.
+- FA_VEC (off): the vector flash attention kernel for one token on Ampere, as upstream picks it from Ada; no gain on cc 8.6.
+
+tests: the Q4_0 matrices of Gemma 4 E4B in test-backend-ops (mat-vec 1-4 and 8 columns, the 2560-wide norms with and
+without the output scale); test-nano-batch-invariance, which evaluates them with 1-4 columns and compares the first column
+bit for bit, also for the gate and up with the GEGLU.
+---
+ ggml/src/ggml-cuda/common.cuh        |  61 +++++-
+ ggml/src/ggml-cuda/fattn.cu          |   5 +-
+ ggml/src/ggml-cuda/ggml-cuda.cu      | 133 ++++++++++-
+ ggml/src/ggml-cuda/mmvq.cu           | 186 ++++++++++++----
+ ggml/src/ggml-cuda/nano.cu           |  76 +++++++
+ ggml/src/ggml-cuda/nano.cuh          |  45 ++++
+ ggml/src/ggml-cuda/norm.cu           | 317 +++++++++++++++++++++++++++
+ ggml/src/ggml-cuda/norm.cuh          |  11 +
+ ggml/src/ggml-cuda/unary.cu          |   3 +
+ ggml/src/ggml-cuda/vecdotq.cuh       |   7 +-
+ tests/CMakeLists.txt                 |   2 +
+ tests/test-backend-ops.cpp           |  38 ++++
+ tests/test-nano-batch-invariance.cpp | 121 ++++++++++
+ 13 files changed, 941 insertions(+), 64 deletions(-)
+ create mode 100644 ggml/src/ggml-cuda/nano.cu
+ create mode 100644 ggml/src/ggml-cuda/nano.cuh
+ create mode 100644 tests/test-nano-batch-invariance.cpp
+
+diff --git a/ggml/src/ggml-cuda/common.cuh b/ggml/src/ggml-cuda/common.cuh
+index c6dc9dd62..5bcc30e78 100644
+--- a/ggml/src/ggml-cuda/common.cuh
++++ b/ggml/src/ggml-cuda/common.cuh
+@@ -1293,6 +1293,23 @@ struct ggml_cuda_graph {
+ #endif
+ };
+ 
++// Which CUDA graph a ggml graph is cached under: its first node, and (GGML_CUDA_NANO_GRAPH_SHAPES) its shape.
++// The first node alone is the same for every batch size of one model, so a decode that alternates between batch
++// sizes (the verification of a speculative draft of a changing length) found a graph that did not match, ran
++// eagerly and captured it again, over and over. One graph per shape settles after two calls of each.
++struct ggml_cuda_graph_key {
++    const void * first_node = nullptr;
++    uint64_t     shape      = 0;
++
++    bool operator==(const ggml_cuda_graph_key & o) const { return first_node == o.first_node && shape == o.shape; }
++};
++
++struct ggml_cuda_graph_key_hash {
++    size_t operator()(const ggml_cuda_graph_key & k) const {
++        return std::hash<const void *>()(k.first_node) ^ (std::hash<uint64_t>()(k.shape) * 0x9E3779B97F4A7C15ull);
++    }
++};
++
+ struct ggml_cuda_concurrent_event {
+     std::vector<cudaEvent_t> join_events;
+     cudaEvent_t              fork_event = nullptr;
+@@ -1457,13 +1474,16 @@ struct ggml_backend_cuda_context {
+     int curr_stream_no = 0;
+ 
+ #ifdef USE_CUDA_GRAPH
+-    // Map from first_node_ptr to cuda_graph - allows multiple graphs per context
+-    // when the computation is split across CPU/GPU (e.g., with --n-cpu-moe)
+-    std::unordered_map<const void *, std::unique_ptr<ggml_cuda_graph>> cuda_graphs;
++    // Map from the graph key (first node, shape) to cuda_graph - allows multiple graphs per context
++    // when the computation is split across CPU/GPU (e.g., with --n-cpu-moe), or has several batch shapes
++    std::unordered_map<ggml_cuda_graph_key, std::unique_ptr<ggml_cuda_graph>, ggml_cuda_graph_key_hash> cuda_graphs;
+ 
+     int64_t last_graph_eviction_sweep = 0;
+ 
+-    ggml_cuda_graph * cuda_graph(const void * first_node_ptr) {
++    // a context that sees every batch size 1..N keeps N graphs; more than this is a program with no pattern
++    static constexpr size_t GGML_CUDA_MAX_GRAPHS = 32;
++
++    ggml_cuda_graph * cuda_graph(const ggml_cuda_graph_key & first_node_ptr) {
+         const int64_t time_now = ggml_time_us();
+ 
+         // sweep every 5s, evicting cuda graphs unused for >=10s
+@@ -1480,6 +1500,15 @@ struct ggml_backend_cuda_context {
+ 
+         auto it = cuda_graphs.find(first_node_ptr);
+         if (it == cuda_graphs.end()) {
++            if (cuda_graphs.size() >= GGML_CUDA_MAX_GRAPHS) {
++                auto oldest = cuda_graphs.begin();
++                for (auto j = cuda_graphs.begin(); j != cuda_graphs.end(); ++j) {
++                    if (j->second->last_used_time < oldest->second->last_used_time) {
++                        oldest = j;
++                    }
++                }
++                cuda_graphs.erase(oldest);
++            }
+             it = cuda_graphs.emplace(first_node_ptr, std::make_unique<ggml_cuda_graph>()).first;
+         }
+         it->second->last_used_time = time_now;
+@@ -1547,6 +1576,30 @@ struct ggml_backend_cuda_context {
+         return cublas_handles[device][curr_stream_no];
+     }
+ 
++    // NanoLLM (GGML_CUDA_NANO_Q8_CACHE): the activation of a mul_mat_vec_q, quantized to q8_1 and kept until the end of
++    // the graph evaluation, under the tensor it came from. The next mul_mat_vec_q on the same tensor (q, k and v take
++    // one input) finds it instead of quantizing again, and a norm that writes the tensor can write the q8_1 as well
++    // (norm.cu). The memory is the context's own and never moves: a CUDA graph keeps the addresses it captured.
++    struct q8_1_cache {
++        std::unordered_map<const ggml_tensor *, void *> entries;
++        char * scratch = nullptr;
++        size_t size    = 0;
++        size_t used    = 0;
++        bool   failed  = false;
++    } q8_cache;
++
++    void * q8_cache_find(const ggml_tensor * t) const {
++        const auto it = q8_cache.entries.find(t);
++        return it == q8_cache.entries.end() ? nullptr : it->second;
++    }
++    // room for `bytes` of q8_1 of the tensor, registered under it; nullptr when there is none (the caller then
++    // quantizes into the pool, as upstream does)
++    void * q8_cache_alloc(const ggml_tensor * t, size_t bytes);
++    void q8_cache_reset() {
++        q8_cache.entries.clear();
++        q8_cache.used = 0;
++    }
++
+     // pool
+     std::unique_ptr<ggml_cuda_pool> pools[GGML_CUDA_MAX_DEVICES][GGML_CUDA_MAX_STREAMS];
+ 
+diff --git a/ggml/src/ggml-cuda/fattn.cu b/ggml/src/ggml-cuda/fattn.cu
+index 5fa3e5308..2b21de483 100644
+--- a/ggml/src/ggml-cuda/fattn.cu
++++ b/ggml/src/ggml-cuda/fattn.cu
+@@ -4,6 +4,7 @@
+ #include "fattn-tile.cuh"
+ #include "fattn-vec.cuh"
+ #include "fattn.cuh"
++#include "nano.cuh"
+ 
+ #if !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA)
+ // one list per group of ncols1 queries: a column is selected if any query of the group can see it
+@@ -641,7 +642,9 @@ static best_fattn_kernel ggml_cuda_get_best_fattn_kernel(const int device, const
+                 const bool sparse_decode = gqa_opt_applies && gqa_ratio > 4 &&
+                     ggml_cuda_flash_attn_ext_mma_f16_may_use_sparse(K->ne[0], V->ne[0], 1, 8) &&
+                     ggml_cuda_flash_attn_ext_mma_f16_shall_use_sparse(cc, dst, 1, 8);
+-                if (!sparse_decode && cc >= GGML_CUDA_CC_ADA_LOVELACE && Q->ne[1] == 1 && Q->ne[3] == 1 &&
++                // NanoLLM (GGML_CUDA_NANO_FA_VEC): the vector kernel for one token on Ampere too, as upstream has it from Ada
++                if (!sparse_decode && (cc >= GGML_CUDA_CC_ADA_LOVELACE || ggml_cuda_nano_get(GGML_CUDA_NANO_FA_VEC)) &&
++                        Q->ne[1] == 1 && Q->ne[3] == 1 &&
+                         !(gqa_ratio > 4 && (Q->ne[0] >= 256 || K->ne[1] >= 8192))) {
+                     return BEST_FATTN_KERNEL_VEC;
+                 }
+diff --git a/ggml/src/ggml-cuda/ggml-cuda.cu b/ggml/src/ggml-cuda/ggml-cuda.cu
+index 9fe618f85..a9ed25542 100644
+--- a/ggml/src/ggml-cuda/ggml-cuda.cu
++++ b/ggml/src/ggml-cuda/ggml-cuda.cu
+@@ -70,6 +70,7 @@
+ #include "ggml-cuda/cumsum.cuh"
+ #include "ggml-cuda/fill.cuh"
+ #include "ggml-cuda/lightning-indexer.cuh"
++#include "ggml-cuda/nano.cuh"
+ #include "ggml.h"
+ 
+ #include <algorithm>
+@@ -737,10 +738,41 @@ static std::mutex ggml_cuda_lock;
+ static std::condition_variable ggml_cuda_lock_cv;
+ static std::atomic<int> ggml_cuda_lock_counter;
+ 
++void * ggml_backend_cuda_context::q8_cache_alloc(const ggml_tensor * t, size_t bytes) {
++    constexpr size_t scratch_bytes = 8u << 20; // 1 token: ~1.1 MiB for the 42 layers of Gemma 4 E4B, 4 tokens: ~4.4 MiB
++    constexpr size_t align         = 256;
++    if (q8_cache.failed) {
++        return nullptr;
++    }
++    if (q8_cache.scratch == nullptr) {
++        ggml_cuda_set_device(device);
++        void * p = nullptr;
++        if (cudaMalloc(&p, scratch_bytes) != cudaSuccess) {
++            (void) cudaGetLastError();
++            q8_cache.failed = true;
++            return nullptr;
++        }
++        q8_cache.scratch = (char *) p;
++        q8_cache.size    = scratch_bytes;
++    }
++    const size_t at = GGML_PAD(q8_cache.used, align);
++    if (at + bytes > q8_cache.size) {
++        return nullptr;
++    }
++    q8_cache.used = at + bytes;
++    void * ptr = q8_cache.scratch + at;
++    q8_cache.entries[t] = ptr;
++    return ptr;
++}
++
+ ggml_backend_cuda_context::~ggml_backend_cuda_context() {
+     std::unique_lock<std::mutex> lock(ggml_cuda_lock);
+     ggml_cuda_lock_cv.wait(lock, []{ return ggml_cuda_lock_counter.load(std::memory_order_relaxed) == 0; });
+ 
++    if (q8_cache.scratch != nullptr) {
++        CUDA_CHECK(cudaFree(q8_cache.scratch));
++    }
++
+     if (copy_event != nullptr) {
+         CUDA_CHECK(cudaEventDestroy(copy_event));
+     }
+@@ -1884,7 +1916,9 @@ static bool ggml_cuda_should_fuse_mul_mat_vec_q(const ggml_tensor * tensor) {
+         return false;
+     }
+     //we only support fusion for ncols_dst = 1
+-    if (tensor->op == GGML_OP_MUL_MAT && dst->ne[1] != 1) {
++    // NanoLLM (GGML_CUDA_NANO_FUSE_BATCH): and, for Q4_0, up to 4 (the verification of a speculative draft)
++    if (tensor->op == GGML_OP_MUL_MAT && dst->ne[1] != 1 &&
++            !(src0->type == GGML_TYPE_Q4_0 && dst->ne[1] <= 4 && ggml_cuda_nano_get(GGML_CUDA_NANO_FUSE_BATCH))) {
+         return false;
+     }
+ 
+@@ -2723,14 +2757,23 @@ static bool ggml_cuda_graph_check_compability(ggml_cgraph * cgraph) {
+     return use_cuda_graph;
+ }
+ 
+-static const void * ggml_cuda_graph_get_key(ggml_cgraph * cgraph) {
+-    return cgraph->nodes[0];
++static ggml_cuda_graph_key ggml_cuda_graph_get_key(ggml_cgraph * cgraph) {
++    ggml_cuda_graph_key key;
++    key.first_node = cgraph->nodes[0];
++    if (ggml_cuda_nano_get(GGML_CUDA_NANO_GRAPH_SHAPES) && cgraph->n_nodes > 0) {
++        // the batch size shows in the rows of the first node (the embeddings of the tokens) and of the last (the
++        // logits that are kept); the node count tells apart the graphs that differ in structure
++        const ggml_tensor * first = cgraph->nodes[0];
++        const ggml_tensor * last  = cgraph->nodes[cgraph->n_nodes - 1];
++        key.shape = 1 + (((uint64_t) cgraph->n_nodes * 1000003ull) ^ ((uint64_t) first->ne[1] * 8191ull) ^ ((uint64_t) last->ne[1] << 40));
++    }
++    return key;
+ }
+ 
+ static bool ggml_cuda_graph_update_required(ggml_backend_cuda_context * cuda_ctx, ggml_cgraph * cgraph) {
+     bool res = false;
+ 
+-    const void * graph_key = ggml_cuda_graph_get_key(cgraph);
++    const ggml_cuda_graph_key graph_key = ggml_cuda_graph_get_key(cgraph);
+     ggml_cuda_graph * graph = cuda_ctx->cuda_graph(graph_key);
+ 
+     if (cgraph->uid != 0 &&
+@@ -2771,7 +2814,7 @@ static bool ggml_cuda_graph_update_required(ggml_backend_cuda_context * cuda_ctx
+     return res;
+ }
+ 
+-static void ggml_cuda_graph_update_executable(ggml_backend_cuda_context * cuda_ctx, const void * graph_key) {
++static void ggml_cuda_graph_update_executable(ggml_backend_cuda_context * cuda_ctx, const ggml_cuda_graph_key & graph_key) {
+     ggml_cuda_graph * graph = cuda_ctx->cuda_graph(graph_key);
+ 
+ #if CUDART_VERSION >= 12000
+@@ -3654,6 +3697,39 @@ static bool ggml_cuda_can_fuse(const struct ggml_cgraph *                cgraph,
+ }
+ 
+ // try and fuse nodes and return the number of nodes to skip
++// NanoLLM (GGML_CUDA_NANO_NORM_Q8): whether the RMS_NORM + MUL at node i should also write the q8_1 of its result, which
++// pays when a mat-vec on quantized weights follows it (it then finds the q8_1 in the context's cache instead of
++// launching a quantize kernel of its own). The norm sees a handful of tokens, one row of weights, and the consumer
++// within the next few nodes (Q, K, V and the feed-forward gate and up are all that close).
++static bool ggml_cuda_norm_q8_wanted(ggml_backend_cuda_context * cuda_ctx, const ggml_cgraph * cgraph, int i) {
++    if (!ggml_cuda_nano_get(GGML_CUDA_NANO_NORM_Q8) || !ggml_cuda_nano_get(GGML_CUDA_NANO_Q8_CACHE) || cuda_ctx->curr_stream_no != 0) {
++        return false;
++    }
++    const ggml_tensor * norm = cgraph->nodes[i];
++    const ggml_tensor * mul  = cgraph->nodes[i + 1];
++    const ggml_tensor * src  = norm->src[0];
++    const ggml_tensor * w    = mul->src[0] == norm ? mul->src[1] : mul->src[0];
++    if (src->type != GGML_TYPE_F32 || norm->type != GGML_TYPE_F32 || mul->type != GGML_TYPE_F32 || w->type != GGML_TYPE_F32) {
++        return false;
++    }
++    if (src->nb[0] != sizeof(float) || src->ne[2] != 1 || src->ne[3] != 1 || src->ne[0] % QK8_1 != 0 || src->ne[1] > MMVQ_MAX_BATCH_SIZE) {
++        return false;
++    }
++    if (w->ne[0] != src->ne[0] || ggml_nelements(w) != w->ne[0] || !ggml_is_contiguous(mul) || !ggml_are_same_shape(mul, src)) {
++        return false;
++    }
++    const int cc = ggml_cuda_info().devices[cuda_ctx->device].cc;
++    const int last = std::min(cgraph->n_nodes, i + 2 + 48);
++    for (int j = i + 2; j < last; ++j) {
++        const ggml_tensor * n = cgraph->nodes[j];
++        if (n->op == GGML_OP_MUL_MAT && n->src[1] == mul && ggml_is_quantized(n->src[0]->type) &&
++            ggml_cuda_should_use_mmvq(n->src[0]->type, cc, n->src[1]->ne[1])) {
++            return true;
++        }
++    }
++    return false;
++}
++
+ static int ggml_cuda_try_fuse(ggml_backend_cuda_context * cuda_ctx, ggml_cgraph * cgraph, int i) {
+ 
+     if (ggml_cuda_fusion_disabled()) {
+@@ -4401,13 +4477,25 @@ static int ggml_cuda_try_fuse(ggml_backend_cuda_context * cuda_ctx, ggml_cgraph
+         return 2;
+     }
+ 
++    // NanoLLM (GGML_CUDA_NANO_NORM_LEAN): and the layer's output scale, a MUL by one value, after the residual
++    if ((ggml_cuda_nano_get(GGML_CUDA_NANO_NORM_LEAN) & 2) &&
++            ggml_cuda_can_fuse(cgraph, i, { GGML_OP_RMS_NORM, GGML_OP_MUL, GGML_OP_ADD, GGML_OP_MUL }, {}) &&
++            ggml_cuda_rms_norm_fused_add_scale_ok(node, cgraph->nodes[i + 1], cgraph->nodes[i + 2], cgraph->nodes[i + 3])) {
++        ggml_cuda_op_rms_norm_fused_add_scale(*cuda_ctx, node, cgraph->nodes[i + 1], cgraph->nodes[i + 2], cgraph->nodes[i + 3]);
++        return 3;
++    }
++
+     if (ggml_cuda_can_fuse(cgraph, i, { GGML_OP_RMS_NORM, GGML_OP_MUL, GGML_OP_ADD }, {})) {
+         ggml_cuda_op_rms_norm_fused_add(*cuda_ctx, node, cgraph->nodes[i + 1], cgraph->nodes[i + 2]);
+         return 2;
+     }
+ 
+     if (ggml_cuda_can_fuse(cgraph, i, { GGML_OP_RMS_NORM, GGML_OP_MUL }, {})) {
+-        ggml_cuda_op_rms_norm_fused(*cuda_ctx, node, cgraph->nodes[i + 1]);
++        if (ggml_cuda_norm_q8_wanted(cuda_ctx, cgraph, i)) {
++            ggml_cuda_op_rms_norm_fused_q8(*cuda_ctx, node, cgraph->nodes[i + 1]);
++        } else {
++            ggml_cuda_op_rms_norm_fused(*cuda_ctx, node, cgraph->nodes[i + 1]);
++        }
+         return 1;
+     }
+ 
+@@ -4428,7 +4516,9 @@ static int ggml_cuda_try_fuse(ggml_backend_cuda_context * cuda_ctx, ggml_cgraph
+ 
+     if (ggml_cuda_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_MUL }, { GGML_UNARY_OP_SILU }) ||
+         ggml_cuda_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_MUL }, { GGML_UNARY_OP_SIGMOID }) ||
+-        ggml_cuda_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_MUL }, { GGML_UNARY_OP_SOFTPLUS })) {
++        ggml_cuda_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_MUL }, { GGML_UNARY_OP_SOFTPLUS }) ||
++        // NanoLLM (GGML_CUDA_NANO_GELU_MUL): Gemma 4's per-layer embedding gate, gelu(x) * y
++        (ggml_cuda_nano_get(GGML_CUDA_NANO_GELU_MUL) && ggml_cuda_can_fuse(cgraph, i, { GGML_OP_UNARY, GGML_OP_MUL }, { GGML_UNARY_OP_GELU }))) {
+         ggml_cuda_op_unary_mul(*cuda_ctx, node, cgraph->nodes[i + 1]);
+         return 1;
+     }
+@@ -4446,7 +4536,7 @@ static int ggml_cuda_try_fuse(ggml_backend_cuda_context * cuda_ctx, ggml_cgraph
+     return 0;
+ }
+ 
+-static void ggml_cuda_graph_evaluate_and_capture(ggml_backend_cuda_context * cuda_ctx, ggml_cgraph * cgraph, const bool use_cuda_graph, const bool cuda_graph_update_required, const void * graph_key) {
++static void ggml_cuda_graph_evaluate_and_capture(ggml_backend_cuda_context * cuda_ctx, ggml_cgraph * cgraph, const bool use_cuda_graph, const bool cuda_graph_update_required, const ggml_cuda_graph_key & graph_key) {
+     bool graph_evaluated_or_captured = false;
+ 
+     // flag used to determine whether it is an integrated_gpu
+@@ -4665,7 +4755,7 @@ static void ggml_cuda_graph_evaluate_and_capture(ggml_backend_cuda_context * cud
+ }
+ 
+ #ifdef USE_CUDA_GRAPH
+-static bool ggml_cuda_graph_set_enabled(ggml_backend_cuda_context * cuda_ctx, const void * graph_key) {
++static bool ggml_cuda_graph_set_enabled(ggml_backend_cuda_context * cuda_ctx, const ggml_cuda_graph_key & graph_key) {
+     ggml_cuda_graph * graph = cuda_ctx->cuda_graph(graph_key);
+ 
+     if (graph->graph == nullptr) {
+@@ -4686,9 +4776,11 @@ static enum ggml_status ggml_backend_cuda_graph_compute(ggml_backend_t backend,
+ 
+     ggml_cuda_set_device(cuda_ctx->device);
+ 
++    cuda_ctx->q8_cache_reset(); // the q8_1 of the previous evaluation's tensors (NanoLLM, common.cuh)
++
+     bool use_cuda_graph             = false;
+     bool cuda_graph_update_required = false;
+-    const void * graph_key = nullptr;
++    ggml_cuda_graph_key graph_key;
+ 
+ #ifdef USE_CUDA_GRAPH
+     graph_key = ggml_cuda_graph_get_key(cgraph);
+@@ -4883,7 +4975,7 @@ static void ggml_backend_cuda_graph_optimize(ggml_backend_t backend, ggml_cgraph
+     }
+ 
+ #ifdef USE_CUDA_GRAPH
+-    const void * graph_key = ggml_cuda_graph_get_key(cgraph);
++    const ggml_cuda_graph_key graph_key = ggml_cuda_graph_get_key(cgraph);
+     const bool use_cuda_graph = ggml_cuda_graph_set_enabled(cuda_ctx, graph_key);
+ #else
+     const bool use_cuda_graph = false;
+@@ -6016,6 +6108,21 @@ static ggml_backend_feature * ggml_backend_cuda_get_features(ggml_backend_reg_t
+         features.push_back({ "FA_QUANTS", GGML_CUDA_FA_QUANTS });
+     #endif
+ 
++    // NanoLLM's series (nano.cuh): the level of the last patch, and the switches with their defaults. The names are
++    // kept in a static list: the features point at the strings.
++    {
++        static std::vector<std::string> nano_strings;
++        nano_strings.reserve(2 * (GGML_CUDA_NANO_COUNT + 1));
++        nano_strings.push_back(std::to_string(GGML_CUDA_NANO_LEVEL));
++        features.push_back({ "NANOLLM", nano_strings.back().c_str() });
++        for (int i = 0; i < GGML_CUDA_NANO_COUNT; ++i) {
++            nano_strings.push_back(std::string("NANO_") + ggml_cuda_nano_name((ggml_cuda_nano_id) i));
++            const char * key = nano_strings.back().c_str();
++            nano_strings.push_back(std::to_string(ggml_cuda_nano_default((ggml_cuda_nano_id) i)));
++            features.push_back({ key, nano_strings.back().c_str() });
++        }
++    }
++
+     {
+         const auto & info = ggml_cuda_info();
+         for (int id = 0; id < info.device_count; ++id) {
+@@ -6059,6 +6166,10 @@ static void * ggml_backend_cuda_reg_get_proc_address(ggml_backend_reg_t reg, con
+     if (strcmp(name, "ggml_backend_get_features") == 0) {
+         return (void *)ggml_backend_cuda_get_features;
+     }
++    if (strcmp(name, "ggml_backend_cuda_nano_set") == 0) {
++        // bool (*)(const char * name, int value): NanoLLM's switches (nano.cuh)
++        return (void *)ggml_cuda_nano_set;
++    }
+     return nullptr;
+ }
+ 
+diff --git a/ggml/src/ggml-cuda/mmvq.cu b/ggml/src/ggml-cuda/mmvq.cu
+index 8068ba364..1a533de6b 100644
+--- a/ggml/src/ggml-cuda/mmvq.cu
++++ b/ggml/src/ggml-cuda/mmvq.cu
+@@ -1,4 +1,5 @@
+ #include "mmvq.cuh"
++#include "nano.cuh"
+ #include "quantize.cuh"
+ #include "unary.cuh"
+ #include "vecdotq.cuh"
+@@ -449,7 +450,10 @@ static constexpr __device__ int get_mmvq_mmid_max_batch_for_device() {
+ #endif
+ }
+ 
+-static constexpr __host__ __device__ int calc_nwarps(ggml_type type, int ncols_dst, mmvq_parameter_table_id table_id, bool small_k = false, bool halve_iters = false) {
++static constexpr __host__ __device__ int calc_nwarps(ggml_type type, int ncols_dst, mmvq_parameter_table_id table_id, bool small_k = false, bool halve_iters = false, int force = 0) {
++    if (force > 0) {
++        return force; // NanoLLM: a block width chosen by the caller (GGML_CUDA_NANO_MMVQ_NWARPS)
++    }
+     if (table_id == MMVQ_PARAMETERS_GENERIC) {
+         switch (ncols_dst) {
+             case 1:
+@@ -576,7 +580,10 @@ static constexpr __host__ __device__ int calc_nwarps(ggml_type type, int ncols_d
+     return 1;
+ }
+ 
+-static constexpr __host__ __device__ int calc_rows_per_block(int ncols_dst, int table_id, bool small_k = false, int nwarps = 1) {
++static constexpr __host__ __device__ int calc_rows_per_block(int ncols_dst, int table_id, bool small_k = false, int nwarps = 1, int force = 0) {
++    if (force > 0) {
++        return force; // NanoLLM (GGML_CUDA_NANO_MMVQ_NWARPS)
++    }
+     if (table_id == MMVQ_PARAMETERS_GENERIC || table_id == MMVQ_PARAMETERS_GCN || table_id == MMVQ_PARAMETERS_TURING || table_id == MMVQ_PARAMETERS_GB10) {
+         switch (ncols_dst) {
+             case 1:
+@@ -596,8 +603,8 @@ static constexpr __host__ __device__ int calc_rows_per_block(int ncols_dst, int
+     return 1;
+ }
+ 
+-template <ggml_type type, int ncols_dst, bool has_fusion, bool small_k = false, bool halve_iters = false>
+-__launch_bounds__(calc_nwarps(type, ncols_dst, get_device_table_id(), small_k, halve_iters)*ggml_cuda_get_physical_warp_size(), 1)
++template <ggml_type type, int ncols_dst, bool has_fusion, bool small_k = false, bool halve_iters = false, int nw_force = 0, int rpb_force = 0>
++__launch_bounds__(calc_nwarps(type, ncols_dst, get_device_table_id(), small_k, halve_iters, nw_force)*ggml_cuda_get_physical_warp_size(), 1)
+ static __global__ void mul_mat_vec_q(
+         const void * vx_ptr, const void * vy_ptr, const int32_t * ids_ptr, const ggml_cuda_mm_fusion_args_device fusion, float * dst_ptr,
+         const uint32_t ncols_x, const uint3 nchannels_y, const uint32_t stride_row_x, const uint32_t stride_col_y,
+@@ -614,8 +621,8 @@ static __global__ void mul_mat_vec_q(
+     constexpr int qi  = ggml_cuda_type_traits<type>::qi;
+     constexpr int vdr = get_vdr_mmvq(type);
+     constexpr mmvq_parameter_table_id table_id = get_device_table_id();
+-    constexpr int nwarps = calc_nwarps(type, ncols_dst, table_id, small_k, halve_iters);
+-    constexpr int rows_per_cuda_block = calc_rows_per_block(ncols_dst, table_id, small_k, nwarps);
++    constexpr int nwarps = calc_nwarps(type, ncols_dst, table_id, small_k, halve_iters, nw_force);
++    constexpr int rows_per_cuda_block = calc_rows_per_block(ncols_dst, table_id, small_k, nwarps, rpb_force);
+     constexpr int warp_size = ggml_cuda_get_physical_warp_size();
+ 
+     constexpr vec_dot_q_cuda_t vec_dot_q_cuda = get_vec_dot_q_cuda(type);
+@@ -1011,16 +1018,17 @@ static __global__ void mul_mat_vec_q_moe(
+ template<ggml_type type>
+ static std::pair<dim3, dim3> calc_launch_params(
+         const int ncols_dst, const int nrows_x, const int nchannels_dst, const int nsamples_or_ntokens,
+-        const int warp_size, const mmvq_parameter_table_id table_id, const bool small_k = false, const bool halve_iters = false) {
+-    const int nwarps = calc_nwarps(type, ncols_dst, table_id, small_k, halve_iters);
+-    const int rpb = calc_rows_per_block(ncols_dst, table_id, small_k, nwarps);
++        const int warp_size, const mmvq_parameter_table_id table_id, const bool small_k = false, const bool halve_iters = false,
++        const int nw_force = 0, const int rpb_force = 0) {
++    const int nwarps = calc_nwarps(type, ncols_dst, table_id, small_k, halve_iters, nw_force);
++    const int rpb = calc_rows_per_block(ncols_dst, table_id, small_k, nwarps, rpb_force);
+     const int64_t nblocks = (nrows_x + rpb - 1) / rpb;
+     const dim3 block_nums(nblocks, nchannels_dst, nsamples_or_ntokens);
+     const dim3 block_dims(warp_size, nwarps, 1);
+     return {block_nums, block_dims};
+ }
+ 
+-template<ggml_type type, int c_ncols_dst, bool small_k = false, bool halve_iters = false>
++template<ggml_type type, int c_ncols_dst, bool small_k = false, bool halve_iters = false, int nw_force = 0, int rpb_force = 0>
+ static void mul_mat_vec_q_switch_fusion(
+         const void * vx, const void * vy, const int32_t * ids, const ggml_cuda_mm_fusion_args_device fusion, float * dst,
+         const uint32_t ncols_x, const uint3 nchannels_y, const uint32_t stride_row_x, const uint32_t stride_col_y,
+@@ -1032,10 +1040,13 @@ static void mul_mat_vec_q_switch_fusion(
+ 
+     const bool has_fusion = fusion.gate != nullptr || fusion.x_bias != nullptr || fusion.gate_bias != nullptr ||
+                             fusion.x_scale != nullptr || fusion.gate_scale != nullptr;
+-    if constexpr (c_ncols_dst == 1) {
++    // NanoLLM (GGML_CUDA_NANO_FUSE_BATCH): the kernel fuses for any number of columns; upstream enables it for one, here
++    // Q4_0 also fuses for 2-4, the verification of a speculative draft (gate and up of the feed-forward in one launch,
++    // the GEGLU in the epilogue: one launch and one write of the product instead of four launches and three writes)
++    if constexpr (c_ncols_dst == 1 || (type == GGML_TYPE_Q4_0 && c_ncols_dst <= 4)) {
+         if (has_fusion) {
+             const ggml_cuda_kernel_launch_params launch_params = ggml_cuda_kernel_launch_params(block_nums, block_dims, nbytes_shared, stream);
+-            ggml_cuda_kernel_launch(mul_mat_vec_q<type, c_ncols_dst, true, small_k, halve_iters>, launch_params,
++            ggml_cuda_kernel_launch(mul_mat_vec_q<type, c_ncols_dst, true, small_k, halve_iters, nw_force, rpb_force>, launch_params,
+                  vx, vy, ids, fusion, dst, ncols_x, nchannels_y, stride_row_x, stride_col_y, stride_col_dst,
+                  channel_ratio, stride_channel_x, stride_channel_y, stride_channel_dst,
+                  sample_ratio, stride_sample_x, stride_sample_y, stride_sample_dst, ids_stride);
+@@ -1043,10 +1054,10 @@ static void mul_mat_vec_q_switch_fusion(
+         }
+     }
+ 
+-    GGML_ASSERT(!has_fusion && "fusion only supported for ncols_dst=1");
++    GGML_ASSERT(!has_fusion && "fusion only supported for ncols_dst=1 (Q4_0: up to 4)");
+ 
+     const ggml_cuda_kernel_launch_params launch_params = ggml_cuda_kernel_launch_params(block_nums, block_dims, nbytes_shared, stream);
+-    ggml_cuda_kernel_launch(mul_mat_vec_q<type, c_ncols_dst, false, small_k, halve_iters>, launch_params,
++    ggml_cuda_kernel_launch(mul_mat_vec_q<type, c_ncols_dst, false, small_k, halve_iters, nw_force, rpb_force>, launch_params,
+         vx, vy, ids, fusion, dst, ncols_x, nchannels_y, stride_row_x, stride_col_y, stride_col_dst,
+         channel_ratio, stride_channel_x, stride_channel_y, stride_channel_dst,
+         sample_ratio, stride_sample_x, stride_sample_y, stride_sample_dst, ids_stride);
+@@ -1085,6 +1096,33 @@ static void mul_mat_vec_q_moe_launch(
+     }
+ }
+ 
++// NanoLLM (GGML_CUDA_NANO_MMVQ_NWARPS, _N): the shape of the block that runs the K loop of a Q4_0 mat-vec, as warps*10 +
++// rows per block; 0 is upstream's (4 warps; 1 row for one token, 2 for 2-4). A value >= 0 forces it for the matrices of one
++// token (NWARPS) or of 2-4 (NWARPS_N), -1 (the default) is the table below.
++//
++// What the shape changes in the result is the order in which a row's partial sums are added: the lanes of one warp, and
++// then the warps of the block. So a matrix must have the same number of warps whatever the number of columns, or a token
++// verified in a batch of four gets other rounding than the same token decoded alone, and the model's int8 activations make
++// a rounding visible (a draft's verification would no longer reproduce plain decoding: native_invariance_test.go). The
++// number of rows per block does not touch the order and is free.
++//
++// The table is one rule for every column count: the wide matrices of Gemma 4 E4B with K = 2560 (the feed-forward gate and
++// up, 10240 rows, which one token reads in the fused kernel and a draft in two; the per-layer projection, 10752) run
++// one warp per row (bench/results/.../cuda-kernels-2026-10-21, nsys of llama-bench on an RTX 3070 Ti Laptop, cc 8.6): the
++// fused gate/up of one token takes 71 us instead of 84 (29 MB: 413 GB/s instead of 348), the gate or up of four tokens 38
++// instead of 41. The matrices with one weight and a longer or shorter K are at the card's ceiling already or read too
++// little to matter, and keep upstream's block. Other compute capabilities are unmeasured and keep upstream's choice.
++static int mmvq_nano_shape(int cc, int ncols_dst, int blocks_per_row_x, int nrows_x) {
++    const int v = ggml_cuda_nano_get(ncols_dst == 1 ? GGML_CUDA_NANO_MMVQ_NWARPS : GGML_CUDA_NANO_MMVQ_NWARPS_N);
++    if (v >= 0) {
++        return v;
++    }
++    if (cc == 860 && blocks_per_row_x == 80 && nrows_x >= 8192 && nrows_x <= 65536) {
++        return ncols_dst == 4 ? 14 : 12;
++    }
++    return 0;
++}
++
+ template <ggml_type type>
+ static void mul_mat_vec_q_switch_ncols_dst(
+         const void * vx, const void * vy, const int32_t * ids, const ggml_cuda_mm_fusion_args_device fusion, float * dst,
+@@ -1191,8 +1229,10 @@ static void mul_mat_vec_q_switch_ncols_dst(
+             static constexpr int c_ncols_dst = 1;
+ 
+             // Tag types keep the flags compile-time, so __launch_bounds__ matches what is launched.
+-            const auto launch = [&](auto small_k_tag, auto halve_iters_tag) {
++            const auto launch = [&](auto small_k_tag, auto halve_iters_tag, auto nw_tag, auto rpb_tag) {
+                 constexpr bool c_small_k = decltype(small_k_tag)::value;
++                constexpr int  c_nw      = decltype(nw_tag)::value;
++                constexpr int  c_rpb     = decltype(rpb_tag)::value;
+                 // Types the table does not promote would compile a second, identical kernel.
+                 constexpr bool c_promoted =
+                     calc_nwarps(type, c_ncols_dst, MMVQ_PARAMETERS_GB10, false, true) !=
+@@ -1201,45 +1241,83 @@ static void mul_mat_vec_q_switch_ncols_dst(
+                 constexpr bool c_halve_iters = decltype(halve_iters_tag)::value && c_promoted;
+ 
+                 const std::pair<dim3, dim3> dims = calc_launch_params<type>(c_ncols_dst, nrows_x, nchannels_dst + (fusion.shared_up != nullptr),
+-                                                                              nsamples_dst, warp_size, table_id, c_small_k, c_halve_iters);
+-                mul_mat_vec_q_switch_fusion<type, c_ncols_dst, c_small_k, c_halve_iters>(
++                                                                              nsamples_dst, warp_size, table_id, c_small_k, c_halve_iters, c_nw, c_rpb);
++                mul_mat_vec_q_switch_fusion<type, c_ncols_dst, c_small_k, c_halve_iters, c_nw, c_rpb>(
+                     vx, vy, ids, fusion, dst, ncols_x, nchannels_y_fd, stride_row_x, stride_col_y, stride_col_dst,
+                     channel_ratio_fd, stride_channel_x, stride_channel_y, stride_channel_dst, sample_ratio_fd,
+                     stride_sample_x, stride_sample_y, stride_sample_dst, dims.first, dims.second, 0, ids_stride,
+                     stream);
+             };
+ 
++            // NanoLLM (GGML_CUDA_NANO_MMVQ_NWARPS = warps*10 + rows per block): the shape of the block that runs the K loop
++            // of one token's mat-vec; only Q4_0 has the extra shapes. 0 is upstream's (4 warps, 1 row).
++            using zero = std::integral_constant<int, 0>;
++            const int nw_pick = type == GGML_TYPE_Q4_0 && !has_ids ? mmvq_nano_shape(cc, 1, blocks_per_row_x, nrows_x) : 0;
+             if (should_use_small_k(c_ncols_dst)) {
+-                launch(std::true_type{},  std::false_type{});
++                launch(std::true_type{},  std::false_type{}, zero{}, zero{});
+             } else if (should_halve_iters()) {
+-                launch(std::false_type{}, std::true_type{});
++                launch(std::false_type{}, std::true_type{}, zero{}, zero{});
+             } else {
+-                launch(std::false_type{}, std::false_type{});
++                bool done = false;
++                if constexpr (type == GGML_TYPE_Q4_0) {
++                    const int rpb = nw_pick % 10;
++                    done = nw_pick > 0 && nrows_x % rpb == 0;
++#define NANO_MMVQ_SHAPE(NW, RPB) case NW * 10 + RPB: launch(std::false_type{}, std::false_type{}, std::integral_constant<int, NW>{}, std::integral_constant<int, RPB>{}); break;
++                    if (done) {
++                        switch (nw_pick) {
++                            NANO_MMVQ_SHAPE(1, 1) NANO_MMVQ_SHAPE(1, 2) NANO_MMVQ_SHAPE(1, 4)
++                            NANO_MMVQ_SHAPE(2, 1) NANO_MMVQ_SHAPE(2, 2) NANO_MMVQ_SHAPE(2, 4)
++                            NANO_MMVQ_SHAPE(3, 1) NANO_MMVQ_SHAPE(3, 2) NANO_MMVQ_SHAPE(3, 4)
++                            NANO_MMVQ_SHAPE(4, 2) NANO_MMVQ_SHAPE(4, 4)
++                            default: done = false; break;
++                        }
++                    }
++#undef NANO_MMVQ_SHAPE
++                }
++                if (!done) {
++                    launch(std::false_type{}, std::false_type{}, zero{}, zero{});
++                }
+             }
+         } break;
+-        case 2: {
+-            constexpr int c_ncols_dst = 2;
+-            std::pair<dim3, dim3> dims = calc_launch_params<type>(c_ncols_dst, nrows_x, nchannels_dst, nsamples_dst, warp_size, table_id);
+-            mul_mat_vec_q_switch_fusion<type, c_ncols_dst>(vx, vy, ids, fusion, dst, ncols_x, nchannels_y_fd, stride_row_x, stride_col_y, stride_col_dst,
+-                 channel_ratio_fd, stride_channel_x, stride_channel_y, stride_channel_dst,
+-                 sample_ratio_fd, stride_sample_x, stride_sample_y, stride_sample_dst,
+-                 dims.first, dims.second, 0, ids_stride, stream);
+-        } break;
+-        case 3: {
+-            constexpr int c_ncols_dst = 3;
+-            std::pair<dim3, dim3> dims = calc_launch_params<type>(c_ncols_dst, nrows_x, nchannels_dst, nsamples_dst, warp_size, table_id);
+-            mul_mat_vec_q_switch_fusion<type, c_ncols_dst>(vx, vy, ids, fusion, dst, ncols_x, nchannels_y_fd, stride_row_x, stride_col_y, stride_col_dst,
+-                 channel_ratio_fd, stride_channel_x, stride_channel_y, stride_channel_dst,
+-                 sample_ratio_fd, stride_sample_x, stride_sample_y, stride_sample_dst,
+-                 dims.first, dims.second, 0, ids_stride, stream);
+-        } break;
++        case 2:
++        case 3:
+         case 4: {
+-            constexpr int c_ncols_dst = 4;
+-            std::pair<dim3, dim3> dims = calc_launch_params<type>(c_ncols_dst, nrows_x, nchannels_dst, nsamples_dst, warp_size, table_id);
+-            mul_mat_vec_q_switch_fusion<type, c_ncols_dst>(vx, vy, ids, fusion, dst, ncols_x, nchannels_y_fd, stride_row_x, stride_col_y, stride_col_dst,
+-                 channel_ratio_fd, stride_channel_x, stride_channel_y, stride_channel_dst,
+-                 sample_ratio_fd, stride_sample_x, stride_sample_y, stride_sample_dst,
+-                 dims.first, dims.second, 0, ids_stride, stream);
++            // NanoLLM (GGML_CUDA_NANO_MMVQ_NWARPS_N): the block shape for a draft's tokens, as for one token
++            const int  pick    = type == GGML_TYPE_Q4_0 && !has_ids ? mmvq_nano_shape(cc, ncols_dst, blocks_per_row_x, nrows_x) : 0;
++            const auto launch_n = [&](auto ncols_tag, auto nw_tag, auto rpb_tag) {
++                constexpr int c_ncols_dst = decltype(ncols_tag)::value;
++                constexpr int c_nw        = decltype(nw_tag)::value;
++                constexpr int c_rpb       = decltype(rpb_tag)::value;
++                std::pair<dim3, dim3> dims = calc_launch_params<type>(c_ncols_dst, nrows_x, nchannels_dst, nsamples_dst, warp_size, table_id, false, false, c_nw, c_rpb);
++                mul_mat_vec_q_switch_fusion<type, c_ncols_dst, false, false, c_nw, c_rpb>(vx, vy, ids, fusion, dst, ncols_x, nchannels_y_fd, stride_row_x, stride_col_y, stride_col_dst,
++                     channel_ratio_fd, stride_channel_x, stride_channel_y, stride_channel_dst,
++                     sample_ratio_fd, stride_sample_x, stride_sample_y, stride_sample_dst,
++                     dims.first, dims.second, 0, ids_stride, stream);
++            };
++            using zero = std::integral_constant<int, 0>;
++            bool done = false;
++            if constexpr (type == GGML_TYPE_Q4_0) {
++                const int rpb = pick % 10;
++                done = pick > 0 && nrows_x % rpb == 0;
++#define NANO_MMVQ_SHAPE_N(NC, NW, RPB) case NW * 10 + RPB: launch_n(std::integral_constant<int, NC>{}, std::integral_constant<int, NW>{}, std::integral_constant<int, RPB>{}); break;
++#define NANO_MMVQ_SHAPES_N(NC)                 NANO_MMVQ_SHAPE_N(NC, 1, 1) NANO_MMVQ_SHAPE_N(NC, 1, 2) NANO_MMVQ_SHAPE_N(NC, 1, 4)                 NANO_MMVQ_SHAPE_N(NC, 2, 1) NANO_MMVQ_SHAPE_N(NC, 2, 2) NANO_MMVQ_SHAPE_N(NC, 2, 4)                 NANO_MMVQ_SHAPE_N(NC, 3, 1) NANO_MMVQ_SHAPE_N(NC, 3, 2) NANO_MMVQ_SHAPE_N(NC, 3, 4)                 NANO_MMVQ_SHAPE_N(NC, 4, 1) NANO_MMVQ_SHAPE_N(NC, 4, 4)
++                if (done) {
++                    switch (ncols_dst) {
++                        case 2: switch (pick) { NANO_MMVQ_SHAPES_N(2) default: done = false; break; } break;
++                        case 3: switch (pick) { NANO_MMVQ_SHAPES_N(3) default: done = false; break; } break;
++                        default: switch (pick) { NANO_MMVQ_SHAPES_N(4) default: done = false; break; } break;
++                    }
++                }
++#undef NANO_MMVQ_SHAPES_N
++#undef NANO_MMVQ_SHAPE_N
++            }
++            if (!done) {
++                switch (ncols_dst) {
++                    case 2: launch_n(std::integral_constant<int, 2>{}, zero{}, zero{}); break;
++                    case 3: launch_n(std::integral_constant<int, 3>{}, zero{}, zero{}); break;
++                    default: launch_n(std::integral_constant<int, 4>{}, zero{}, zero{}); break;
++                }
++            }
+         } break;
+         case 5: {
+             constexpr int c_ncols_dst = 5;
+@@ -1460,7 +1538,7 @@ void ggml_cuda_mul_mat_vec_q(
+     if (fusion) {
+         const int cc = ggml_cuda_info().devices[ggml_cuda_get_device()].cc;
+         GGML_ASSERT( !ids || dst->ne[2] <= get_mmvq_mmid_max_batch(src0->type, cc));
+-        GGML_ASSERT(  ids || dst->ne[1] == 1);
++        GGML_ASSERT(  ids || dst->ne[1] == 1 || (src0->type == GGML_TYPE_Q4_0 && dst->ne[1] <= 4));
+         // Scale fusion is only allowed for NVFP4 currently as the cost of checking this at run-time in the prologue is
+         // non-negligible for some models such as gpt-oss-20b
+         GGML_ASSERT((fusion->x_scale == nullptr && fusion->gate_scale == nullptr) || src0->type == GGML_TYPE_NVFP4);
+@@ -1526,12 +1604,26 @@ void ggml_cuda_mul_mat_vec_q(
+     }
+ 
+     const int64_t ne10_padded = GGML_PAD(ne10, MATRIX_ROW_PADDING);
+-    ggml_cuda_pool_alloc<char> src1_q8_1(ctx.pool(), ne13*ne12 * ne11*ne10_padded * sizeof(block_q8_1)/QK8_1);
+-    {
++    const size_t  q8_1_bytes  = ne13*ne12 * ne11*ne10_padded * sizeof(block_q8_1)/QK8_1;
++    // NanoLLM: the q8_1 of this activation may exist already (q, k and v take one; a norm may have written it)
++    char * src1_q8_1_ptr = nullptr;
++    // only on the main stream: the branches GGML_CUDA_GRAPH_OPT runs concurrently are not ordered against each other
++    const bool use_q8_cache = !ids && ctx.curr_stream_no == 0 && ggml_cuda_nano_get(GGML_CUDA_NANO_Q8_CACHE) && ggml_is_contiguous(src1);
++    if (use_q8_cache) {
++        src1_q8_1_ptr = (char *) ctx.q8_cache_find(src1);
++    }
++    ggml_cuda_pool_alloc<char> src1_q8_1(ctx.pool());
++    if (src1_q8_1_ptr == nullptr) {
++        if (use_q8_cache) {
++            src1_q8_1_ptr = (char *) ctx.q8_cache_alloc(src1, q8_1_bytes);
++        }
++        if (src1_q8_1_ptr == nullptr) {
++            src1_q8_1_ptr = src1_q8_1.alloc(q8_1_bytes);
++        }
+         const int64_t s11 = src1->nb[1] / ts_src1;
+         const int64_t s12 = src1->nb[2] / ts_src1;
+         const int64_t s13 = src1->nb[3] / ts_src1;
+-        quantize_row_q8_1_cuda(src1_d, nullptr, src1_q8_1.get(), src0->type, ne10, s11, s12, s13, ne10_padded, ne11, ne12, ne13, stream);
++        quantize_row_q8_1_cuda(src1_d, nullptr, src1_q8_1_ptr, src0->type, ne10, s11, s12, s13, ne10_padded, ne11, ne12, ne13, stream);
+     }
+ 
+     const int64_t s01 = src0->nb[1] / ts_src0;
+@@ -1557,7 +1649,7 @@ void ggml_cuda_mul_mat_vec_q(
+     const int64_t ids_stride = ids ? ids->nb[1] / ggml_type_size(ids->type) : 0;
+ 
+     mul_mat_vec_q_switch_type(
+-        src0->data, src0->type, src1_q8_1.get(), ids_d, fusion_local, dst_d, ne00,
++        src0->data, src0->type, src1_q8_1_ptr, ids_d, fusion_local, dst_d, ne00,
+         ne01,              ncols_dst,     s01, stride_col_y,     stride_col_dst,
+         ne02, nchannels_y, nchannels_dst, s02, stride_channel_y, stride_channel_dst,
+         ne03,              ne3,           s03, s13,              s3,               ids_stride, stream);
+diff --git a/ggml/src/ggml-cuda/nano.cu b/ggml/src/ggml-cuda/nano.cu
+new file mode 100644
+index 000000000..a85efeb29
+--- /dev/null
++++ b/ggml/src/ggml-cuda/nano.cu
+@@ -0,0 +1,76 @@
++#include "nano.cuh"
++
++#include <atomic>
++#include <cctype>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <mutex>
++
++namespace {
++
++struct nano_def {
++    const char * name;
++    int          def;
++};
++
++const nano_def nano_defs[GGML_CUDA_NANO_COUNT] = {
++#define GGML_CUDA_NANO_DEF(name, def, doc) { #name, def },
++    GGML_CUDA_NANO_LIST(GGML_CUDA_NANO_DEF)
++#undef GGML_CUDA_NANO_DEF
++};
++
++std::atomic<int> nano_values[GGML_CUDA_NANO_COUNT];
++std::once_flag   nano_once;
++
++void nano_init() {
++    for (int i = 0; i < GGML_CUDA_NANO_COUNT; ++i) {
++        int v = nano_defs[i].def;
++        char var[64];
++        snprintf(var, sizeof(var), "GGML_CUDA_NANO_%s", nano_defs[i].name);
++        if (const char * s = getenv(var)) {
++            if (*s) {
++                v = atoi(s);
++            }
++        }
++        nano_values[i].store(v, std::memory_order_relaxed);
++    }
++}
++
++bool nano_equal(const char * a, const char * b) {
++    for (; *a && *b; ++a, ++b) {
++        if (toupper((unsigned char) *a) != toupper((unsigned char) *b)) {
++            return false;
++        }
++    }
++    return *a == *b;
++}
++
++} // namespace
++
++int ggml_cuda_nano_get(ggml_cuda_nano_id id) {
++    std::call_once(nano_once, nano_init);
++    return nano_values[id].load(std::memory_order_relaxed);
++}
++
++bool ggml_cuda_nano_set(const char * name, int value) {
++    std::call_once(nano_once, nano_init);
++    if (name == nullptr) {
++        return false;
++    }
++    for (int i = 0; i < GGML_CUDA_NANO_COUNT; ++i) {
++        if (nano_equal(name, nano_defs[i].name)) {
++            nano_values[i].store(value, std::memory_order_relaxed);
++            return true;
++        }
++    }
++    return false;
++}
++
++const char * ggml_cuda_nano_name(ggml_cuda_nano_id id) {
++    return nano_defs[id].name;
++}
++
++int ggml_cuda_nano_default(ggml_cuda_nano_id id) {
++    return nano_defs[id].def;
++}
+diff --git a/ggml/src/ggml-cuda/nano.cuh b/ggml/src/ggml-cuda/nano.cuh
+new file mode 100644
+index 000000000..43daf869e
+--- /dev/null
++++ b/ggml/src/ggml-cuda/nano.cuh
+@@ -0,0 +1,45 @@
++#pragma once
++
++// NanoLLM: the switches of the kernels this series changes (patches/llama.cpp, the "cuda:" subjects).
++//
++// Every change has a switch, so that the build without it can be measured next to the build with it, in the same
++// DLL: GGML_CUDA_NANO_<NAME>=<integer> in the environment of the process, or
++// ggml_backend_cuda_nano_set("<NAME>", value) from the host program (an environment variable set after the process
++// has started does not reach the C runtime of a Windows DLL). It takes effect for the graphs that are computed
++// afterwards (a CUDA graph that is already captured keeps what it was captured with).
++//
++// A change that removes work without changing a result is on by default on every architecture. A change whose
++// best setting depends on the card (a table of kernel shapes) has a default per compute capability, and a
++// capability nobody has measured keeps upstream's choice. The names are listed in the NANO_* entries of the
++// backend's features (llama_print_system_info); NANOLLM there is the number of the last patch of the series, and
++// tells the host program that this is not upstream's DLL.
++
++#include <cstdint>
++
++#define GGML_CUDA_NANO_LEVEL 8
++
++// X(name, default, what it switches)
++#define GGML_CUDA_NANO_LIST(X) \
++    X(GRAPH_SHAPES,  1, "one CUDA graph per batch shape instead of one that is captured again after each change (1: on)") \
++    X(MMVQ_NWARPS,  -1, "block of the Q4_0 mat-vec for one token, warps*10 + rows: 11 12 14 21 22 24 31 32 34 44; 0 upstream's (41); -1 the table (the number of warps must be the same as for 2-4 tokens, or a draft's verification stops reproducing plain decoding)") \
++    X(MMVQ_NWARPS_N,-1, "the same for 2-4 tokens (the verification of a draft); 0 upstream's (42); -1 the table") \
++    X(FUSE_BATCH,    0, "the gate/up GEGLU (and bias) fusion of Q4_0 mat-vecs also for 2-4 tokens (1: on; off by default: on cc 8.6 the fused kernel of 4 tokens takes 156 us, 89 us with a one-warp block, against 87 us for the two mat-vecs and the GEGLU launch it replaces)") \
++    X(Q8_CACHE,      1, "the q8_1 of an activation is kept for the next mat-vec on it (q, k and v take one) (1: on)") \
++    X(NORM_LEAN,     3, "rms_norm*weight(+residual)(*scale) of a short row in one block of one float4 per thread (bit 0: without a residual, bit 1: with it)") \
++    X(GELU_MUL,      1, "gelu(x) * y in one launch (Gemma 4's per-layer embedding gate) (1: on)") \
++    X(FA_VEC,        0, "flash attention of one token with the vector kernel on Ampere, as upstream does from Ada (1: on)") \
++    X(NORM_Q8,       1, "rms_norm*weight also writes the q8_1 for the mat-vecs that follow it (1: on; needs Q8_CACHE)")
++
++enum ggml_cuda_nano_id {
++#define GGML_CUDA_NANO_ENUM(name, def, doc) GGML_CUDA_NANO_##name,
++    GGML_CUDA_NANO_LIST(GGML_CUDA_NANO_ENUM)
++#undef GGML_CUDA_NANO_ENUM
++    GGML_CUDA_NANO_COUNT
++};
++
++// the value of a switch: set by the host program, else the environment, else the default.
++int  ggml_cuda_nano_get(ggml_cuda_nano_id id);
++// by name (case-insensitive, without the GGML_CUDA_NANO_ prefix); false if there is no such switch.
++bool ggml_cuda_nano_set(const char * name, int value);
++const char * ggml_cuda_nano_name(ggml_cuda_nano_id id);
++int  ggml_cuda_nano_default(ggml_cuda_nano_id id);
+diff --git a/ggml/src/ggml-cuda/norm.cu b/ggml/src/ggml-cuda/norm.cu
+index d804b933b..3f0432021 100644
+--- a/ggml/src/ggml-cuda/norm.cu
++++ b/ggml/src/ggml-cuda/norm.cu
+@@ -1,4 +1,5 @@
+ #include "norm.cuh"
++#include "nano.cuh"
+ #include <cstdint>
+ 
+ template <int block_size>
+@@ -178,6 +179,221 @@ static __global__ void rms_norm_f32(const float * x,
+     }
+ }
+ 
++// NanoLLM (GGML_CUDA_NANO_NORM_Q8): rms_norm * weight computed as rms_norm_f32<block_size, true> computes it (the
++// same sums in the same order, the same products), and the q8_1 blocks of what it stores computed as quantize_q8_1
++// computes them: a block is 32 consecutive columns, which one warp holds in registers, reduced with the same
++// 32-lane butterflies. So the bits are those of the norm followed by the quantization, in one launch and without
++// reading the row again. One row per block; ncols % 32 == 0; the weight is one row of ncols values.
++template <int block_size>
++static __global__ void rms_norm_mul_q8_1_f32(
++        const float * x, float * dst, block_q8_1 * q8, const int ncols, const int ncols_padded,
++        const int64_t stride_row, const float eps, const float * mul) {
++    const int row = blockIdx.x;
++    const int tid = threadIdx.x;
++
++    extern __shared__ float s_sum[];
++
++    const float * xc   = x + row*stride_row;
++    float       * dstc = dst + (int64_t) row*ncols;
++    block_q8_1  * yc   = q8 + (int64_t) row*(ncols_padded/QK8_1);
++
++    float tmp = 0.0f; // partial sum for thread in warp
++
++    for (int col = tid; col < ncols; col += block_size) {
++        const float xi = xc[col];
++        tmp += xi * xi;
++    }
++
++    // sum up partial sums
++    tmp = block_reduce<block_reduce_method::SUM, block_size>(tmp, s_sum);
++
++    const float mean  = tmp / ncols;
++    const float scale = rsqrtf(mean + eps);
++
++    // ncols % 32 == 0 and block_size % 32 == 0: every lane of a warp runs the same number of times
++    for (int col = tid; col < ncols; col += block_size) {
++        const float v = scale * xc[col] * mul[col];
++        dstc[col] = v;
++
++        float amax = fabsf(v);
++        float sum  = v;
++        amax = warp_reduce_max<QK8_1>(amax);
++        sum  = warp_reduce_sum<QK8_1>(sum);
++
++        const float  d = amax / 127.0f;
++        const int8_t q = amax == 0.0f ? 0 : roundf(v / d);
++
++        yc[col / QK8_1].qs[col % QK8_1] = q;
++        if (col % QK8_1 == 0) {
++            yc[col / QK8_1].ds = make_half2(d, sum);
++        }
++    }
++
++    // the padding of the row, as quantize_q8_1 writes it (a column past ne00 is 0)
++    for (int col = ncols + tid; col < ncols_padded; col += block_size) {
++        yc[col / QK8_1].qs[col % QK8_1] = 0;
++        if (col % QK8_1 == 0) {
++            yc[col / QK8_1].ds = make_half2(0.0f, 0.0f);
++        }
++    }
++}
++
++// NanoLLM (GGML_CUDA_NANO_NORM_LEAN): rms_norm * weight (+ residual) for a row that one block holds in registers, one
++// float4 per thread: the row is read once (rms_norm_f32 reads it twice, in three trips of a 1024-thread block), the
++// sum is reduced by the warps' partial sums, which every warp adds up for itself (one __syncthreads instead of two and
++// no broadcast), and the block is as small as the row (640 threads for 2560 columns instead of 1024). The product is
++// the one rms_norm_f32 computes, element by element; only the order in which the squares are added differs.
++template <bool do_add, bool do_scalar>
++static __global__ void rms_norm_mul_lean_f32(
++        const float * __restrict__ x, float * __restrict__ dst, const float * __restrict__ mul, const float * __restrict__ add,
++        const float * __restrict__ scalar,
++        const int ncols, const int64_t stride_row, const int64_t stride_channel, const int64_t add_stride_row, const float eps) {
++    const int row  = blockIdx.x;
++    const int nrows = gridDim.x;
++    const int channel = blockIdx.y;
++    const int tid  = threadIdx.x;
++    const int lane = tid & (WARP_SIZE - 1);
++    const int warp = tid / WARP_SIZE;
++    const int nwarps = (blockDim.x + WARP_SIZE - 1) / WARP_SIZE;
++    const int nvec = ncols / 4;
++
++    __shared__ float s_partial[32];
++
++    float4 v = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
++    if (tid < nvec) {
++        v = reinterpret_cast<const float4 *>(x + channel*stride_channel + row*stride_row)[tid];
++    }
++    float sum = v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w;
++    sum = warp_reduce_sum<WARP_SIZE>(sum);
++    if (lane == 0) {
++        s_partial[warp] = sum;
++    }
++    __syncthreads();
++    float total = lane < nwarps ? s_partial[lane] : 0.0f;
++    total = warp_reduce_sum<WARP_SIZE>(total);
++
++    const float scale = rsqrtf(total / ncols + eps);
++
++    if (tid < nvec) {
++        const float4 m = reinterpret_cast<const float4 *>(mul)[tid];
++        float4 o;
++        if constexpr (do_add) {
++            const float4 a = reinterpret_cast<const float4 *>(add + row*add_stride_row)[tid];
++            o.x = scale * v.x * m.x + a.x;
++            o.y = scale * v.y * m.y + a.y;
++            o.z = scale * v.z * m.z + a.z;
++            o.w = scale * v.w * m.w + a.w;
++        } else {
++            o.x = scale * v.x * m.x;
++            o.y = scale * v.y * m.y;
++            o.z = scale * v.z * m.z;
++            o.w = scale * v.w * m.w;
++        }
++        if constexpr (do_scalar) {
++            // the layer's output scale, a MUL by a one-element tensor that follows the add
++            const float k = scalar[0];
++            o.x *= k;
++            o.y *= k;
++            o.z *= k;
++            o.w *= k;
++        }
++        reinterpret_cast<float4 *>(dst + ((int64_t) channel*nrows + row)*ncols)[tid] = o;
++    }
++}
++
++// whether rms_norm_mul_lean_f32 can take this norm (see GGML_CUDA_NANO_NORM_LEAN)
++static bool rms_norm_lean_ok(
++        const float * x, const float * dst, const float * mul, const float * add, const int ncols, const int nrows,
++        const int nchannels, const int nsamples, const int64_t stride_row, const int64_t stride_channel, const uint32_t mul_ncols, const uint32_t mul_nrows,
++        const uint32_t mul_nchannels, const uint32_t mul_nsamples, const int64_t add_stride_row, const uint32_t add_ncols,
++        const uint32_t add_nrows, const uint32_t add_nchannels, const uint32_t add_nsamples) {
++    // bit 0 of the switch: the norms without a residual, bit 1: the ones with it (and with the output scale after it)
++    // The channels (a batch of tokens laid out as a third dimension: the per-layer norms of the per-layer inputs) take the
++    // same kernel, so that a row is normalized by the same one for one token and for four: the result must not depend on
++    // the batch size (batch-invariance, native_invariance_test.go).
++    return (ggml_cuda_nano_get(GGML_CUDA_NANO_NORM_LEAN) & (add == nullptr ? 1 : 2)) && mul != nullptr && nsamples == 1 &&
++           (add == nullptr || nchannels == 1) && nchannels <= 65535 && ncols % 4 == 0 && ncols <= 4096 &&
++           mul_ncols == (uint32_t) ncols && mul_nrows == 1 && mul_nchannels == 1 && mul_nsamples == 1 && stride_row % 4 == 0 &&
++           stride_channel % 4 == 0 &&
++           (add == nullptr || (add_ncols == (uint32_t) ncols && add_nrows == (uint32_t) nrows && add_nchannels == 1 &&
++                               add_nsamples == 1 && add_stride_row % 4 == 0)) &&
++           (((uintptr_t) x | (uintptr_t) dst | (uintptr_t) mul | (uintptr_t) add) & 15) == 0;
++}
++
++// NanoLLM (GGML_CUDA_NANO_NORM_LEAN + NORM_Q8): rms_norm_mul_lean_f32, and the q8_1 blocks of its result for the mat-vecs
++// that follow. A block of 32 columns is 8 lanes of 4; amax is exact, the sum that goes into the block's half2 is added in
++// the order of 8-lane butterflies instead of quantize_q8_1's 32-lane ones (the same value in fp32 up to rounding, and the
++// half it is stored as is the same one nearly always); d and the quants are computed as quantize_q8_1 computes them.
++static __global__ void rms_norm_mul_lean_q8_1_f32(
++        const float * __restrict__ x, float * __restrict__ dst, block_q8_1 * __restrict__ q8, const float * __restrict__ mul,
++        const int ncols, const int ncols_padded, const int64_t stride_row, const float eps) {
++    const int row  = blockIdx.x;
++    const int tid  = threadIdx.x;
++    const int lane = tid & (WARP_SIZE - 1);
++    const int warp = tid / WARP_SIZE;
++    const int nwarps = (blockDim.x + WARP_SIZE - 1) / WARP_SIZE;
++    const int nvec = ncols / 4;
++
++    __shared__ float s_partial[32];
++
++    float4 v = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
++    if (tid < nvec) {
++        v = reinterpret_cast<const float4 *>(x + row*stride_row)[tid];
++    }
++    float sum = v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w;
++    sum = warp_reduce_sum<WARP_SIZE>(sum);
++    if (lane == 0) {
++        s_partial[warp] = sum;
++    }
++    __syncthreads();
++    float total = lane < nwarps ? s_partial[lane] : 0.0f;
++    total = warp_reduce_sum<WARP_SIZE>(total);
++
++    const float scale = rsqrtf(total / ncols + eps);
++
++    float4 o = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
++    if (tid < nvec) {
++        const float4 m = reinterpret_cast<const float4 *>(mul)[tid];
++        o.x = scale * v.x * m.x;
++        o.y = scale * v.y * m.y;
++        o.z = scale * v.z * m.z;
++        o.w = scale * v.w * m.w;
++        reinterpret_cast<float4 *>(dst + (int64_t) row*ncols)[tid] = o;
++    }
++
++    float amax = fmaxf(fmaxf(fabsf(o.x), fabsf(o.y)), fmaxf(fabsf(o.z), fabsf(o.w)));
++    float bsum = (o.x + o.y) + (o.z + o.w);
++#pragma unroll
++    for (int offset = 4; offset > 0; offset >>= 1) {
++        amax  = fmaxf(amax, __shfl_xor_sync(0xFFFFFFFF, amax, offset, WARP_SIZE));
++        bsum += __shfl_xor_sync(0xFFFFFFFF, bsum, offset, WARP_SIZE);
++    }
++    const float d = amax / 127.0f;
++
++    block_q8_1 * yc = q8 + (int64_t) row*(ncols_padded/QK8_1);
++    if (tid < nvec) {
++        const int8_t q0 = amax == 0.0f ? 0 : roundf(o.x / d);
++        const int8_t q1 = amax == 0.0f ? 0 : roundf(o.y / d);
++        const int8_t q2 = amax == 0.0f ? 0 : roundf(o.z / d);
++        const int8_t q3 = amax == 0.0f ? 0 : roundf(o.w / d);
++        const int packed = (int) (uint8_t) q0 | ((int) (uint8_t) q1 << 8) | ((int) (uint8_t) q2 << 16) | ((int) (uint8_t) q3 << 24);
++        // 4 bytes at 4 + 4*(tid%8) of a 36-byte block: aligned
++        reinterpret_cast<int *>(yc[tid / 8].qs)[tid % 8] = packed;
++        if ((tid & 7) == 0) {
++            yc[tid / 8].ds = make_half2(d, bsum);
++        }
++    }
++
++    // the padding of the row, as quantize_q8_1 writes it (a column past ne00 is 0)
++    for (int b = ncols/QK8_1 + tid; b < ncols_padded/QK8_1; b += blockDim.x) {
++        int * p = reinterpret_cast<int *>(yc + b);
++#pragma unroll
++        for (int i = 0; i < (int) (sizeof(block_q8_1) / sizeof(int)); ++i) {
++            p[i] = 0;
++        }
++    }
++}
++
+ template <int block_size>
+ static __global__ void rms_norm_back_f32(
+         const float * grad, const float * xf, float * dst, const int ncols, const float eps) {
+@@ -388,6 +604,19 @@ static void rms_norm_mul_f32_cuda(const float *  x,
+         rms_norm_f32_cuda(x, dst, ncols, nrows, nchannels, nsamples, stride_row, stride_channel, stride_sample, eps, stream);
+         return;
+     }
++    // NanoLLM (GGML_CUDA_NANO_NORM_LEAN): one block per row, one float4 per thread, a weight row (and a residual of the
++    // shape of the input), aligned for float4
++    if (rms_norm_lean_ok(x, dst, mul, add, ncols, nrows, nchannels, nsamples, stride_row, stride_channel, mul_ncols, mul_nrows,
++                         mul_nchannels, mul_nsamples, add_stride_row, add_ncols, add_nrows, add_nchannels, add_nsamples)) {
++        const int nthreads = ((ncols / 4 + WARP_SIZE - 1) / WARP_SIZE) * WARP_SIZE;
++        const dim3 grid(nrows, nchannels, 1);
++        if (add == nullptr) {
++            rms_norm_mul_lean_f32<false, false><<<grid, nthreads, 0, stream>>>(x, dst, mul, nullptr, nullptr, ncols, stride_row, stride_channel, 0, eps);
++        } else {
++            rms_norm_mul_lean_f32<true, false><<<grid, nthreads, 0, stream>>>(x, dst, mul, add, nullptr, ncols, stride_row, stride_channel, add_stride_row, eps);
++        }
++        return;
++    }
+     if (add == nullptr) {
+         const uint3 mul_ncols_packed     = init_fastdiv_values(mul_ncols);
+         const uint3 mul_nrows_packed     = init_fastdiv_values(mul_nrows);
+@@ -619,6 +848,46 @@ void ggml_cuda_op_rms_norm_fused(ggml_backend_cuda_context & ctx, ggml_tensor *
+                           eps, stream);
+ }
+ 
++void ggml_cuda_op_rms_norm_fused_q8(ggml_backend_cuda_context & ctx, ggml_tensor * dst, ggml_tensor * mul_tensor) {
++    const ggml_tensor * rms_norm_src = (ggml_tensor *) dst->src[0];
++    float eps = 0.0f;
++    memcpy(&eps, dst->op_params, sizeof(float));
++
++    const ggml_tensor * mul_src = mul_tensor->src[0] == dst ? mul_tensor->src[1] : mul_tensor->src[0];
++
++    GGML_ASSERT(rms_norm_src->type == GGML_TYPE_F32 && mul_tensor->type == GGML_TYPE_F32 && mul_src->type == GGML_TYPE_F32);
++    GGML_ASSERT(eps >= 0.0f);
++    GGML_ASSERT(rms_norm_src->nb[0] == sizeof(float));
++    GGML_ASSERT(rms_norm_src->ne[2] == 1 && rms_norm_src->ne[3] == 1);
++    GGML_ASSERT(mul_src->ne[0] == rms_norm_src->ne[0] && ggml_nelements(mul_src) == mul_src->ne[0]);
++
++    const int ncols        = rms_norm_src->ne[0];
++    const int nrows        = rms_norm_src->ne[1];
++    const int ncols_padded = GGML_PAD(ncols, MATRIX_ROW_PADDING);
++    GGML_ASSERT(ncols % QK8_1 == 0);
++
++    block_q8_1 * q8 = (block_q8_1 *) ctx.q8_cache_alloc(mul_tensor, (size_t) nrows * ncols_padded / QK8_1 * sizeof(block_q8_1));
++    if (q8 == nullptr) {
++        ggml_cuda_op_rms_norm_fused(ctx, dst, mul_tensor);
++        return;
++    }
++
++    const float * x   = (const float *) rms_norm_src->data;
++    const float * mul = (const float *) mul_src->data;
++    float *       out = (float *) mul_tensor->data;
++    const int64_t stride_row = rms_norm_src->nb[1] / sizeof(float);
++
++    cudaStream_t stream = ctx.stream();
++    if (rms_norm_lean_ok(x, out, mul, nullptr, ncols, nrows, 1, 1, stride_row, 0, ncols, 1, 1, 1, 0, 0, 0, 0, 0)) {
++        const int nthreads = ((ncols / 4 + WARP_SIZE - 1) / WARP_SIZE) * WARP_SIZE;
++        rms_norm_mul_lean_q8_1_f32<<<nrows, nthreads, 0, stream>>>(x, out, q8, mul, ncols, ncols_padded, stride_row, eps);
++    } else if (ncols < 1024) {
++        rms_norm_mul_q8_1_f32<256><<<nrows, 256, 32 * sizeof(float), stream>>>(x, out, q8, ncols, ncols_padded, stride_row, eps, mul);
++    } else {
++        rms_norm_mul_q8_1_f32<1024><<<nrows, 1024, 32 * sizeof(float), stream>>>(x, out, q8, ncols, ncols_padded, stride_row, eps, mul);
++    }
++}
++
+ void ggml_cuda_op_rms_norm_fused_add(ggml_backend_cuda_context & ctx,
+                                      ggml_tensor *               dst,
+                                      ggml_tensor *               mul_tensor,
+@@ -707,6 +976,54 @@ void ggml_cuda_op_rms_norm_fused_add(ggml_backend_cuda_context & ctx,
+                           eps, stream);
+ }
+ 
++// NanoLLM (GGML_CUDA_NANO_NORM_LEAN): RMS_NORM, MUL, ADD and the MUL by a one-element tensor that follows (Gemma 4's
++// per-layer output scale after the per-layer embedding's norm and residual) in one launch.
++struct norm_add_scale_args {
++    const ggml_tensor * x;
++    const ggml_tensor * mul;
++    const ggml_tensor * add;
++    float eps;
++};
++
++static norm_add_scale_args norm_add_scale_get(const ggml_tensor * dst, const ggml_tensor * mul_tensor, const ggml_tensor * add_tensor) {
++    norm_add_scale_args a;
++    a.x   = dst->src[0];
++    a.mul = mul_tensor->src[0] == dst ? mul_tensor->src[1] : mul_tensor->src[0];
++    a.add = add_tensor->src[0] == mul_tensor ? add_tensor->src[1] : add_tensor->src[0];
++    memcpy(&a.eps, dst->op_params, sizeof(float));
++    return a;
++}
++
++bool ggml_cuda_rms_norm_fused_add_scale_ok(const ggml_tensor * dst, const ggml_tensor * mul_tensor, const ggml_tensor * add_tensor,
++                                           const ggml_tensor * scale_tensor) {
++    const norm_add_scale_args a = norm_add_scale_get(dst, mul_tensor, add_tensor);
++    const ggml_tensor * s = scale_tensor->src[0] == add_tensor ? scale_tensor->src[1] : scale_tensor->src[0];
++    if (a.x->type != GGML_TYPE_F32 || a.mul->type != GGML_TYPE_F32 || a.add->type != GGML_TYPE_F32 || s->type != GGML_TYPE_F32 ||
++            scale_tensor->type != GGML_TYPE_F32 || add_tensor->type != GGML_TYPE_F32 || ggml_nelements(s) != 1 ||
++            a.x->nb[0] != sizeof(float) || a.mul->nb[0] != sizeof(float) || a.add->nb[0] != sizeof(float) ||
++            !ggml_is_contiguous(scale_tensor) || !ggml_are_same_shape(scale_tensor, add_tensor)) {
++        return false;
++    }
++    return rms_norm_lean_ok((const float *) a.x->data, (const float *) scale_tensor->data, (const float *) a.mul->data,
++                            (const float *) a.add->data, a.x->ne[0], a.x->ne[1], a.x->ne[2], a.x->ne[3], a.x->nb[1] / sizeof(float),
++                            a.x->nb[2] / sizeof(float), a.mul->ne[0], a.mul->ne[1], a.mul->ne[2], a.mul->ne[3],
++                            a.add->nb[1] / sizeof(float), a.add->ne[0], a.add->ne[1], a.add->ne[2], a.add->ne[3]);
++}
++
++void ggml_cuda_op_rms_norm_fused_add_scale(ggml_backend_cuda_context & ctx, ggml_tensor * dst, ggml_tensor * mul_tensor,
++                                           ggml_tensor * add_tensor, ggml_tensor * scale_tensor) {
++    const norm_add_scale_args a = norm_add_scale_get(dst, mul_tensor, add_tensor);
++    const ggml_tensor * s = scale_tensor->src[0] == add_tensor ? scale_tensor->src[1] : scale_tensor->src[0];
++    GGML_ASSERT(ggml_cuda_rms_norm_fused_add_scale_ok(dst, mul_tensor, add_tensor, scale_tensor));
++
++    const int ncols    = a.x->ne[0];
++    const int nrows    = a.x->ne[1];
++    const int nthreads = ((ncols / 4 + WARP_SIZE - 1) / WARP_SIZE) * WARP_SIZE;
++    rms_norm_mul_lean_f32<true, true><<<nrows, nthreads, 0, ctx.stream()>>>(
++        (const float *) a.x->data, (float *) scale_tensor->data, (const float *) a.mul->data, (const float *) a.add->data,
++        (const float *) s->data, ncols, a.x->nb[1] / sizeof(float), 0, a.add->nb[1] / sizeof(float), a.eps);
++}
++
+ void ggml_cuda_op_rms_norm_back(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
+     const ggml_tensor * grad  = dst->src[0]; // gradients
+     const ggml_tensor * src0f = dst->src[1]; // src0 from forward pass
+diff --git a/ggml/src/ggml-cuda/norm.cuh b/ggml/src/ggml-cuda/norm.cuh
+index 95618df5f..c74643c50 100644
+--- a/ggml/src/ggml-cuda/norm.cuh
++++ b/ggml/src/ggml-cuda/norm.cuh
+@@ -8,6 +8,10 @@ void ggml_cuda_op_rms_norm(ggml_backend_cuda_context & ctx, ggml_tensor * dst);
+ 
+ void ggml_cuda_op_rms_norm_fused(ggml_backend_cuda_context & ctx, ggml_tensor * dst, ggml_tensor * mul_tensor);
+ 
++// NanoLLM (GGML_CUDA_NANO_NORM_Q8): the same, and the q8_1 of the result in the context's q8_1 cache (common.cuh),
++// where the mul_mat_vec_q on mul_tensor finds it. Falls back to the plain fused op when the cache has no room.
++void ggml_cuda_op_rms_norm_fused_q8(ggml_backend_cuda_context & ctx, ggml_tensor * dst, ggml_tensor * mul_tensor);
++
+ void ggml_cuda_op_rms_norm_scale_fused(ggml_backend_cuda_context & ctx, ggml_tensor * dst, ggml_tensor * scale_tensor);
+ 
+ void ggml_cuda_op_rms_norm_fused_add(ggml_backend_cuda_context & ctx,
+@@ -15,6 +19,13 @@ void ggml_cuda_op_rms_norm_fused_add(ggml_backend_cuda_context & ctx,
+                                      ggml_tensor *               mul_tensor,
+                                      ggml_tensor *               add_tensor);
+ 
++// NanoLLM (GGML_CUDA_NANO_NORM_LEAN): RMS_NORM, MUL, ADD and the MUL by a one-element tensor in one launch; _ok says
++// whether the nodes qualify.
++bool ggml_cuda_rms_norm_fused_add_scale_ok(const ggml_tensor * dst, const ggml_tensor * mul_tensor, const ggml_tensor * add_tensor,
++                                           const ggml_tensor * scale_tensor);
++void ggml_cuda_op_rms_norm_fused_add_scale(ggml_backend_cuda_context & ctx, ggml_tensor * dst, ggml_tensor * mul_tensor,
++                                           ggml_tensor * add_tensor, ggml_tensor * scale_tensor);
++
+ void ggml_cuda_op_rms_norm_back(ggml_backend_cuda_context & ctx, ggml_tensor * dst);
+ 
+ void ggml_cuda_op_l2_norm(ggml_backend_cuda_context & ctx, ggml_tensor * dst);
+diff --git a/ggml/src/ggml-cuda/unary.cu b/ggml/src/ggml-cuda/unary.cu
+index af839acd7..9813dccb3 100644
+--- a/ggml/src/ggml-cuda/unary.cu
++++ b/ggml/src/ggml-cuda/unary.cu
+@@ -756,6 +756,9 @@ void ggml_cuda_op_unary_mul(ggml_backend_cuda_context & ctx, ggml_tensor * unary
+         case GGML_UNARY_OP_SOFTPLUS:
+             ggml_cuda_op_unary_mul_impl<op_softplus>(ctx, unary_node, mul_node);
+             break;
++        case GGML_UNARY_OP_GELU:
++            ggml_cuda_op_unary_mul_impl<op_gelu>(ctx, unary_node, mul_node);
++            break;
+         default:
+             GGML_ABORT("Unsupported unary op for fused unary+mul");
+     }
+diff --git a/ggml/src/ggml-cuda/vecdotq.cuh b/ggml/src/ggml-cuda/vecdotq.cuh
+index f65fe530e..04255152e 100644
+--- a/ggml/src/ggml-cuda/vecdotq.cuh
++++ b/ggml/src/ggml-cuda/vecdotq.cuh
+@@ -133,7 +133,12 @@ template <int vdr> static __device__ __forceinline__ float vec_dot_q4_0_q8_1_imp
+     const float2 ds8f = __half22float2(ds8);
+ 
+     // second part effectively subtracts 8 from each quant value
+-    return d4 * (sumi * ds8f.x - (8*vdr/QI4_0) * ds8f.y);
++    // NanoLLM: the products and the difference are rounded one by one (no fused multiply-add). Which of the two products
++    // of "a*b - c*d" a compiler fuses depends on how it schedules the kernel around it, so the same row came out with other
++    // low bits from kernels of other block shapes and column counts (the fused gate/up of one token and the two mat-vecs
++    // of a draft's verification), and the model's int8 activations make a rounding visible.
++    // test-nano-batch-invariance.cpp
++    return __fmul_rn(d4, __fsub_rn(__fmul_rn((float) sumi, ds8f.x), __fmul_rn((float) (8*vdr/QI4_0), ds8f.y)));
+ }
+ 
+ #define VDR_Q4_1_Q8_1_MMVQ 2
+diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
+index 1a9bc9157..a6cbbe551 100644
+--- a/tests/CMakeLists.txt
++++ b/tests/CMakeLists.txt
+@@ -314,6 +314,8 @@ if (GGML_METAL AND NOT GGML_BACKEND_DL)
+ endif()
+ 
+ llama_build(test-backend-ops.cpp LINK ggml)
++# NanoLLM: a token verified in a batch gets the bits it gets alone (the CUDA mat-vec block shapes)
++llama_build(test-nano-batch-invariance.cpp LINK ggml)
+ 
+ llama_build_and_test(test-tiled-mulmat.cpp LINK ggml)
+ llama_build_and_test(test-model-load-cancel.cpp LABEL "model")
+diff --git a/tests/test-backend-ops.cpp b/tests/test-backend-ops.cpp
+index 0080c7e16..a6e5a4f7a 100644
+--- a/tests/test-backend-ops.cpp
++++ b/tests/test-backend-ops.cpp
+@@ -9621,10 +9621,35 @@ static const ggml_type other_types[] = {
+ #endif
+ 
+ // Test cases for evaluation: should try to cover edge cases while using small input sizes to keep the runtime low
++// The Q4_0 matrices that Gemma 4 E4B multiplies a handful of tokens by (m output rows, k inputs): q, k, v and o of
++// the sliding-window (head 256) and full-attention (head 512) layers, the feed-forward gate/up and down, the
++// per-layer-input gate and projection, the projection of the per-layer embeddings, and the output head.
++static std::vector<std::array<int64_t, 2>> gemma4_e4b_decode_shapes(bool with_head) {
++    std::vector<std::array<int64_t, 2>> shapes = {
++        {2048, 2560}, {4096, 2560},          // q
++        {512, 2560},  {1024, 2560},          // k, v
++        {2560, 2048}, {2560, 4096},          // o
++        {10240, 2560}, {2560, 10240},        // ffn gate/up, down
++        {256, 2560},  {2560, 256},           // per-layer input gate, projection
++        {10752, 2560},                       // per-layer model projection (42 layers x 256)
++    };
++    if (with_head) {
++        shapes.push_back({262144, 2560});    // output head (tied to the token embeddings)
++    }
++    return shapes;
++}
++
+ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
+     std::vector<std::unique_ptr<test_case>> test_cases;
+     std::default_random_engine rng(0);
+ 
++    // Gemma 4 E4B decoding: the matrices of the NanoLLM kernels, 1..4 tokens and 8 (the head is in the perf cases)
++    for (const auto & mk : gemma4_e4b_decode_shapes(false)) {
++        for (int64_t n : {1, 2, 3, 4, 8}) {
++            test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_0, GGML_TYPE_F32, mk[0], n, mk[1], {1, 1}, {1, 1}));
++        }
++    }
++
+     // unary ops
+     for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32, GGML_TYPE_BF16}) {
+         for (int v : {0, 1}) {
+@@ -10509,6 +10534,12 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
+         test_cases.emplace_back(new test_add_add(GGML_TYPE_F16, GGML_TYPE_F32, { n, 5, 4, 3 }, true, false));
+     }
+ 
++    // Gemma 4 E4B (NanoLLM): the 2560-wide rows of the layers' norms, a weight row, with and without the output scale
++    for (int64_t rows : {1, 4, 8, 512}) {
++        for (bool post_mul : {false, true}) {
++            test_cases.emplace_back(new test_rms_norm_mul_add(GGML_TYPE_F32, { 2560, rows, 1, 1 }, 1e-6f, false, false, post_mul, false, true));
++        }
++    }
+     test_cases.emplace_back(new test_rms_norm_mul_add(GGML_TYPE_F32, { 1536, 1, 1, 1 }, 1e-6f, false, false, true));
+     test_cases.emplace_back(new test_rms_norm_mul_add(GGML_TYPE_F32, { 256, 4, 1, 1 }, 1e-6f, false, false, true));
+     test_cases.emplace_back(new test_rms_norm_mul_add(GGML_TYPE_F32, { 256, 4, 3, 2 }, 1e-6f, false, false, true));
+@@ -12003,6 +12034,13 @@ static std::vector<std::unique_ptr<test_case>> make_test_cases_eval() {
+ static std::vector<std::unique_ptr<test_case>> make_test_cases_perf() {
+     std::vector<std::unique_ptr<test_case>> test_cases;
+ 
++    // Gemma 4 E4B decoding (NanoLLM): the Q4_0 matrices of one token and of a verified draft of up to 4 (m x k)
++    for (const auto & mk : gemma4_e4b_decode_shapes(true)) {
++        for (int64_t n : {1, 2, 3, 4}) {
++            test_cases.emplace_back(new test_mul_mat(GGML_TYPE_Q4_0, GGML_TYPE_F32, mk[0], n, mk[1], {1, 1}, {1, 1}));
++        }
++    }
++
+     // SWIGLU at a 27B-class FFN width, fused [gate|up] vs split operands
+     // note: same bytes either way, so a backend that indexes them differently shows it here
+     for (ggml_type type : {GGML_TYPE_F16, GGML_TYPE_F32, GGML_TYPE_BF16}) {
+diff --git a/tests/test-nano-batch-invariance.cpp b/tests/test-nano-batch-invariance.cpp
+new file mode 100644
+index 000000000..d341cf6a0
+--- /dev/null
++++ b/tests/test-nano-batch-invariance.cpp
+@@ -0,0 +1,121 @@
++// NanoLLM: a token verified in a batch must get the bits it would get alone. Speculative decoding checks a draft by
++// evaluating several tokens at once and promises the tokens plain decoding would give; kernels that add up the same row
++// in another order for another number of columns make the two differ by rounding, and the int8 activations of a
++// quantized model turn a rounding into a flipped value. This evaluates the Q4_0 matrices that Gemma 4 E4B multiplies a
++// few tokens by with 1, 2, 3 and 4 columns, the first column the same, and compares the first column bit for bit; for
++// the feed-forward's shape also the gate and up with the GEGLU, which the CUDA backend fuses for one column and runs
++// as three launches for more.
++//
++//   test-nano-batch-invariance [dir with the backends] [m k]...
++//
++// Exit status 1 if some matrix differs. Run it with GGML_CUDA_NANO_* in the environment to see which switch breaks it.
++
++#include "ggml.h"
++#include "ggml-alloc.h"
++#include "ggml-backend.h"
++
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <random>
++#include <vector>
++
++static std::vector<float> eval_cols(ggml_backend_t backend, const std::vector<uint8_t> & wup, const std::vector<uint8_t> & wgate,
++        int64_t k, int64_t m, const std::vector<float> & act, int n, bool geglu) {
++    ggml_init_params ip = { ggml_tensor_overhead() * 16 + ggml_graph_overhead(), nullptr, true };
++    ggml_context * ctx = ggml_init(ip);
++    ggml_tensor * up = ggml_new_tensor_2d(ctx, GGML_TYPE_Q4_0, k, m);
++    ggml_tensor * gate_w = geglu ? ggml_new_tensor_2d(ctx, GGML_TYPE_Q4_0, k, m) : nullptr;
++    ggml_tensor * b = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, k, n);
++    ggml_tensor * out = ggml_mul_mat(ctx, up, b);
++    if (geglu) {
++        ggml_tensor * gate = ggml_mul_mat(ctx, gate_w, b);
++        out = ggml_glu_split(ctx, gate, out, GGML_GLU_OP_GEGLU);
++    }
++    ggml_cgraph * gf = ggml_new_graph(ctx);
++    ggml_build_forward_expand(gf, out);
++    ggml_backend_buffer_t buf = ggml_backend_alloc_ctx_tensors(ctx, backend);
++    ggml_backend_tensor_set(up, wup.data(), 0, wup.size());
++    if (geglu) {
++        ggml_backend_tensor_set(gate_w, wgate.data(), 0, wgate.size());
++    }
++    ggml_backend_tensor_set(b, act.data(), 0, sizeof(float) * k * n);
++    ggml_backend_graph_compute(backend, gf);
++    std::vector<float> res(m * n);
++    ggml_backend_tensor_get(out, res.data(), 0, sizeof(float) * m * n);
++    ggml_backend_buffer_free(buf);
++    ggml_free(ctx);
++    return res;
++}
++
++static std::vector<uint8_t> random_q4_0(std::mt19937 & rng, int64_t m, int64_t k) {
++    std::normal_distribution<float> nd(0.0f, 1.0f);
++    std::vector<float> w((size_t) m * k);
++    for (auto & v : w) {
++        v = nd(rng);
++    }
++    std::vector<uint8_t> q(ggml_row_size(GGML_TYPE_Q4_0, k) * m);
++    ggml_quantize_chunk(GGML_TYPE_Q4_0, w.data(), q.data(), 0, m, k, nullptr);
++    return q;
++}
++
++int main(int argc, char ** argv) {
++    if (argc > 1) {
++        ggml_backend_load_all_from_path(argv[1]);
++    } else {
++        ggml_backend_load_all();
++    }
++    ggml_backend_dev_t dev = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_GPU);
++    if (!dev) {
++        fprintf(stderr, "no GPU backend\n");
++        return 77; // skipped
++    }
++    ggml_backend_t backend = ggml_backend_dev_init(dev, nullptr);
++    printf("device: %s\n", ggml_backend_dev_description(dev));
++
++    std::vector<std::pair<int64_t, int64_t>> shapes = {
++        {2048, 2560}, {4096, 2560}, {512, 2560}, {1024, 2560}, {2560, 2048}, {2560, 4096}, {10240, 2560}, {2560, 10240},
++        {256, 2560}, {2560, 256}, {10752, 2560}, {262144, 2560},
++    };
++    if (argc > 3) {
++        shapes.clear();
++        for (int i = 2; i + 1 < argc; i += 2) {
++            shapes.push_back({atoll(argv[i]), atoll(argv[i + 1])});
++        }
++    }
++
++    std::mt19937 rng(7);
++    std::normal_distribution<float> nd(0.0f, 1.0f);
++    int bad = 0;
++    for (auto [m, k] : shapes) {
++        const std::vector<uint8_t> wup   = random_q4_0(rng, m, k);
++        const std::vector<uint8_t> wgate = random_q4_0(rng, m, k);
++        std::vector<float> act((size_t) k * 4);
++        for (auto & v : act) {
++            v = nd(rng);
++        }
++        const bool ffn = k == 2560 && m >= 8192 && m <= 16384; // the shape of the feed-forward's gate and up
++        for (int variant = 0; variant < (ffn ? 2 : 1); ++variant) {
++            const bool geglu = variant == 1;
++            const std::vector<float> one = eval_cols(backend, wup, wgate, k, m, act, 1, geglu);
++            printf("%7lld x %-6lld %s", (long long) m, (long long) k, geglu ? "gate+up+geglu" : "             ");
++            for (int n = 2; n <= 4; ++n) {
++                const std::vector<float> many = eval_cols(backend, wup, wgate, k, m, act, n, geglu);
++                int64_t differ = 0;
++                for (int64_t i = 0; i < m; ++i) {
++                    if (memcmp(&one[i], &many[i], sizeof(float)) != 0) {
++                        ++differ;
++                    }
++                }
++                printf("  %d cols: %s", n, differ == 0 ? "same" : "DIFFERENT");
++                if (differ) {
++                    printf(" (%lld rows)", (long long) differ);
++                    ++bad;
++                }
++            }
++            printf("\n");
++        }
++    }
++    ggml_backend_free(backend);
++    return bad ? 1 : 0;
++}
+-- 
+2.51.2.windows.1
+
