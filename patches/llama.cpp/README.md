@@ -25,8 +25,15 @@ The series, in order:
   decode x1.15-1.4 on a Zen 1).
 - 0003 ggml-cpu: repack a tensor on several threads while the model loads, with
   NUMA first-touch (OPT-14, CPU backend; `GGML_REPACK_THREADS`).
+- 0004 x86: prefetch the Q4_0 weight blocks 8 ahead in the multi-row GEMV; the CPU backend lists
+  `REPACK_Q4_0_ROWS` (the CPU MTP default keys on it).
+- 0005 x86: the Q4_0 8x8 kernels of 0002 on CPUs with AVX-VNNI and no AVX512-VNNI (the alderlake
+  variant: Alder Lake and later), with `vpdpbusd` instead of `vpmaddubsw` (OPT-16-VNNI; bit-exact
+  with upstream's lut kernels, prefill x1.4 and MTP on the CPU x1.9 on an i7-12700H; the decode of
+  one token is at the memory ceiling and does not move). Windows build:
+  `scripts/build-libs-windows.ps1`; kernels: `scripts/kernel-bench/run-windows.ps1`.
 
-0002 and 0003 change the CPU backend, so the targets marked `cpu` in
+0002 to 0005 change the CPU backend, so the targets marked `cpu` in
 `libs-build.yml` ship the CPU variants too (see there and `scripts/fetch-libs.sh`).
 Without patches the build is upstream's.
 

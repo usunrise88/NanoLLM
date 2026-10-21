@@ -1,0 +1,162 @@
+From 87e2cfbb179de2b93dc069b2f43ce98de955dbfd Mon Sep 17 00:00:00 2001
+From: NanoLLM <nanollm@localhost>
+Date: Wed, 21 Oct 2026 13:00:00 +0000
+Subject: [PATCH] x86: Q4_0 8x8 GEMV and GEMM with vpdpbusd on CPUs with
+ AVX-VNNI
+
+The kernels of 0002 (unsigned nibbles, several rows of the activation per
+call) were compiled only for AVX2 without VNNI. On a CPU with AVX-VNNI and no
+AVX512 (Alder Lake and later, the alderlake variant) ggml kept the lut kernels
+with the vpsignb pair, one activation row per call, and the multi-row GEMV
+(REPACK_Q4_0_ROWS, the CPU MTP default) was off.
+
+Now the kernels are used on every AVX2 build without AVX512-VNNI, and with
+AVX-VNNI the integer part of a block is 8 vpdpbusd (unsigned nibbles times the
+signed activation) in two accumulators, seeded with -4 * sum(activation) in
+each lane, so that the "- 8" of Q4_0 costs nothing; the two lanes of a row are
+added by one vphaddd. No vpmaddubsw, no int16 sums, no widening, no subtraction.
+
+The integers are exactly those of the lut kernels and the float scales are
+applied in the same order, so the output is bit for bit the same
+(scripts/kernel-bench/run-windows.ps1 check: random and extreme data, nr 1 to 8,
+n around the stack buffers), no KL divergence to measure.
+
+i7-12700H, alderlake variant, clang 22, one P-core thread (kernel-bench):
+GEMM 3.08 -> 1.53 ns per row-block (2.0x; the vpmaddubsw kernels of 0002: 1.92),
+GEMV one row 5.4 -> 2.6 ns per block, three rows in one call 16.1 -> 5.3 ns.
+End to end (NanoLLM bench ram-6g, 6 decode and 20 batch threads): pp512 168 ->
+237 tok/s, tg128 unchanged at 13.8 (decode is at the memory read ceiling of
+37 GB/s), chat with MTP (draft_max 2) 12.6 -> 26.1 tok/s; gemma.json 183 s ->
+155 s without MTP and 130 s with it.
+---
+ ggml/src/ggml-cpu/arch/x86/repack.cpp | 40 +++++++++++++++++++++++++--
+ ggml/src/ggml-cpu/repack.h            |  7 +++--
+ 2 files changed, 42 insertions(+), 5 deletions(-)
+
+diff --git a/ggml/src/ggml-cpu/arch/x86/repack.cpp b/ggml/src/ggml-cpu/arch/x86/repack.cpp
+index 7b773819b..bb7c1ed23 100644
+--- a/ggml/src/ggml-cpu/arch/x86/repack.cpp
++++ b/ggml/src/ggml-cpu/arch/x86/repack.cpp
+@@ -637,7 +637,7 @@ static void gemv_q4_b32_8x8_q8_0_lut_avx(int n, float * GGML_RESTRICT s, size_t
+ }
+ 
+ #if defined(GGML_REPACK_Q4_0_GEMV_U8)
+-// Q4_0 8x8 kernels for AVX2 without VNNI. They give the same result bit for bit as the lut kernels
++// Q4_0 8x8 kernels for AVX2, with AVX-VNNI or without. They give the same result bit for bit as the lut kernels
+ // above and below with about half of the vector operations:
+ // - the nibbles are unsigned (stored as value xor 8, so xor 8 again) and go to vpmaddubsw as the first
+ //   operand, the Q8_0 values as the second: no lookup table, no vpsignb pair. The "- 8" of Q4_0 is
+@@ -647,6 +647,7 @@ static void gemv_q4_b32_8x8_q8_0_lut_avx(int n, float * GGML_RESTRICT s, size_t
+ // - the int16 sums of the 4 pieces of a block stay in int16 (8 products of at most 15 * 127 per lane,
+ //   and 2 lanes added by vphaddw, 30480 at most) and are widened once; the lanes come out in the order
+ //   0 1 4 5 2 3 6 7 and are put back at the end
++// - with AVX-VNNI one vpdpbusd per piece replaces the vpmaddubsw, the int16 sums and the widening
+ #if !defined(__AVX512BW__)
+ // with AVX512BW the lut GEMM above has its own AVX512 path
+ #define GGML_REPACK_Q4_0_GEMM_U8
+@@ -711,7 +712,9 @@ static void gemv_q4_0_8x8_q8_0_u8_avx_rows(float * GGML_RESTRICT s, size_t bs, c
+         const block_q8_0 * GGML_RESTRICT a_ptr_start, q8_0_pre * GGML_RESTRICT pre, int nb, int nc) {
+     const __m256i m4b    = _mm256_set1_epi8(0x0F);
+     const __m256i m88    = _mm256_set1_epi8((char) 0x88);
++#if !defined(__AVXVNNI__)
+     const __m256i ones16 = _mm256_set1_epi16(1);
++#endif
+     // the column scales in the order of the lanes after the horizontal add: rows 0 1 4 5 2 3 6 7
+     const __m128i scale_order = _mm_set_epi8(15, 14, 13, 12, 7, 6, 5, 4, 11, 10, 9, 8, 3, 2, 1, 0);
+     const __m256i lane_to_row = _mm256_setr_epi32(0, 1, 4, 5, 2, 3, 6, 7);
+@@ -769,6 +772,21 @@ static void gemv_q4_0_8x8_q8_0_u8_avx_rows(float * GGML_RESTRICT s, size_t bs, c
+                 const __m256i lhs_3 = _mm256_set1_epi64x(a3);
+ 
+                 // low nibbles are values 0-7 and 8-15 of a row, high nibbles 16-23 and 24-31
++#if defined(__AVXVNNI__)
++                // vpdpbusd adds 4 products to a 32-bit lane. The "- 8" of Q4_0 is the seed, half in each of the 2 lanes of a row
++                const __m256i seed = _mm256_set1_epi32(-(pre[r * nb + b].sum8 >> 1));
++                __m256i iacc_0123 = _mm256_dpbusd_avx_epi32(seed, rhs_0123_0, lhs_0);
++                __m256i iacc_4567 = _mm256_dpbusd_avx_epi32(seed, rhs_4567_0, lhs_0);
++                iacc_0123 = _mm256_dpbusd_avx_epi32(iacc_0123, rhs_0123_1, lhs_1);
++                iacc_4567 = _mm256_dpbusd_avx_epi32(iacc_4567, rhs_4567_1, lhs_1);
++                iacc_0123 = _mm256_dpbusd_avx_epi32(iacc_0123, rhs_0123_2, lhs_2);
++                iacc_4567 = _mm256_dpbusd_avx_epi32(iacc_4567, rhs_4567_2, lhs_2);
++                iacc_0123 = _mm256_dpbusd_avx_epi32(iacc_0123, rhs_0123_3, lhs_3);
++                iacc_4567 = _mm256_dpbusd_avx_epi32(iacc_4567, rhs_4567_3, lhs_3);
++
++                // add the 2 lanes of each row
++                const __m256i iacc = _mm256_hadd_epi32(iacc_0123, iacc_4567);
++#else
+                 __m256i iacc_0123 = _mm256_maddubs_epi16(rhs_0123_0, lhs_0);
+                 __m256i iacc_4567 = _mm256_maddubs_epi16(rhs_4567_0, lhs_0);
+                 iacc_0123 = _mm256_add_epi16(iacc_0123, _mm256_maddubs_epi16(rhs_0123_1, lhs_1));
+@@ -781,6 +799,7 @@ static void gemv_q4_0_8x8_q8_0_u8_avx_rows(float * GGML_RESTRICT s, size_t bs, c
+                 // add the 2 int16 lanes of each row, widen, take off the 8 of Q4_0
+                 __m256i iacc = _mm256_madd_epi16(_mm256_hadd_epi16(iacc_0123, iacc_4567), ones16);
+                 iacc = _mm256_sub_epi32(iacc, _mm256_set1_epi32(pre[r * nb + b].sum8));
++#endif
+ 
+                 const __m256 row_scale_f32 = _mm256_set1_ps(pre[r * nb + b].d);
+ 
+@@ -834,7 +853,9 @@ static void gemm_q4_0_8x8_q8_0_u8_avx_rows(float * GGML_RESTRICT s, size_t bs, c
+         const block_q8_0x4 * GGML_RESTRICT a_ptr_start, q8_0x4_pre * GGML_RESTRICT pre, int nb, int nc) {
+     const __m256i m4b    = _mm256_set1_epi8(0x0F);
+     const __m256i m88    = _mm256_set1_epi8((char) 0x88);
++#if !defined(__AVXVNNI__)
+     const __m256i ones16 = _mm256_set1_epi16(1);
++#endif
+     // the column scales in the order of the lanes after the horizontal add: rows 0 1 4 5 2 3 6 7
+     const __m128i scale_order = _mm_set_epi8(15, 14, 13, 12, 7, 6, 5, 4, 11, 10, 9, 8, 3, 2, 1, 0);
+     const __m256i lane_to_row = _mm256_setr_epi32(0, 1, 4, 5, 2, 3, 6, 7);
+@@ -886,6 +907,20 @@ static void gemm_q4_0_8x8_q8_0_u8_avx_rows(float * GGML_RESTRICT s, size_t bs, c
+                 const __m256i lhs_2 = _mm256_set1_epi64x(a2);
+                 const __m256i lhs_3 = _mm256_set1_epi64x(a3);
+ 
++#if defined(__AVXVNNI__)
++                // vpdpbusd adds 4 products to a 32-bit lane. The "- 8" of Q4_0 is the seed, half in each of the 2 lanes of a row
++                const __m256i seed = _mm256_set1_epi32(-(pre[(i / 4) * nb + b].sum8[r] >> 1));
++                __m256i iacc_0123 = _mm256_dpbusd_avx_epi32(seed, rhs_0123_0, lhs_0);
++                __m256i iacc_4567 = _mm256_dpbusd_avx_epi32(seed, rhs_4567_0, lhs_0);
++                iacc_0123 = _mm256_dpbusd_avx_epi32(iacc_0123, rhs_0123_1, lhs_1);
++                iacc_4567 = _mm256_dpbusd_avx_epi32(iacc_4567, rhs_4567_1, lhs_1);
++                iacc_0123 = _mm256_dpbusd_avx_epi32(iacc_0123, rhs_0123_2, lhs_2);
++                iacc_4567 = _mm256_dpbusd_avx_epi32(iacc_4567, rhs_4567_2, lhs_2);
++                iacc_0123 = _mm256_dpbusd_avx_epi32(iacc_0123, rhs_0123_3, lhs_3);
++                iacc_4567 = _mm256_dpbusd_avx_epi32(iacc_4567, rhs_4567_3, lhs_3);
++
++                const __m256i iacc = _mm256_hadd_epi32(iacc_0123, iacc_4567);
++#else
+                 __m256i iacc_0123 = _mm256_maddubs_epi16(rhs_0123_0, lhs_0);
+                 __m256i iacc_4567 = _mm256_maddubs_epi16(rhs_4567_0, lhs_0);
+                 iacc_0123 = _mm256_add_epi16(iacc_0123, _mm256_maddubs_epi16(rhs_0123_1, lhs_1));
+@@ -897,6 +932,7 @@ static void gemm_q4_0_8x8_q8_0_u8_avx_rows(float * GGML_RESTRICT s, size_t bs, c
+ 
+                 __m256i iacc = _mm256_madd_epi16(_mm256_hadd_epi16(iacc_0123, iacc_4567), ones16);
+                 iacc = _mm256_sub_epi32(iacc, _mm256_set1_epi32(pre[(i / 4) * nb + b].sum8[r]));
++#endif
+ 
+                 const __m256 row_scale_f32 = _mm256_set1_ps(pre[(i / 4) * nb + b].d[r]);
+                 acc_rows[i] = _mm256_fmadd_ps(_mm256_cvtepi32_ps(iacc), _mm256_mul_ps(col_scale_f32, row_scale_f32), acc_rows[i]);
+@@ -938,7 +974,7 @@ static void gemm_q4_0_8x8_q8_0_u8_avx(int n, float * GGML_RESTRICT s, size_t bs,
+     }
+ }
+ #endif // GGML_REPACK_Q4_0_GEMM_U8
+-#endif // AVX2 without VNNI
++#endif // AVX2 Q4_0 u8 kernels
+ 
+ // GEMM for 8x blocks of 32 4-bit quants with a single scale factor per block
+ template<typename block_tx8>
+diff --git a/ggml/src/ggml-cpu/repack.h b/ggml/src/ggml-cpu/repack.h
+index 1ccf11af4..69541ed3c 100644
+--- a/ggml/src/ggml-cpu/repack.h
++++ b/ggml/src/ggml-cpu/repack.h
+@@ -10,9 +10,10 @@
+ 
+ ggml_backend_buffer_type_t ggml_backend_cpu_repack_buffer_type(void);
+ 
+-// x86 with AVX2 and without VNNI: the Q4_0 8x8 kernels of arch/x86/repack.cpp for unsigned nibbles.
+-// Their gemv takes several rows of the activation in one call (rows one after the other, bs floats apart in dst).
+-#if defined(__AVX2__) && !defined(__AVXVNNI__) && !defined(__AVX512VNNI__)
++// x86 with AVX2 and without AVX512-VNNI: the Q4_0 8x8 kernels of arch/x86/repack.cpp for unsigned nibbles
++// (vpdpbusd with AVX-VNNI, vpmaddubsw without). Their gemv takes several rows of the activation in one call
++// (rows one after the other, bs floats apart in dst).
++#if defined(__AVX2__) && !defined(__AVX512VNNI__)
+ #define GGML_REPACK_Q4_0_GEMV_U8
+ #endif
+ 
