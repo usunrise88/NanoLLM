@@ -154,7 +154,11 @@ type Plan struct {
 	// and runs longer ones through the matmul attention on the full-attention
 	// layers (Request.FlashAttnSmallBatch).
 	FlashAttnSmallBatch bool `json:"flash_attn_small_batch,omitempty"`
-	KV                  KV   `json:"kv"`
+	// BackendSampling samples in the device graph (Request.BackendSampling).
+	BackendSampling bool `json:"backend_sampling,omitempty"`
+	// CudaNano are the switches of ggml-cuda set for this load (Request.CudaNano).
+	CudaNano map[string]int `json:"cuda_nano,omitempty"`
+	KV       KV             `json:"kv"`
 
 	LoadMode   backend.LoadMode         `json:"load_mode,omitempty"`
 	LazyMode   backend.LazyMode         `json:"lazy_mode,omitempty"`

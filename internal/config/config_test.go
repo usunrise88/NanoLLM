@@ -96,6 +96,9 @@ func TestValidateRefuses(t *testing.T) {
 		"bad flash attention": func(c *Config) {
 			c.Models.Overrides = map[string]ModelOverride{"m": {FlashAttention: "fast"}}
 		},
+		"bad ggml-cuda switch name": func(c *Config) {
+			c.Models.Overrides = map[string]ModelOverride{"m": {CudaNano: map[string]int{"MMVQ NWARPS": 12}}}
+		},
 		"q8_0 cache without flash attention": func(c *Config) {
 			c.Models.Overrides = map[string]ModelOverride{"m": {FlashAttention: "off", KVType: KVQ8_0}}
 		},
@@ -235,5 +238,20 @@ func TestNewKeySecret(t *testing.T) {
 	b, _ := NewKeySecret()
 	if a == b || !strings.HasPrefix(a, KeyPrefix) || len(a) != len(KeyPrefix)+32 {
 		t.Errorf("bad secrets %q %q", a, b)
+	}
+}
+
+// TestCudaNanoOverride: the switches of ggml-cuda are a map of names to integers under a model's override.
+func TestCudaNanoOverride(t *testing.T) {
+	c := Default()
+	err := decode([]byte("models:\n  overrides:\n    m:\n      cuda_nano: {MMVQ_NWARPS: 12, norm_lean: 0}\n"), &c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if got := c.Models.Override("m").CudaNano; got["MMVQ_NWARPS"] != 12 || got["norm_lean"] != 0 || len(got) != 2 {
+		t.Errorf("cuda_nano: %v", got)
 	}
 }

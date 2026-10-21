@@ -292,6 +292,7 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 	}
 	if onGPU {
 		req.FlashAttnSmallBatch = gpu.Has(backend.FeatureFlashAttnSmallBatch)
+		req.BackendSampling = gpu.Has(backend.FeatureBackendSampling)
 	}
 	v.Plan(&req)
 	if onGPU {

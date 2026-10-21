@@ -132,12 +132,16 @@ func (m *model) verify(s backend.SeqStep, idxs []int32, drafts []backend.Token) 
 	sl := &m.slots[s.Seq]
 	out := backend.SeqOut{Seq: s.Seq, Drafted: len(drafts)}
 	for i, idx := range idxs {
-		row, err := m.logitsRow(idx)
-		if err != nil {
-			return out, err
-		}
+		var row []float32
 		var lp *logprobs
 		if s.Logprobs >= 0 {
+			if sl.onDevice {
+				return out, fmt.Errorf("llamacpp: slot %d samples on the device and has no logits rows for logprobs", s.Seq)
+			}
+			var err error
+			if row, err = m.logitsRow(idx); err != nil {
+				return out, err
+			}
 			lp = m.logprobs(row, s.Logprobs)
 		}
 		tok := backend.Token(llamaSamplerSample(sl.chain, m.ctx, idx))

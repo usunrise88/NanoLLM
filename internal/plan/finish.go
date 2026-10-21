@@ -3,6 +3,7 @@ package plan
 import (
 	"cmp"
 	"fmt"
+	"maps"
 	"sort"
 
 	"github.com/usunrise88/nanollm/internal/backend"
@@ -24,6 +25,10 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 	}
 	if !t.spec.gpu {
 		p.Device = nil
+	}
+	p.BackendSampling = pl.req.BackendSampling && t.spec.gpu
+	if t.spec.gpu && len(pl.req.CudaNano) > 0 {
+		p.CudaNano = maps.Clone(pl.req.CudaNano)
 	}
 	switch {
 	case !t.spec.gpu:

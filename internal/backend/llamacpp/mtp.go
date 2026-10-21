@@ -50,6 +50,11 @@ type drafter struct {
 	nVocab   int
 	maxDraft int
 	pMin     float64
+	// chains are the top-10 chains attached to the drafter's context, one
+	// per slot, when it samples on the device (LoadSpec.BackendSampling):
+	// the graph hands back ten candidates and their logits instead of a
+	// vocabulary-wide row.
+	chains []LlamaSampler
 }
 
 // defaultDraftMax is llama.cpp's --spec-draft-n-max default.
@@ -125,13 +130,72 @@ func (m *model) loadDrafter(spec backend.LoadSpec, mp LlamaModelParams, cp Llama
 	// row before the next token.
 	llamaSetEmbeddingsNextn(m.ctx, true, true)
 	llamaSetEmbeddingsNextn(d.ctx, true, true)
+	if spec.BackendSampling {
+		d.attachTopK(int(cp.NSeqMax))
+	}
 	return d, nil
+}
+
+// attachTopK puts a top-10 chain into the drafter's graph for every slot, or
+// for none: one slot sampling on the host makes llama.cpp copy every logits
+// row again.
+func (d *drafter) attachTopK(slots int) {
+	for seq := 0; seq < slots; seq++ {
+		ch := llamaSamplerChainInit(llamaSamplerChainDefaultParams())
+		if ch == 0 {
+			break
+		}
+		if tk := llamaSamplerInitTopK(draftTopK); tk != 0 {
+			llamaSamplerChainAdd(ch, tk)
+		}
+		if !llamaSetSampler(d.ctx, int32(seq), ch) {
+			llamaSamplerFree(ch)
+			break
+		}
+		d.chains = append(d.chains, ch)
+	}
+	if len(d.chains) < slots {
+		slog.Warn("llamacpp: the drafter cannot sample on the device; it reads the logits rows", "attached", len(d.chains), "slots", slots)
+		d.detachTopK()
+	}
+}
+
+func (d *drafter) detachTopK() {
+	for seq, ch := range d.chains {
+		llamaSetSampler(d.ctx, int32(seq), 0)
+		llamaSamplerFree(ch)
+	}
+	d.chains = nil
+}
+
+// deviceTop is topOfTopK over the ten candidates the graph sampled for
+// batch entry idx; ok is false when the graph left none.
+func (d *drafter) deviceTop(idx int32) (tok backend.Token, prob float64, ok bool) {
+	n := llamaGetSampledCandidatesCountIth(d.ctx, idx)
+	ids := llamaGetSampledCandidatesIth(d.ctx, idx)
+	lg := llamaGetSampledLogitsIth(d.ctx, idx)
+	if n == 0 || n > draftTopK || ids == nil || lg == nil || llamaGetSampledLogitsCountIth(d.ctx, idx) != n {
+		return 0, 0, false
+	}
+	cand, logits := unsafe.Slice(ids, n), unsafe.Slice(lg, n)
+	b := 0
+	for i := 1; i < len(logits); i++ {
+		if logits[i] > logits[b] || logits[i] == logits[b] && cand[i] < cand[b] {
+			b = i
+		}
+	}
+	var sum float64
+	for _, v := range logits {
+		sum += math.Exp(float64(v - logits[b]))
+	}
+	return backend.Token(cand[b]), 1 / sum, true
 }
 
 func (d *drafter) close() {
 	if d == nil {
 		return
 	}
+	d.detachTopK()
 	if d.batch != 0 {
 		llamaBatchExtFree(d.batch)
 	}
@@ -197,12 +261,24 @@ func (m *model) draft(steps []backend.SeqStep, limits []int) [][]backend.Token {
 		}
 		var next []*drafting
 		for _, a := range active {
-			p := llamaGetLogitsIth(d.ctx, a.idx)
 			h := llamaGetEmbeddingsNextnIth(d.ctx, a.idx)
-			if p == nil || h == nil {
+			if h == nil {
 				continue
 			}
-			tok, prob := topOfTopK(unsafe.Slice(p, d.nVocab), draftTopK)
+			var tok backend.Token
+			var prob float64
+			if d.chains != nil {
+				var ok bool
+				if tok, prob, ok = d.deviceTop(a.idx); !ok {
+					continue
+				}
+			} else {
+				p := llamaGetLogitsIth(d.ctx, a.idx)
+				if p == nil {
+					continue
+				}
+				tok, prob = topOfTopK(unsafe.Slice(p, d.nVocab), draftTopK)
+			}
 			if prob < d.pMin || int(tok) >= m.nVocab {
 				continue
 			}

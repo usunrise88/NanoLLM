@@ -70,6 +70,13 @@ type Request struct {
 	// longer ones on the full-attention layers. It needs flash attention and
 	// an unquantized cache; otherwise it is dropped.
 	FlashAttnSmallBatch bool
+	// BackendSampling plans for a device that lists
+	// backend.FeatureBackendSampling: sampler chains and the MTP drafter's
+	// top-10 run in the device graph. Only a plan with a GPU keeps it.
+	BackendSampling bool
+	// CudaNano are switches of NanoLLM's ggml-cuda for the load (a device that
+	// lists backend.FeatureCudaNano); only a plan with a GPU keeps them.
+	CudaNano map[string]int
 	// NoRepack plans without the CPU's repacked weights where a mode would
 	// use them: M7 then range-locks the file mapping of its core (its
 	// behaviour before OPT-1), several times slower to decode.

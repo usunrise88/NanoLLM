@@ -464,7 +464,9 @@ func (l *Loop) assign(seq int, h *Handle) {
 	}
 	h.pos = reuse
 	h.stats = Stats{Slot: seq, PromptTokens: len(h.req.Prompt), CachedTokens: reuse}
-	if err := l.model.SetSampler(seq, h.req.Sampler, h.req.Prompt); err != nil {
+	sp := h.req.Sampler
+	sp.RawLogits = h.req.Logprobs >= 0
+	if err := l.model.SetSampler(seq, sp, h.req.Prompt); err != nil {
 		l.finish(seq, Event{Err: err})
 	}
 }

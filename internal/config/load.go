@@ -351,6 +351,16 @@ func (o ModelOverride) validate() error {
 	default:
 		return fmt.Errorf("flash_attention must be auto, on, off or small, got %q", o.FlashAttention)
 	}
+	switch o.Sampling {
+	case "", "auto", "host", "device":
+	default:
+		return fmt.Errorf("sampling must be auto, host or device, got %q", o.Sampling)
+	}
+	for name := range o.CudaNano {
+		if !validCudaNanoName(name) {
+			return fmt.Errorf("cuda_nano: %q is not the name of a switch (letters, digits and _)", name)
+		}
+	}
 	if o.FlashAttention == "off" && o.KVType == KVQ8_0 {
 		return fmt.Errorf("kv_type %s needs flash_attention on", KVQ8_0)
 	}
@@ -429,4 +439,17 @@ func ValidNUMA(s string) error {
 		}
 	}
 	return fmt.Errorf("%q is not auto, off, interleave, distribute or node:N", s)
+}
+
+// validCudaNanoName: a switch of ggml-cuda is named in capitals, digits and underscores.
+func validCudaNanoName(name string) bool {
+	if name == "" || len(name) > 40 {
+		return false
+	}
+	for _, r := range name {
+		if !(r >= 'A' && r <= 'Z' || r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '_') {
+			return false
+		}
+	}
+	return true
 }

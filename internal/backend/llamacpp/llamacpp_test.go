@@ -188,6 +188,29 @@ func TestCPUFeatures(t *testing.T) {
 	}
 }
 
+func TestGPUFeatures(t *testing.T) {
+	const own = "CPU : SSE3 = 1 | AVX2 = 1 | REPACK = 1 | CUDA : ARCHS = 860 | USE_GRAPHS = 1 | FA_QUANTS = 1 | NANOLLM = 8 | NANO_GRAPH_SHAPES = 1 |"
+	upstream := strings.Replace(own, "NANOLLM = 8 | NANO_GRAPH_SHAPES = 1 |", "", 1)
+	if got := gpuFeatures("cuda0", own); len(got) != 2 || got[0] != backend.FeatureBackendSampling || got[1] != backend.FeatureCudaNano {
+		t.Errorf("our ggml-cuda: %v", got)
+	}
+	for _, info := range []string{upstream, "", "CUDA :"} {
+		if got := gpuFeatures("cuda0", info); len(got) != 1 || got[0] != backend.FeatureBackendSampling {
+			t.Errorf("upstream's ggml-cuda %q: %v", info, got)
+		}
+	}
+	// another backend's entry does not make a CUDA device ours
+	if got := gpuFeatures("cuda0", "Vulkan : NANOLLM = 9 |"); len(got) != 1 {
+		t.Errorf("a NANOLLM outside the CUDA entry: %v", got)
+	}
+	if got := gpuFeatures("vulkan0", own); len(got) != 0 {
+		t.Errorf("a Vulkan device: %v", got)
+	}
+	if n := cudaNanoLevel("CUDA : NANOLLM = 12 | NANO_X = 1 |"); n != 12 {
+		t.Errorf("level %d, want 12", n)
+	}
+}
+
 func TestIGPUFeatures(t *testing.T) {
 	const iris = "Intel(R) Iris(R) Xe Graphics"
 	if got := igpuFeatures("vulkan0", iris, "windows"); len(got) != 1 || got[0] != backend.FeatureFlashAttnSmallBatch {

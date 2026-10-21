@@ -124,6 +124,7 @@ func (b *llamaBackend) Devices(context.Context) ([]backend.Device, error) {
 			d.Features = cpuFeatures(llamaPrintSystemInfo())
 		case GgmlBackendDeviceTypeGpu:
 			d.Type = backend.GPU
+			d.Features = gpuFeatures(d.ID, llamaPrintSystemInfo())
 		case GgmlBackendDeviceTypeIgpu:
 			d.Type = backend.GPU
 			d.Unified = true
@@ -197,6 +198,44 @@ func (b *llamaBackend) cpuRepackBuft() (GgmlBackendBufferType, error) {
 		}
 	}
 	return 0, errors.New("no repacked buffer type on this CPU")
+}
+
+// gpuFeatures are those of a discrete GPU. CUDA samples in the graph: on an
+// RTX 3070 Ti Laptop the host scan of the logits rows cost 8-11 % of MTP
+// decoding (bench/results/rusunrisebook/rtx-2026-10-21). The other backends
+// are not measured and keep sampling on the host. info is
+// llama_print_system_info, in which our own ggml-cuda lists NANOLLM.
+func gpuFeatures(id, info string) []string {
+	if strings.HasPrefix(id, "cuda") {
+		out := []string{backend.FeatureBackendSampling}
+		if cudaNanoLevel(info) > 0 {
+			out = append(out, backend.FeatureCudaNano)
+		}
+		return out
+	}
+	return nil
+}
+
+// cudaNanoLevel is the number of the last patch of NanoLLM's CUDA series in
+// the ggml-cuda that reports it ("CUDA : ARCHS = 860 | ... | NANOLLM = 8 |"),
+// 0 for upstream's.
+func cudaNanoLevel(info string) int {
+	_, rest, ok := strings.Cut(info, "CUDA :")
+	if !ok {
+		return 0
+	}
+	_, rest, ok = strings.Cut(rest, "NANOLLM = ")
+	if !ok {
+		return 0
+	}
+	n := 0
+	for _, c := range rest {
+		if c < '0' || c > '9' {
+			break
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
 }
 
 // igpuFeatures are those of an integrated GPU. An Intel one on Vulkan with the

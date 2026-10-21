@@ -39,6 +39,8 @@ func (p *Plan) LoadSpec(modelPath, drafterPath string) (backend.LoadSpec, error)
 		KVTypeV:             p.KV.TypeV,
 		FlashAttention:      p.FlashAttention,
 		FlashAttnSmallBatch: p.FlashAttnSmallBatch,
+		BackendSampling:     p.BackendSampling,
+		CudaNano:            p.CudaNano,
 		SWAFull:             p.KV.SWAFull,
 		KVUnified:           p.KV.Unified,
 	}

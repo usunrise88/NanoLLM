@@ -163,6 +163,17 @@ type ModelOverride struct {
 	// "small" (on for small batches only, the matmul attention for long ones on
 	// the full-attention layers; needs libraries with patches/llama.cpp/0007).
 	FlashAttention string `yaml:"flash_attention"`
+	// Sampling is "" or "auto" (in the GPU's graph where the device lists
+	// backend-sampling, CUDA; on the host elsewhere), "host" or "device".
+	// Requests with a grammar, penalties or logprobs sample on the host
+	// either way.
+	Sampling string `yaml:"sampling"`
+	// CudaNano sets switches of NanoLLM's own ggml-cuda for this model, by the
+	// names it lists (the NANO_* entries of llama_print_system_info; the same as
+	// GGML_CUDA_NANO_<NAME> in the environment): the block shape a measurement
+	// of this card chose (MMVQ_NWARPS: 12), or a change turned off to compare
+	// (NORM_LEAN: 0). Ignored where the device does not list cuda-nano.
+	CudaNano map[string]int `yaml:"cuda_nano"`
 	// NCtx and Slots take "auto": what the preset leaves after weights, down
 	// to a floor of 4096 tokens and one slot.
 	NCtx        Auto        `yaml:"n_ctx"`

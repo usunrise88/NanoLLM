@@ -73,6 +73,10 @@ type slot struct {
 	chain     LlamaSampler // owned; frees the samplers added to it
 	penalties LlamaSampler // inside chain, fed the history; 0 when unused
 	spec      backend.SamplerSpec
+	// onDevice: the chain is attached to the context and runs in its graph
+	// (LoadSpec.BackendSampling); llama_sampler_sample returns the token the
+	// graph picked, and no logits row reaches the host.
+	onDevice bool
 
 	// pendingH is the target's hidden state (h_nextn) at position
 	// pendingPos: the input whose logits produced the token the caller
@@ -102,6 +106,7 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 	if spec.DrafterPath != "" {
 		files = append(files, spec.DrafterPath)
 	}
+	applyCudaNano(spec.CudaNano)
 	for _, p := range files {
 		if st, err := os.Stat(p); err != nil {
 			return nil, fmt.Errorf("llamacpp: model: %w", err)
@@ -200,6 +205,18 @@ func (b *llamaBackend) modelParams(spec backend.LoadSpec) (LlamaModelParams, []a
 	}
 	p.Devices = &devs[0]
 	keep = append(keep, devs)
+	if !onCPU {
+		// The whole model on that device. Without a split llama.cpp divides
+		// the layers by the free memory each device reports, and a GPU that
+		// reports none while its total is known (CUDA under WDDM once VRAM is
+		// oversubscribed) makes the split points 0/0: the load then fails
+		// with "invalid vector subscript" (devices.at past the end). llama.cpp
+		// copies llama_max_devices() entries.
+		split := make([]float32, llamaMaxDevices())
+		split[0] = 1
+		p.TensorSplit = &split[0]
+		keep = append(keep, split)
+	}
 	switch {
 	case onCPU:
 		p.NGpuLayers = 0

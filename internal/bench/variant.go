@@ -35,6 +35,7 @@ var variantKeys = map[string]string{
 	"lazy":          "off, auto or on",
 	"fa":            "on, off or small: flash attention (small: on batches of up to 8 tokens only, the matmul attention for longer ones on the full-attention layers; the default where the GPU lists fa-small-batch)",
 	"swa_full":      "on or off: off keeps the sliding-window layers at their window even when the full cache fits (auto is on when it fits)",
+	"sampling":      "host or device: sampler chains and the MTP drafter's top-10 on the host or in the GPU graph (the default where the GPU lists backend-sampling)",
 	"stream_ahead":  "layers read ahead of the compute in the file-backed modes M8, M9 (OPT-8); 0 is off",
 	"stream_keep":   "leading layers the streamer never evicts",
 	"stream_evict":  "on or off: drop a layer's pages once it is computed",
@@ -120,6 +121,10 @@ func checkValue(key, v string) error {
 	case "fa":
 		if v != "on" && v != "off" && v != "small" {
 			return fmt.Errorf("%q is not on, off or small", v)
+		}
+	case "sampling":
+		if v != "host" && v != "device" {
+			return fmt.Errorf("%q is not host or device", v)
 		}
 	case "mtp", "repack", "swa_full", "stream_evict":
 		if v != "on" && v != "off" {
@@ -212,6 +217,12 @@ func (v Variant) Plan(req *plan.Request) {
 		req.FlashAttnSmallBatch = false
 	case "small":
 		req.FlashAttnSmallBatch = true
+	}
+	switch v["sampling"] {
+	case "host":
+		req.BackendSampling = false
+	case "device":
+		req.BackendSampling = true
 	}
 	if v["repack"] == "off" {
 		req.NoRepack = true

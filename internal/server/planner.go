@@ -71,6 +71,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	}
 	if req.Device.Type != backend.CPU {
 		r.FlashAttnSmallBatch = req.Device.Has(backend.FeatureFlashAttnSmallBatch)
+		r.BackendSampling = req.Device.Has(backend.FeatureBackendSampling)
 		r.Device = &plan.Device{
 			Selector: req.Device.Selector(), Backend: strings.TrimRight(req.Device.ID, "0123456789"),
 			Memory: plan.DeviceMemory(req.Device), Unified: req.Device.Unified,
@@ -83,6 +84,18 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		r.NoFlashAttention = true
 	case "small":
 		r.FlashAttnSmallBatch = true
+	}
+	if len(ov.CudaNano) > 0 && req.Device.Has(backend.FeatureCudaNano) {
+		r.CudaNano = make(map[string]int, len(ov.CudaNano))
+		for name, v := range ov.CudaNano {
+			r.CudaNano[strings.ToUpper(name)] = v
+		}
+	}
+	switch ov.Sampling {
+	case "host":
+		r.BackendSampling = false
+	case "device":
+		r.BackendSampling = true
 	}
 	p, err := plan.Make(r)
 	if err != nil {

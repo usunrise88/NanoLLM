@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"runtime"
 	"strings"
 	"unsafe"
@@ -43,6 +44,12 @@ func (m *model) SetSampler(seq int, spec backend.SamplerSpec, history []backend.
 		if t < 0 || int(t) >= m.nVocab {
 			return fmt.Errorf("llamacpp: logit_bias token %d is outside the vocabulary", t)
 		}
+	}
+	// A greedy chain on the device holds no state: the next request with the
+	// same settings keeps it. Attaching a new one makes llama.cpp reserve the
+	// graph again on the next decode (16 ms more to the first token on CUDA).
+	if sl := &m.slots[seq]; sl.onDevice && statelessChain(spec) && reflect.DeepEqual(sl.spec, spec) {
+		return nil
 	}
 
 	chain := llamaSamplerChainInit(llamaSamplerChainDefaultParams())
@@ -138,7 +145,21 @@ func (m *model) SetSampler(seq int, spec backend.SamplerSpec, history []backend.
 	m.freeSampler(seq)
 	sl := &m.slots[seq]
 	sl.chain, sl.penalties, sl.spec = chain, penalties, spec
+	// The whole chain goes into the graph or none of it: an attached chain
+	// skips its device part on the host, so it cannot fall back later. A
+	// grammar does not run on a device and penalties need the history on it;
+	// logprobs need the logits rows, which an attached chain keeps on the GPU.
+	if m.spec.BackendSampling && spec.Grammar == "" && penalties == 0 && !spec.RawLogits {
+		sl.onDevice = llamaSetSampler(m.ctx, int32(seq), chain)
+	}
 	return nil
+}
+
+// statelessChain is a greedy chain without penalties or grammar: what it
+// picks depends on the logits alone.
+func statelessChain(s backend.SamplerSpec) bool {
+	return s.Temperature <= 0 && s.Grammar == "" &&
+		(s.RepeatPenalty == 0 || s.RepeatPenalty == 1) && s.FrequencyPenalty == 0 && s.PresencePenalty == 0
 }
 
 func checkSamplerSpec(s backend.SamplerSpec) error {
@@ -245,10 +266,14 @@ func regexEscape(s string) string {
 
 func (m *model) freeSampler(seq int) {
 	sl := &m.slots[seq]
+	if sl.onDevice {
+		// detached first: the context would sample through a freed chain
+		llamaSetSampler(m.ctx, int32(seq), 0)
+	}
 	if sl.chain != 0 {
 		llamaSamplerFree(sl.chain)
 	}
-	sl.chain, sl.penalties, sl.spec = 0, 0, backend.SamplerSpec{}
+	sl.chain, sl.penalties, sl.spec, sl.onDevice = 0, 0, backend.SamplerSpec{}, false
 }
 
 func (m *model) checkSeq(seq int) error {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/usunrise88/nanollm/internal/api/adapter"
 	"github.com/usunrise88/nanollm/internal/backend"
@@ -71,6 +72,9 @@ func devicesCommand(args []string) error {
 				}
 				fmt.Printf("  %-22s %-22s %-40s %s free of %s\n", d.Selector(), kind, d.Name,
 					gib(d.MemoryFree), gib(d.MemoryTotal))
+				if len(d.Features) > 0 {
+					fmt.Printf("  %-22s features: %s\n", "", strings.Join(d.Features, " "))
+				}
 			}
 		}
 		if w, ok := b.(backend.Warner); ok {

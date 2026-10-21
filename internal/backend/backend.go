@@ -72,6 +72,17 @@ const (
 	// flash attention on batches of up to 8 tokens and on sliding-window layers
 	// only (patches/llama.cpp/0007, LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH).
 	FeatureFlashAttnSmallBatch = "fa-small-batch"
+	// FeatureBackendSampling means sampling pays in the device's graph: the
+	// sampled token (and the drafter's ten candidates) leave the GPU instead
+	// of a 1 MiB row of logits per output, which the host then scans (the
+	// drafter's top-10 alone costs 0.23 ms per token in Go). Listed for CUDA
+	// (LoadSpec.BackendSampling).
+	FeatureBackendSampling = "backend-sampling"
+	// FeatureCudaNano means the CUDA backend is NanoLLM's own ggml-cuda
+	// (patches/llama.cpp, the "cuda:" subjects), not upstream's: it keeps a
+	// CUDA graph per batch shape and has switches for the kernels it changed
+	// (GGML_CUDA_NANO_*, the NANO_* entries of llama_print_system_info).
+	FeatureCudaNano = "cuda-nano"
 )
 
 // Selector is how configuration and requests name this device.
@@ -228,6 +239,15 @@ type LoadSpec struct {
 	// (FeatureFlashAttnSmallBatch). The KV cache layout is that of flash
 	// attention either way.
 	FlashAttnSmallBatch bool
+	// BackendSampling runs a slot's sampler chain in the device graph when the
+	// chain has no grammar and no penalties and the request reads no logits
+	// (SamplerSpec.RawLogits), and the MTP drafter's top-10 too
+	// (FeatureBackendSampling). Other chains sample on the host as before.
+	BackendSampling bool
+	// CudaNano sets switches of NanoLLM's ggml-cuda before the model loads
+	// (FeatureCudaNano; GGML_CUDA_NANO_<NAME>): the setting is the process's,
+	// and takes effect for the graphs computed afterwards.
+	CudaNano map[string]int
 	// SWAFull keeps the full context in the sliding-window layers too, so the
 	// cache can be trimmed to any position; without it a trim further back
 	// than the window forces a fresh prefill.
@@ -296,6 +316,9 @@ type SamplerSpec struct {
 	// Seed seeds the sampler; a negative seed is random. Zero is a seed like
 	// any other, so a zero SamplerSpec is reproducible.
 	Seed int64
+	// RawLogits says the caller reads the logits rows (logprobs), so the
+	// chain samples on the host even where the model samples on the device.
+	RawLogits bool
 	// Grammar is GBNF; empty means unconstrained. GrammarRoot defaults to
 	// "root". With GrammarTriggers set the grammar is lazy: unconstrained
 	// until the output contains one of the trigger strings (tool_choice auto).

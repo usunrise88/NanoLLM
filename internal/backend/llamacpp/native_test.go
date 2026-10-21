@@ -94,11 +94,25 @@ func testModelPath(t *testing.T) string {
 // batches across slots are exercised, flash attention, repacked CPU weights
 // (as llama.cpp's tools default to), swa_full off (as llama-server does).
 func baseSpec(path string) backend.LoadSpec {
-	return backend.LoadSpec{
+	s := backend.LoadSpec{
 		Path: path, Device: "cpu", Repack: true,
 		NCtx: 1024, Slots: 2, NBatch: 512, NUBatch: 512, Threads: 4,
 		KVTypeK: "f16", KVTypeV: "f16", FlashAttention: true,
 	}
+	// NANOLLM_TEST_DEVICE=cuda0 (or llamacpp:cuda0, vulkan0): the same tests on a GPU, the whole model on it and its
+	// sampling in the device graph where the device lists it (NANOLLM_TEST_SAMPLING=host keeps it on the host). The
+	// goldens are the CPU's and skip themselves there.
+	if dev := os.Getenv("NANOLLM_TEST_DEVICE"); dev != "" && dev != "cpu" {
+		s.Device, s.Repack, s.GPULayers = dev, false, -1
+		s.BackendSampling = strings.HasPrefix(strings.TrimPrefix(dev, "llamacpp:"), "cuda") && os.Getenv("NANOLLM_TEST_SAMPLING") != "host"
+	}
+	return s
+}
+
+// testOnCPU reports whether the tests run on the CPU device (NANOLLM_TEST_DEVICE unset).
+func testOnCPU() bool {
+	dev := os.Getenv("NANOLLM_TEST_DEVICE")
+	return dev == "" || dev == "cpu"
 }
 
 var shared struct {
@@ -130,7 +144,9 @@ func sharedModel(t *testing.T) *model {
 	return shared.m
 }
 
-var greedy = backend.SamplerSpec{Temperature: 0}
+// greedy is what most tests sample with. On a GPU that samples in its graph the tests that read logprobs or compare
+// logits need the rows: RawLogits keeps those chains on the host; TestNativeBackendSampling covers the device chains.
+var greedy = backend.SamplerSpec{Temperature: 0, RawLogits: !testOnCPU()}
 
 // decode prefills prompt on seq and generates up to n tokens greedily (or
 // with sp), returning the generated ids.
@@ -538,7 +554,16 @@ func TestNativeMemoryReport(t *testing.T) {
 	m := sharedModel(t)
 	r := m.MemoryReport()
 	t.Logf("memory: %+v", r.Devices)
-	if len(r.Devices) == 0 || r.Devices[0].Device != "cpu" || r.Devices[0].Weights == 0 || r.Devices[0].KV == 0 || r.Devices[0].Compute == 0 {
+	// the CPU device holds the weights, the KV cache and the graph on a CPU run; on a GPU run the GPU entry holds the
+	// KV cache and the graph, and the CPU keeps what stays on the host
+	if len(r.Devices) == 0 || r.Devices[0].Device != "cpu" || r.Devices[0].Weights == 0 {
+		t.Errorf("report: %+v", r)
+	}
+	dev := r.Devices[0]
+	if !testOnCPU() && len(r.Devices) > 1 {
+		dev = r.Devices[1]
+	}
+	if dev.KV == 0 || dev.Compute == 0 {
 		t.Errorf("report: %+v", r)
 	}
 	for _, l := range m.loadLog {
@@ -708,6 +733,9 @@ func goldenFiles(mtp bool) []string {
 // recorded from and only on the same ggml CPU variant: other kernels round
 // differently, and greedy picks may flip.
 func TestNativeGolden(t *testing.T) {
+	if !testOnCPU() {
+		t.Skip("the goldens are the CPU's tokens (NANOLLM_TEST_DEVICE is set)")
+	}
 	files := goldenFiles(false)
 	if len(files) == 0 {
 		t.Skip("no golden files for " + bindingTag)

@@ -118,6 +118,9 @@ func TestNativeMTPLoads(t *testing.T) {
 // own MTP (tools/golden -drafter) under greedy decoding: the same tokens and
 // the same numbers of drafted and accepted tokens.
 func TestNativeMTPMatchesServer(t *testing.T) {
+	if !testOnCPU() {
+		t.Skip("the goldens are the CPU's tokens (NANOLLM_TEST_DEVICE is set)")
+	}
 	files := goldenFiles(true)
 	if len(files) == 0 {
 		t.Skip("no MTP golden files for " + bindingTag)
@@ -181,6 +184,26 @@ var equivalencePrompts = []string{
 	"Write a Go function that reverses a string, with a comment.",
 }
 
+// moreEquivalencePrompts widen the equivalence check where it is cheap (a GPU, or NANOLLM_TEST_LONG): a kernel that
+// rounds a row differently for one token and for four shows up on one prompt in a dozen.
+var moreEquivalencePrompts = []string{
+	"Describe how a bicycle works.",
+	"What is the difference between a virus and a bacterium?",
+	"Give me a recipe for pancakes.",
+	"Explain recursion to a ten year old.",
+	"Translate 'good morning, how are you?' into French, German and Spanish.",
+	"Summarize the plot of Romeo and Juliet in four sentences.",
+	"Why is the ocean salty?",
+	"Write a limerick about a cat.",
+}
+
+func equivalencePromptList() []string {
+	if testOnCPU() && os.Getenv("NANOLLM_TEST_LONG") == "" {
+		return equivalencePrompts
+	}
+	return append(append([]string(nil), equivalencePrompts...), moreEquivalencePrompts...)
+}
+
 // TestNativeMTPEquivalence decodes five prompts greedily with and without
 // the drafter. The target is an exact match; a divergence is reported with
 // the top-1/top-2 logprob margin of the plain run at the first differing
@@ -221,7 +244,7 @@ func mtpEquivalence(t *testing.T, plain, mtp *model) {
 	const n = 48
 	var drafted, accepted, genPlain, genMTP int
 	var tPlain, tMTP time.Duration
-	for _, p := range equivalencePrompts {
+	for _, p := range equivalencePromptList() {
 		prompt := tokenize(t, plain, chat(plain, p))
 		if err := plain.SetSampler(0, greedy, prompt); err != nil {
 			t.Fatal(err)

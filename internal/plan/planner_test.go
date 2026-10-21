@@ -285,6 +285,26 @@ func TestFlashAttnSmallBatch(t *testing.T) {
 	}
 }
 
+// TestCudaNanoCarries: the switches of ggml-cuda in a request reach the load spec of a plan with a GPU, and a CPU plan
+// does not keep them.
+func TestCudaNanoCarries(t *testing.T) {
+	model := e4b(t)
+	req := Request{Model: model, Preset: preset(t, "uma-4g"), NCtx: 8192, Slots: 1, CudaNano: map[string]int{"MMVQ_NWARPS": 12}}
+	p := mustPlan(t, req)
+	spec, err := p.LoadSpec("m.gguf", "d.gguf")
+	if err != nil || spec.CudaNano["MMVQ_NWARPS"] != 12 {
+		t.Fatalf("load spec %+v, %v", spec.CudaNano, err)
+	}
+	req.CudaNano["MMVQ_NWARPS"] = 0
+	if p.CudaNano["MMVQ_NWARPS"] != 12 {
+		t.Errorf("the plan shares the request's map: %v", p.CudaNano)
+	}
+	cpu := Request{Model: model, Preset: preset(t, "ram-6g"), NCtx: 4096, Slots: 1, CudaNano: map[string]int{"NORM_LEAN": 0}}
+	if pc := mustPlan(t, cpu); len(pc.CudaNano) != 0 {
+		t.Errorf("a CPU plan keeps the switches: %v", pc.CudaNano)
+	}
+}
+
 func TestSWAFullDecision(t *testing.T) {
 	model := e4b(t)
 	// ram-8g at 32k: the full SWA cache is 20 layers × 32768 cells × 2 KiB.
