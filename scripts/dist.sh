@@ -6,7 +6,8 @@
 #
 # TARGET is one of
 #   linux-amd64 linux-arm64 windows-amd64 windows-arm64 darwin-universal
-#   linux-amd64-cuda windows-amd64-cuda        (the CUDA add-ons)
+#   linux-amd64-cuda windows-amd64-cuda        (the CUDA add-ons: CUDA 12.x)
+#   windows-amd64-cuda13                       (the CUDA 13.4 add-on, Turing and newer, driver 580+)
 #   all                                        (every one of the above)
 # and defaults to this machine. Environment:
 #   VERSION   the release tag stamped into the binary and the file names
@@ -48,7 +49,7 @@ export GOWORK=off CGO_ENABLED=0
 say() { printf '==> %s\n' "$*" >&2; }
 die() { printf 'dist.sh: %s\n' "$*" >&2; exit 1; }
 
-ALL=(linux-amd64 linux-arm64 windows-amd64 windows-arm64 darwin-universal linux-amd64-cuda windows-amd64-cuda)
+ALL=(linux-amd64 linux-arm64 windows-amd64 windows-arm64 darwin-universal linux-amd64-cuda windows-amd64-cuda windows-amd64-cuda13)
 
 host_target() {
   local os arch
@@ -207,7 +208,7 @@ package() {
 
 # addon TARGET: the CUDA add-on, lib/ only.
 addon() {
-  local target=$1 base=${1%-cuda} ext=tar.gz stage
+  local target=$1 base=${1%-cuda*} ext=tar.gz stage
   [[ "$base" == windows-* ]] && ext=zip
   stage=$(mktemp -d)
   STAGES+=("$stage")
@@ -228,7 +229,7 @@ mkdir -p "$OUT"
 for t in "${targets[@]}"; do
   [[ " ${ALL[*]} " == *" $t "* ]] || die "unknown target $t; use one of ${ALL[*]} or all"
   LIBDIR=$(libs "$t")
-  if [[ "$t" == *-cuda ]]; then
+  if [[ "$t" == *-cuda || "$t" == *-cuda13 ]]; then
     addon "$t"
     continue
   fi

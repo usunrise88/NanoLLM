@@ -5,8 +5,9 @@
 #
 # TAG defaults to the contents of scripts/llama.cpp.tag. TARGET is any of
 # linux_amd64 linux_arm64 windows_amd64 windows_arm64 darwin_arm64
-# darwin_amd64 darwin_universal, or the CUDA add-ons linux_amd64_cuda and
-# windows_amd64_cuda; the default is the machine this runs on.
+# darwin_amd64 darwin_universal, or the CUDA add-ons linux_amd64_cuda,
+# windows_amd64_cuda (CUDA 12.4) and windows_amd64_cuda13 (CUDA 13.4); the
+# default is the machine this runs on.
 #
 # Each archive is verified against scripts/libs.sha256 before it is opened: an
 # archive whose hash is not listed there is refused, not trusted on first use.
@@ -31,6 +32,13 @@
 # with --tools, in tools/ too, so the reference tools run the same libraries.
 # NANOLLM_LIBS_URL replaces the release's download URL (a mirror, or file://
 # for a local build).
+#
+# The Windows CUDA add-ons are ours too once the pinned release carries them
+# (nanollm-libs-windows_amd64_cuda.tar.gz and ..._cuda13.tar.gz, listed in
+# scripts/libs.sha256; the "cuda:" patches of patches/llama.cpp are in
+# ggml-cuda): then the add-on is that archive, ggml-cuda.dll and the CUDA
+# runtime it was built with. Before that windows_amd64_cuda is upstream's CUDA
+# 12.4 build and windows_amd64_cuda13 does not exist.
 #
 # NanoLLM compiles no C code. If an upstream archive layout changes, this
 # script fails on the layout check below rather than shipping a lib/ that is
@@ -207,8 +215,33 @@ copy_matching() {
   find "$stage" \( -type f -o -type l \) \( "${expr[@]:1}" \) -exec cp -P {} "$out/" \;
 }
 
+# own_cuda TARGET: whether the pinned series carries a CUDA add-on of ours for TARGET
+# (the archive is listed in scripts/libs.sha256).
+own_cuda() {
+  (( PATCHED )) && awk -v f="nanollm-libs-$1.tar.gz" '$2 == f { found = 1 } END { exit !found }' scripts/libs.sha256
+}
+
 fetch() {
   local target=$1 assets asset out stage
+  if [[ "$target" == windows_amd64_cuda13 ]] && ! own_cuda "$target"; then
+    echo "fetch-libs: windows_amd64_cuda13 is ours only; nanollm-libs-$target.tar.gz is not listed in scripts/libs.sha256 (it ships with the release that carries the cuda patches)" >&2
+    exit 1
+  fi
+  if [[ "$target" == *_cuda* ]] && own_cuda "$target"; then
+    out=dist/$target/lib
+    rm -rf "$out"
+    mkdir -p "$out"
+    stage=$(mktemp -d)
+    STAGES+=("$stage")
+    unpack "$(download_own "$target")" "$stage"
+    copy_matching "$stage" "$out" 'libggml-cuda*' 'ggml-cuda*.dll' 'libcudart*' 'libcublas*' 'cudart64*.dll' 'cublas64*.dll' 'cublasLt64*.dll'
+    if ! compgen -G "$out/*ggml-cuda*" >/dev/null || ! compgen -G "$out/*cudart*" >/dev/null; then
+      echo "fetch-libs: nanollm-libs-$target.tar.gz lacks ggml-cuda or the CUDA runtime" >&2
+      exit 1
+    fi
+    echo "$target: $(ls "$out" | wc -l | tr -d ' ') files in $out ($OWN_REL, ours)"
+    return
+  fi
   assets=$(assets_for "$target") || { echo "fetch-libs: unknown target $target" >&2; exit 1; }
 
   stage=$(mktemp -d)

@@ -346,7 +346,8 @@ jobs:
           | \`nanollm-${TAG}-linux-amd64.tar.gz\`, \`-linux-arm64\` | CPU + Vulkan, web UI |
           | \`nanollm-${TAG}-windows-amd64.zip\`, \`-windows-arm64\` | CPU + Vulkan, web UI |
           | \`nanollm-${TAG}-darwin-universal.tar.gz\` | CPU + Metal, arm64 and x86_64, web UI |
-          | \`nanollm-${TAG}-<os>-amd64-cuda.<ext>\` | add-on: ggml-cuda and the CUDA 12 runtime, unpacked over an installation |
+          | \`nanollm-${TAG}-<os>-amd64-cuda.<ext>\` | add-on: ggml-cuda and the CUDA 12 runtime (Maxwell and newer, driver 525+), unpacked over an installation |
+          | \`nanollm-${TAG}-windows-amd64-cuda13.zip\` | the same for CUDA 13.4 (Turing and newer, driver 580+); the Windows installer picks it for such a GPU |
           | \`*-noui.*\` | the same without the web UI |
 
           Unpack the whole archive: the binary loads the libraries from \`lib/\` beside

@@ -270,6 +270,29 @@ function Test-Nvidia {
     } catch { return $false }
 }
 
+# 'cuda13' when every NVIDIA GPU is Turing or newer (compute capability 7.5+, which is what the CUDA 13.4 build
+# targets) and its driver is 580 or newer (the CUDA 13 runtime's minimum); 'cuda' (CUDA 12.4: Maxwell and newer, driver
+# 525+) otherwise, or when nvidia-smi cannot say.
+function Get-CudaFlavour {
+    try {
+        $rows = @(nvidia-smi --query-gpu=driver_version,compute_cap --format=csv,noheader 2>$null)
+        foreach ($r in $rows) {
+            $p = "$r" -split ',\s*'
+            if ($p.Count -lt 2) { return 'cuda' }
+            if ([int](($p[0] -split '\.')[0]) -lt 580 -or [double]::Parse($p[1], [cultureinfo]::InvariantCulture) -lt 7.5) { return 'cuda' }
+        }
+        if ($rows.Count -gt 0) { return 'cuda13' }
+    } catch { }
+    return 'cuda'
+}
+
+# Whether the release has this asset (a HEAD request).
+function Test-ReleaseAsset {
+    param([string] $Name, [string] $Base)
+    try { return (Invoke-WebRequest -UseBasicParsing -Method Head -Uri "$Base/$Name" -ErrorAction Stop).StatusCode -eq 200 }
+    catch { return $false }
+}
+
 function Test-CudaLibs { return [bool](Get-ChildItem -Path (Join-Path $Prefix 'lib') -Filter '*ggml-cuda*' -ErrorAction SilentlyContinue) }
 
 function Add-ToMachinePath {
@@ -392,7 +415,11 @@ function Install-NanoLLM {
                 Warn "-Cuda: no NVIDIA GPU found; the add-on is not installed"
             } else {
                 if ($hadCuda -and -not $Cuda) { Say "refreshing the CUDA add-on to match the new binary" }
-                $addon = Get-Archive -Name "nanollm-$Version-windows-amd64-cuda.zip" -Local $CudaArchive -Tmp $tmp -Base $base
+                # CUDA 13.4 (Turing and newer, driver 580+) when the driver can run it and the release has the archive;
+                # CUDA 12.4 otherwise (Maxwell and newer, driver 525+)
+                $cudaName = 'cuda'
+                if (-not $CudaArchive -and (Get-CudaFlavour) -eq 'cuda13' -and (Test-ReleaseAsset -Name "nanollm-$Version-windows-amd64-cuda13.zip" -Base $base)) { $cudaName = 'cuda13' }
+                $addon = Get-Archive -Name "nanollm-$Version-windows-amd64-$cudaName.zip" -Local $CudaArchive -Tmp $tmp -Base $base
                 Say "unpacking the CUDA add-on into $lib"
                 Expand-Archive -LiteralPath $addon -DestinationPath $Prefix -Force
             }

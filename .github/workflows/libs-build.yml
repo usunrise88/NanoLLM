@@ -10,7 +10,8 @@ name: libs-build
 # `cpu` in the matrix also builds the CPU backend (GGML_CPU_ALL_VARIANTS where
 # upstream's release job uses it) and ships it in the same archive; a target
 # without it keeps upstream's CPU backend, which runs the same model with the
-# unpatched kernels. The Vulkan and CUDA backends are always upstream's.
+# unpatched kernels. The Vulkan backend is ours on windows_amd64 (patch 0006), and so is the CUDA backend of the two
+# windows_amd64_cuda* targets below (the "cuda:" patches, 0008 on); every other GPU backend is upstream's.
 # fetch-libs.sh lays what the archive holds over upstream's.
 #
 # Published as a release of this repository, llama-<tag>-n<N> (scripts/libs.release),
@@ -122,8 +123,88 @@ jobs:
           name: nanollm-libs-${{ matrix.target }}
           path: nanollm-libs-${{ matrix.target }}.tar.gz
 
+  # Our ggml-cuda.dll (patches/llama.cpp, the "cuda:" subjects) and the CUDA runtime it needs, for two toolkits as
+  # upstream's release does: 12.4 (drivers 525+, Maxwell and newer: nanollm-libs-windows_amd64_cuda) and 13.4
+  # (driver 580+, Turing and newer: nanollm-libs-windows_amd64_cuda13). MSVC is the host compiler (nvcc takes no clang):
+  # VS 2022 on windows-2022 as upstream's job; the toolkits are installed from NVIDIA's redistributable zips, which is
+  # what upstream's windows-setup-cuda action does. CMAKE_CUDA_ARCHITECTURES is left to ggml/src/ggml-cuda/CMakeLists.txt.
+  build-cuda:
+    name: ${{ matrix.target }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: windows_amd64_cuda, cuda: '12.4', defines: '-DGGML_CUDA_CCCL_VERSION=v3.4.3' }
+          - { target: windows_amd64_cuda13, cuda: '13.4', defines: '-DGGML_CUDA_CCCL_VERSION=v3.4.3' }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The patched source
+        shell: bash
+        run: ./scripts/build-libs.sh --prepare-only
+
+      - name: CUDA Toolkit ${{ matrix.cuda }}
+        shell: pwsh
+        run: |
+          $v = '${{ matrix.cuda }}'
+          $root = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v$v"
+          # name, version of the redistributable archive (upstream's windows-setup-cuda action)
+          $parts = if ($v -eq '12.4') { @(
+              @('cuda_cudart', '12.4.127'), @('cuda_nvcc', '12.4.131'), @('cuda_nvrtc', '12.4.127'),
+              @('libcublas', '12.4.5.8'), @('cuda_nvtx', '12.4.127'), @('cuda_profiler_api', '12.4.127'),
+              @('visual_studio_integration', '12.4.127'), @('cuda_cccl', '12.4.127')) } else { @(
+              @('cuda_crt', '13.4.59'), @('cuda_cudart', '13.4.49'), @('cuda_nvcc', '13.4.59'), @('cuda_nvrtc', '13.4.59'),
+              @('libcublas', '13.7.0.27'), @('libnvvm', '13.4.59'), @('cuda_nvtx', '13.4.49'),
+              @('cuda_profiler_api', '13.4.49'), @('visual_studio_integration', '13.4.49'), @('cccl', '13.3.4.2.1')) }
+          New-Item -ItemType Directory -Force $root | Out-Null
+          $tmp = Join-Path $env:RUNNER_TEMP 'cudazips'
+          New-Item -ItemType Directory -Force $tmp | Out-Null
+          foreach ($p in $parts) {
+              $name = "$($p[0])-windows-x86_64-$($p[1])-archive"
+              curl.exe -fsSL -o "$tmp\$name.zip" "https://developer.download.nvidia.com/compute/cuda/redist/$($p[0])/windows-x86_64/$name.zip"
+              if ($LASTEXITCODE -ne 0) { throw "download of $name failed" }
+              Expand-Archive "$tmp\$name.zip" -DestinationPath $tmp -Force
+              Copy-Item "$tmp\$name\*" $root -Recurse -Force
+          }
+          Add-Content $env:GITHUB_PATH "$root\bin"
+          Add-Content $env:GITHUB_ENV "CUDA_PATH=$root"
+
+      - name: Build
+        shell: cmd
+        run: |
+          choco install ninja -y
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cmake -S .cache/llama.cpp/src -B build -G "Ninja Multi-Config" ^
+            -DGGML_BACKEND_DL=ON -DGGML_NATIVE=OFF -DGGML_CPU=OFF -DGGML_CUDA=ON ${{ matrix.defines }} ^
+            -DLLAMA_BUILD_COMMON=OFF -DLLAMA_BUILD_TOOLS=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_EXAMPLES=OFF ^
+            -DLLAMA_BUILD_SERVER=OFF -DLLAMA_OPENSSL=OFF
+          set /A NINJA_JOBS=%NUMBER_OF_PROCESSORS%-1
+          cmake --build build --config Release -j %NINJA_JOBS% --target ggml-cuda
+
+      - name: Collect
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item build\bin\Release\ggml-cuda.dll out\
+          foreach ($d in "$env:CUDA_PATH\bin", "$env:CUDA_PATH\bin\x64", "$env:CUDA_PATH\lib") {
+              foreach ($n in 'cudart64_*.dll', 'cublas64_*.dll', 'cublasLt64_*.dll') {
+                  Get-ChildItem -Path (Join-Path $d $n) -ErrorAction SilentlyContinue | Copy-Item -Destination out\ -Force
+              }
+          }
+          Get-ChildItem out | Format-Table Name, Length
+          foreach ($n in 'ggml-cuda.dll', 'cudart64_*.dll', 'cublas64_*.dll', 'cublasLt64_*.dll') {
+              if (-not (Get-ChildItem out -Filter $n)) { throw "no $n in the CUDA archive" }
+          }
+          tar -czf "nanollm-libs-${{ matrix.target }}.tar.gz" -C out .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nanollm-libs-${{ matrix.target }}
+          path: nanollm-libs-${{ matrix.target }}.tar.gz
+
   publish:
-    needs: build
+    needs: [build, build-cuda]
     if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
     steps:
