@@ -29,6 +29,30 @@ var (
 	defaultThreads     int
 )
 
+// DefaultBatchThreads is the size of the team that should process prompt
+// chunks when neither the configuration nor the request says: every logical CPU
+// this process may run on, on hybrid x86 CPUs (Intel P+E), and 0 (follow
+// DefaultThreads) elsewhere. Decoding is limited by memory bandwidth, which
+// six performance cores of an i7-12700H already saturate, but prefill is
+// limited by arithmetic and gains from the efficiency cores and the second
+// threads of the performance cores: 6 threads 125-128 tok/s, 14 138, 20 155-172
+// (bench/results/rusunrisebook/stage0-2026-10-21). Apple's hybrid parts are not
+// measured and keep following DefaultThreads.
+func DefaultBatchThreads() int {
+	defaultBatchOnce.Do(func() {
+		m := collect(context.Background())
+		if runtime.GOARCH == "amd64" && m.CPU.PCores > 0 && m.CPU.ECores > 0 {
+			defaultBatch = runtime.NumCPU()
+		}
+	})
+	return defaultBatch
+}
+
+var (
+	defaultBatchOnce sync.Once
+	defaultBatch     int
+)
+
 // detectThreads is DefaultThreads without the cache.
 func detectThreads() int {
 	if n := allowedPhysicalCores(); n > 0 {

@@ -45,6 +45,8 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 	}
 	if t.shape.swaFull {
 		p.KV.SWAFullReason = "the full sliding-window cache fits the budget: the prompt cache can reuse a prefix of any length"
+	} else if pl.req.NoSWAFull {
+		p.KV.SWAFullReason = fmt.Sprintf("the request asked for the window-only sliding-window cache: the prompt cache reuses a prefix only within the last %d tokens", pl.h.SlidingWindow)
 	} else {
 		full := KVShape{NCtx: t.shape.nCtx, Slots: t.shape.slots, NUBatch: pl.nUBatch, SWAFull: true,
 			FlashAttention: pl.fa, TypeK: pl.kvType, TypeV: pl.kvType}

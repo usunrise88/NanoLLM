@@ -68,6 +68,12 @@ type Request struct {
 	// use them: M7 then range-locks the file mapping of its core (its
 	// behaviour before OPT-1), several times slower to decode.
 	NoRepack bool
+	// NoSWAFull keeps the sliding-window layers at their window even when the
+	// full cache would fit: attention over 512 positions instead of the whole
+	// context, at the price of prefix reuse only within the window (a
+	// measurement setting, the default is to spend a spare budget on the full
+	// cache).
+	NoSWAFull bool
 	// Proven is the table of modes the planner may pick; nil is DefaultProven.
 	Proven ProvenModes
 	// NBatch and NUBatch default to DefaultNBatch and DefaultNUBatch.
@@ -315,6 +321,9 @@ func (pl *planner) grow(t *trial, floor shape, target Target) *trial {
 		if found {
 			break
 		}
+	}
+	if pl.req.NoSWAFull {
+		return best
 	}
 	full := best.shape
 	full.swaFull = true

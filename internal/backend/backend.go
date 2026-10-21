@@ -236,17 +236,27 @@ type LoadSpec struct {
 
 // WithDefaultThreads fills a zero thread count with the physical cores this
 // process may use (hwinfo.DefaultThreads), so a plan records the number it
-// ran with. A model fully offloaded to a GPU keeps zero: it does no CPU
+// ran with. A zero ThreadsBatch follows Threads, except when neither was set
+// and the CPU is hybrid (hwinfo.DefaultBatchThreads). A model fully offloaded to a GPU keeps zero: it does no CPU
 // matrix work, and polling threads would only take cores from the host.
 func (s LoadSpec) WithDefaultThreads() LoadSpec {
+	auto := s.Threads == 0 && s.ThreadsBatch == 0 && !s.FullyOnGPU()
 	if s.Threads == 0 && !s.FullyOnGPU() {
 		s.Threads = hwinfo.DefaultThreads()
 	}
 	if s.ThreadsBatch == 0 {
 		s.ThreadsBatch = s.Threads
+		// Neither count was asked for: prompt chunks use every logical CPU of a
+		// hybrid machine, decoding keeps the performance cores.
+		if auto {
+			s.ThreadsBatch = max(s.Threads, defaultBatchThreads())
+		}
 	}
 	return s
 }
+
+// defaultBatchThreads is a variable for the tests.
+var defaultBatchThreads = hwinfo.DefaultBatchThreads
 
 // FullyOnGPU is a spec that names a GPU device and offloads every layer.
 func (s LoadSpec) FullyOnGPU() bool {

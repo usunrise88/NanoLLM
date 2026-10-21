@@ -34,6 +34,7 @@ var variantKeys = map[string]string{
 	"load":          "none, mmap, mlock, mmap+mlock or dio",
 	"lazy":          "off, auto or on",
 	"fa":            "on or off: flash attention",
+	"swa_full":      "on or off: off keeps the sliding-window layers at their window even when the full cache fits (auto is on when it fits)",
 	"stream_ahead":  "layers read ahead of the compute in the file-backed modes M8, M9 (OPT-8); 0 is off",
 	"stream_keep":   "leading layers the streamer never evicts",
 	"stream_evict":  "on or off: drop a layer's pages once it is computed",
@@ -116,7 +117,7 @@ func checkValue(key, v string) error {
 		if v != "f16" && v != "q8_0" {
 			return fmt.Errorf("%q is not f16 or q8_0", v)
 		}
-	case "mtp", "repack", "fa", "stream_evict":
+	case "mtp", "repack", "fa", "swa_full", "stream_evict":
 		if v != "on" && v != "off" {
 			return fmt.Errorf("%q is not on or off", v)
 		}
@@ -205,6 +206,9 @@ func (v Variant) Plan(req *plan.Request) {
 	}
 	if v["repack"] == "off" {
 		req.NoRepack = true
+	}
+	if v["swa_full"] == "off" {
+		req.NoSWAFull = true
 	}
 	if s, ok := v["mode"]; ok {
 		req.Mode, _ = plan.ParseMode(s)
