@@ -36,6 +36,11 @@ The series, in order:
   workgroup for every row count and 4 rows per workgroup in the batch kernels (host-side choices in `ggml-vulkan.cpp`;
   decode +12%, verification of 2 to 3 speculative drafts +14 to +21%, prefill unchanged). The Windows build of the libs
   ships our `ggml-vulkan.dll` for it; other vendors and drivers keep upstream's choices.
+- 0007 llama: `LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH`, flash attention on batches of up to 8 tokens and on sliding-window
+  layers, the matmul attention for longer batches on the full-attention layers (libllama, plus `small_batch` for
+  common's and llama-bench's `-fa`; needs an unquantized KV cache, which keeps the flash-attention layout). Prefill on an
+  Iris Xe +23% at 4096 tokens of context, +42% at 8192, KLD below that of `-fa 0`; gemma.json on the iGPU 95 -> 89-90 s.
+  NanoLLM asks for it on GPUs listing `fa-small-batch` (Intel iGPUs under Vulkan on Windows).
 
 0002 to 0005 change the CPU backend, so the targets marked `cpu` in
 `libs-build.yml` ship the CPU variants too (see there and `scripts/fetch-libs.sh`), and 0006 changes the
@@ -53,10 +58,7 @@ that commit and `NANOLLM_DEV_SERIES=<commit>`:
 
     go build -ldflags "-X github.com/usunrise88/nanollm/internal/backend/llamacpp.PinnedCommit=<commit>" ./cmd/nanollm
 
-In `next/` now: 0007 llama: `LLAMA_FLASH_ATTN_TYPE_SMALL_BATCH`, flash attention on batches of up to 8 tokens and on
-sliding-window layers, the matmul attention for longer batches on the full-attention layers (libllama, plus `small_batch`
-for common's and llama-bench's `-fa`; prefill on an Iris Xe +23% at 4096 tokens of context, +42% at 8192, KLD below that
-of `-fa 0`). NanoLLM asks for it on GPUs listing `fa-small-batch`, which needs the release.
+`next/` is empty now.
 
 When the owner agrees to a libs release, the patches move from `next/` into
 this directory, the new commit goes into `scripts/llama.cpp.commit`, the
