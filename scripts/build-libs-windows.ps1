@@ -18,6 +18,7 @@
   .\scripts\build-libs-windows.ps1 -Next                 # plus patches/next
   .\scripts\build-libs-windows.ps1 -Variants all -Vulkan # what CI builds, with ggml-vulkan.dll
   .\scripts\build-libs-windows.ps1 -Variants alderlake -Out C:\x\lib -Reuse
+  .\scripts\build-libs-windows.ps1 -Variants none -Core -Reuse   # llama/ggml/ggml-base only (a libllama change)
 
   The result is a lib directory: llama.dll, ggml-base.dll, ggml.dll, the CPU
   variants asked for, libomp.dll. Put the ggml-cpu-*.dll files of a build with
@@ -26,13 +27,16 @@
   commit, patches/llama.cpp/README.md).
 #>
 param(
-    # CPU variants to build: names without the ggml-cpu- prefix, or 'all'.
+    # CPU variants to build: names without the ggml-cpu- prefix, 'all', or 'none' (GGML_CPU_ALL_VARIANTS off, in a
+    # build directory of its own: the ggml target depends on every variant, and sapphirerapids' amx/mmq.cpp takes
+    # clang 22 most of an hour).
     [string[]]$Variants = @('alderlake'),
     [switch]$Next,
     [switch]$Vulkan,
     # The ggml-base/llama/ggml targets. Off: only the CPU variants (a kernel change).
     [switch]$Core,
-    # Also build llama-server and llama-bench (the golden recorder and the A/B bench) into <Out>\..	ools.
+    # Also build llama-server, llama-bench and llama-perplexity (the golden recorder, the A/B bench and the KLD
+    # check) into <Out>\..\tools.
     [switch]$Tools,
     [string]$Out,
     [string]$Build,
@@ -62,7 +66,8 @@ $bash = 'C:\Program Files\Git\bin\bash.exe'
 
 if (-not $Src) { $Src = Join-Path $root '.cache\llama.cpp\src' }
 if (-not $Out) { $Out = Join-Path $root ('.cache\llama.cpp\out-windows_amd64' + $(if ($Next) { '-next' } else { '' }) + '\lib') }
-if (-not $Build) { $Build = Join-Path $root ('.cache\llama.cpp\build-windows_amd64' + $(if ($Next) { '-next' } else { '' })) }
+$noVariants = $Variants -contains 'none'
+if (-not $Build) { $Build = Join-Path $root ('.cache\llama.cpp\build-windows_amd64' + $(if ($Next) { '-next' } else { '' }) + $(if ($noVariants) { '-novariants' } else { '' })) }
 
 # --- the source -------------------------------------------------------------
 if (-not $Reuse) {
@@ -80,18 +85,18 @@ $targets = @()
 if ($Core) { $targets += @('llama', 'ggml-base', 'ggml') }
 if ($Variants -contains 'all') {
     $targets += @('ggml')
-} else {
+} elseif (-not $noVariants) {
     foreach ($v in $Variants) { $targets += "ggml-cpu-$v" }
 }
 if ($Vulkan) { $targets += 'ggml-vulkan' }
-if ($Tools) { $targets += @('llama-server', 'llama-bench') }
+if ($Tools) { $targets += @('llama-server', 'llama-bench', 'llama-perplexity') }
 $targets = $targets | Select-Object -Unique
 
 $flags = @(
     '-DGGML_BACKEND_DL=ON', '-DGGML_NATIVE=OFF',
     ('-DLLAMA_BUILD_COMMON=' + $(if ($Tools) { 'ON' } else { 'OFF' })), ('-DLLAMA_BUILD_TOOLS=' + $(if ($Tools) { 'ON' } else { 'OFF' })), '-DLLAMA_BUILD_TESTS=OFF',
     '-DLLAMA_BUILD_EXAMPLES=OFF', ('-DLLAMA_BUILD_SERVER=' + $(if ($Tools) { 'ON' } else { 'OFF' })), '-DLLAMA_OPENSSL=OFF',
-    '-DGGML_OPENMP=ON', '-DGGML_CPU=ON', '-DGGML_CPU_ALL_VARIANTS=ON',
+    '-DGGML_OPENMP=ON', '-DGGML_CPU=ON', ('-DGGML_CPU_ALL_VARIANTS=' + $(if ($noVariants) { 'OFF' } else { 'ON' })),
     ('-DPERL_EXECUTABLE="{0}"' -f ($perl -replace '\\', '/')),
     # clang 21+ makes this an error; upstream's quants.c passes a block pointer to _mm_prefetch
     '-DCMAKE_C_FLAGS=-Wno-error=incompatible-pointer-types'
@@ -130,10 +135,10 @@ $bin = Get-ChildItem -Recurse -File $Build -Include '*.dll' |
 foreach ($f in $bin) { Copy-Item -Force $f.FullName $Out }
 if ($vsLlvm) { Copy-Item -Force (Join-Path $vsLlvm 'bin\libomp.dll') $Out }
 if ($Tools) {
-    # llama-server and llama-bench with every DLL of the build beside them (llama-common among them)
+    # the tools with every DLL of the build beside them (llama-common among them)
     $td = Join-Path (Split-Path -Parent $Out) 'tools'
     New-Item -ItemType Directory -Force $td | Out-Null
-    Get-ChildItem -Recurse -File $Build -Include '*.dll', 'llama-server.exe', 'llama-bench.exe' |
+    Get-ChildItem -Recurse -File $Build -Include '*.dll', 'llama-server.exe', 'llama-bench.exe', 'llama-perplexity.exe' |
         Where-Object { $_.FullName -match 'Release' -and $_.FullName -match '\\bin\\' } | ForEach-Object { Copy-Item -Force $_.FullName $td }
     if ($vsLlvm) { Copy-Item -Force (Join-Path $vsLlvm 'bin\libomp.dll') $td }
     Write-Host "tools dir: $td"
