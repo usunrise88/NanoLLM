@@ -17,10 +17,12 @@ b579cfebd0832005c2a57ce246167cad55ccf88f0adfe69a48c9696fa8c71d90  cudart-llama-b
 e881051d0c28a2dfddbcee76a969aebaa61faee7ab80d2f5ef022cfacba56dfb  llama-b11600-bin-win-cuda-12.4-x64.zip
 8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6  cudart-llama-bin-win-cuda-12.4-x64.zip
 
-# Our own libllama and libggml-base (and the CPU variants, and ggml-vulkan on windows_amd64), built by .github/workflows/libs-build.yml (release scripts/libs.release)
-e7872d4da5ce65052b4038b6be2eca4d4e0371e03f8a2d0b0384ab32c458c2b5  nanollm-libs-darwin_amd64.tar.gz
-237795c1b1acfcc791bc2330b22a5ce5dcba77475a2c9eb1d39b32fcd9384e92  nanollm-libs-darwin_arm64.tar.gz
-6455fca6d007db525521005eba0ff45726b9c0ea36b75bf5c54a8848c9a59e4f  nanollm-libs-linux_amd64.tar.gz
-88feda1c9c0861fe918dfcdf21143dcdc009116cbe2f716714c2180153ae4a71  nanollm-libs-linux_arm64.tar.gz
-93c3e365b279a83dfc54950bd5f30d9765f1b12c4376fe0f2fb9487576ccba37  nanollm-libs-windows_amd64.tar.gz
-67a6081d5cc9f860d4282fdb769593d8a801b1ea664ddd4ddb3839b5d6132502  nanollm-libs-windows_arm64.tar.gz
+# Our own libllama and libggml-base (and the CPU variants, ggml-vulkan on windows_amd64, and the ggml-cuda of the two windows_amd64_cuda* add-ons), built by .github/workflows/libs-build.yml (release scripts/libs.release)
+852d7707c27a8bdc2659102fd98a83d12428261b9d2e23198e5912c98be09c1e  nanollm-libs-darwin_amd64.tar.gz
+3e7ff079ecde44699a1ceb104a5e986d33a2dcb66f7a34a68a9303f177c3d63f  nanollm-libs-darwin_arm64.tar.gz
+35b01413dbc5758e8260acca821735482bc0b165f12d0a7bf98c39da0d477095  nanollm-libs-linux_amd64.tar.gz
+6c2ccd2a2336bc150a64d96eb77761cf329087ff38d2b4ccc9f55a213f2ba6b3  nanollm-libs-linux_arm64.tar.gz
+5a914827ba654495f3f5dcdffeccbdece9be754236105416b3d47cf65dc965cd  nanollm-libs-windows_amd64.tar.gz
+38cf293c85748c59afcf74be2c9ba0ecc90369424be16f93e5e186d883222e76  nanollm-libs-windows_amd64_cuda.tar.gz
+fda7e1289aa7c2f09c488b75ff8906ec219577307c82cf224af4accb2cddd43c  nanollm-libs-windows_amd64_cuda13.tar.gz
+c165681ce1ece85d10af8718bbfaea0c720e22e7a2c3417c64f9799bc069253c  nanollm-libs-windows_arm64.tar.gz
