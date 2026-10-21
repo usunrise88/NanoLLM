@@ -1,0 +1,20 @@
+# The standard suite on this laptop, one device per file (run_standard.ps1).
+server:
+  addr: "127.0.0.1:8091"
+  data_dir: 'C:\ProgramData\NanoLLM'
+auth:
+  mode: open
+backends:
+  lib_dir: 'C:\Projects\nanollm\dist\windows_amd64\lib'
+  enabled: [llamacpp]
+devices:
+  default: llamacpp:vulkan0
+  fallback: false
+models:
+  default: gemma-4-e4b-qat
+registry:
+  models_dir: 'C:\ProgramData\NanoLLM\models'
+bench:
+  submit_url: https://nano.llmto.day
+ui:
+  enabled: false

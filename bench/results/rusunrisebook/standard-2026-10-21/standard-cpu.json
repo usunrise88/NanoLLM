@@ -1,0 +1,250 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "standard",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "b11600-n7-1-ga02a725",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "9c268ceeb3a2500e4b4ef7414c915b2e2c75b7ea"
+    },
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Intel",
+      "model": "Intel Core i7-12700H",
+      "cores": 14,
+      "threads": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ]
+    },
+    "memory": {
+      "total_bytes": 34070962176,
+      "speed_mts": 3200
+    },
+    "gpus": [
+      {
+        "name": "Intel(R) Iris(R) Xe Graphics",
+        "vram_bytes": 17035481088,
+        "unified": true
+      }
+    ],
+    "system": {
+      "vendor": "GIGABYTE",
+      "family": "AERO",
+      "product": "AERO 5 XE",
+      "form_factor": "laptop",
+      "chassis": "notebook"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11",
+      "kernel_mm": "10.26200"
+    },
+    "power": {
+      "source": "ac",
+      "profile": "Performance"
+    },
+    "disk": {
+      "type": "nvme"
+    }
+  },
+  "runs": [
+    {
+      "preset": "ram-8g",
+      "plan_hash": "2b0a7e23b4c7e53b",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 6,
+        "enforcement": "advisory",
+        "threads_batch": 20,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5
+      },
+      "metrics": {
+        "load_ms": 3863.94,
+        "pp_tok_s": 223.82508768850542,
+        "tg_tok_s": {
+          "d0": 13.691128739343721
+        },
+        "ttft_ms": 302.606,
+        "chat_tok_s": 13.232019407350771,
+        "mtp": {
+          "acceptance": 0.7,
+          "speedup": 1.8554033534677696,
+          "tok_s": 24.55073318154923
+        },
+        "peak_rss": 6941380608,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.8008177630776758,
+          "mtp_tok_s": 0.9618248032734024,
+          "pp_tok_s": 5.023986359851236,
+          "tg_tok_s.d0": 0.10081637418226391,
+          "ttft_ms": 13.42885811725381
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "ram-6g",
+      "plan_hash": "6dd0bf88eabe5d23",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 16384,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 6,
+        "enforcement": "advisory",
+        "threads_batch": 20,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5
+      },
+      "metrics": {
+        "load_ms": 3577.287,
+        "pp_tok_s": 212.54165110656987,
+        "tg_tok_s": {
+          "d0": 13.69909706770288
+        },
+        "ttft_ms": 314.492,
+        "chat_tok_s": 13.49193230785228,
+        "mtp": {
+          "acceptance": 0.7,
+          "speedup": 1.8120808951837184,
+          "tok_s": 24.448472774171094
+        },
+        "peak_rss": 6000091136,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.08705940204960519,
+          "mtp_tok_s": 0.07185989784430381,
+          "pp_tok_s": 4.981781369256733,
+          "tg_tok_s.d0": 0.4634493467451741,
+          "ttft_ms": 6.84953183314986
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "ram-4g",
+      "plan_hash": "9b87c810cb3562df",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 6,
+        "enforcement": "advisory",
+        "threads_batch": 20,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 2,
+        "draft_p_min": 0.5
+      },
+      "metrics": {
+        "load_ms": 1953.05,
+        "pp_tok_s": 208.26203985427676,
+        "tg_tok_s": {
+          "d0": 13.742920556309961
+        },
+        "ttft_ms": 319.117,
+        "chat_tok_s": 13.567717106389255,
+        "mtp": {
+          "acceptance": 0.7,
+          "speedup": 1.7618980457565665,
+          "tok_s": 23.904934255125166
+        },
+        "peak_rss": 6195384320,
+        "buffers": {
+          "CPU_Mapped": 2002895427,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.04096409471419868,
+          "mtp_tok_s": 0.9397833486554904,
+          "pp_tok_s": 5.677753587733902,
+          "tg_tok_s.d0": 0.06237140065665792,
+          "ttft_ms": 4.842698318086727
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    }
+  ],
+  "date": "2026-10-21",
+  "duration_s": 260.8032317
+}
