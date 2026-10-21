@@ -1,0 +1,74 @@
+diff --git a/ggml/src/ggml-vulkan/ggml-vulkan.cpp b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+index e8589dc0e..e21cf9620 100644
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -1,4 +1,6 @@
+ #include "ggml-vulkan-common.h"
++#include <sstream>
++#include <set>
+ 
+ static vk_device_architecture get_device_architecture(const vk::PhysicalDevice& device) {
+     vk::PhysicalDeviceProperties props = device.getProperties();
+@@ -1857,6 +1859,41 @@ void ggml_vk_load_shaders(vk_device& device, vk_pipeline requested) {
+         m_align =  64;
+         s_align =  32;
+ 
++        // dev only: GGML_VK_DEV_TILES="m_mmq_int=128,64,64,32,8,32,2,2,2,1,8;l_mmq_int=..." (11 numbers: BLOCK_SIZE, BM, BN, BK, WM, WN, WMITER, TM, TN, TK, WARP)
++        if (const char * ev = getenv("GGML_VK_DEV_TILES")) {
++            std::string all(ev);
++            size_t pos = 0;
++            while (pos < all.size()) {
++                size_t end = all.find(';', pos);
++                if (end == std::string::npos) end = all.size();
++                const std::string item = all.substr(pos, end - pos);
++                pos = end + 1;
++                const size_t eq = item.find('=');
++                if (eq == std::string::npos) continue;
++                const std::string name = item.substr(0, eq);
++                std::vector<uint32_t> v;
++                {
++                    std::stringstream ss(item.substr(eq + 1));
++                    std::string tok;
++                    while (std::getline(ss, tok, ',')) v.push_back((uint32_t) std::stoul(tok));
++                }
++                if (v.size() != 11) continue;
++                std::vector<uint32_t> * w = nullptr;
++                std::array<uint32_t, 3> * d = nullptr;
++                if (name == "s_mmq_int") { w = &s_warptile_mmq_int; d = &s_mmq_wg_denoms; }
++                else if (name == "m_mmq_int") { w = &m_warptile_mmq_int; d = &m_mmq_wg_denoms; }
++                else if (name == "l_mmq_int") { w = &l_warptile_mmq_int; d = &l_mmq_wg_denoms; }
++                else if (name == "s_mmq") { w = &s_warptile_mmq; d = &s_mmq_wg_denoms; }
++                else if (name == "m_mmq") { w = &m_warptile_mmq; d = &m_mmq_wg_denoms; }
++                else if (name == "l_mmq") { w = &l_warptile_mmq; d = &l_mmq_wg_denoms; }
++                if (w) {
++                    *w = v;
++                    *d = { v[1], v[2], 1 };
++                    fprintf(stderr, "ggml_vulkan: dev tile %s = %u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", name.c_str(), v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10]);
++                }
++            }
++        }
++
+         if (device->vendor_id == VK_VENDOR_ID_INTEL && device->coopmat_support) {
+             // Xe1/Xe2/Xe3 with coopmat enabled - warptile performance tuning
+             l_warptile = { 512, 128, 128, 16, mm_warp_8, 32, 2, tm_l, tn_l, tk_l, mm_warp_8 };
+@@ -6019,7 +6056,20 @@ static vk_pipeline ggml_vk_guess_matmul_pipeline_map(ggml_backend_vk_context * c
+         uint32_t m, uint32_t n, bool aligned, bool mul_mat_id) {
+     auto& selector = mul_mat_id ? ctx->device->matmul_id_tile_selector : ctx->device->matmul_tile_selector;
+     uint32_t idx = selector(m, n, 0, ctx->device->shader_core_count, configs);
++    static const char * force = getenv("GGML_VK_DEV_FORCE");
++    if (force && !mul_mat_id) {
++        const uint32_t f = force[0] == 's' ? 0u : force[0] == 'm' ? 1u : 2u;
++        idx = std::min<uint32_t>(f, (uint32_t)configs.size() - 1);
++    }
+     if (idx >= configs.size()) idx = (uint32_t)configs.size() - 1;
++    static const char * info = getenv("GGML_VK_DEV_INFO");
++    if (info && !mul_mat_id) {
++        static std::set<std::pair<uint32_t, uint32_t>> seen;
++        if (seen.insert({m, n}).second) {
++            const vk_pipeline & pp = (aligned && configs[idx].aligned) ? configs[idx].aligned : configs[idx].unaligned;
++            fprintf(stderr, "ggml_vulkan: mul_mat m=%u n=%u -> %s (config %u of %zu, wg_denoms %u x %u)\n", m, n, pp->name.c_str(), idx, configs.size(), pp->wg_denoms[0], pp->wg_denoms[1]);
++        }
++    }
+     return (aligned && configs[idx].aligned) ? configs[idx].aligned : configs[idx].unaligned;
+ }
+ 
