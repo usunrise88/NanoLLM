@@ -1,0 +1,8 @@
+﻿=== [1/12] draft_max=2 start 2026-10-21T18:16:20 gpu 65C
+[1/1] vram-4g draft_max=2 …
+[1/1] vram-4g  draft_max=2              ok       pp 5489.0 tok/s  tg 89.0 tok/s  
+=== [1/12] draft_max=2 exit 0 2026-10-21T18:16:43
+=== [2/12] draft_max=3 start 2026-10-21T18:20:45 gpu 63C
+[1/1] vram-4g draft_max=3 …
+[1/1] vram-4g  draft_max=3              ok       pp 5615.0 tok/s  tg 90.6 tok/s  
+=== [2/12] draft_max=3 exit 0 2026-10-21T18:21:08

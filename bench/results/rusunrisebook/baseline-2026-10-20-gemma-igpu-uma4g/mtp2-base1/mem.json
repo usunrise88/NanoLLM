@@ -1,0 +1,13 @@
+{
+    "variant":  "mtp2",
+    "samples":  348,
+    "adapter_shared_baseline":  661417984,
+    "peak_proc_shared":  3439099904,
+    "peak_proc_dedicated":  0,
+    "peak_proc_committed":  3468533760,
+    "peak_adapter_shared":  4100501504,
+    "peak_working_set_sampled":  6456086528,
+    "peak_private_sampled":  3968819200,
+    "peak_working_set_os":  6456115200,
+    "peak_paged_os":  3974209536
+}

@@ -1,0 +1,29 @@
+server:
+  addr: "127.0.0.1:8090"
+  data_dir: "C:\\Users\\rusun\\AppData\\Local\\Temp\\claude\\C--Projects-nanollm\\9ae507c4-1490-4f40-9237-6c55572cd24b\\scratchpad\\igpu\\data"
+auth:
+  mode: open
+backends:
+  lib_dir: ./lib
+  enabled: [llamacpp]
+devices:
+  default: llamacpp:vulkan0
+  fallback: false
+models:
+  default: gemma-4-e4b-qat
+  preload: [gemma-4-e4b-qat]
+  overrides:
+    gemma-4-e4b-qat:
+      preset: uma-4g
+      mode: auto
+      speculative:
+        type: mtp
+        n_max: 2
+        p_min: 0.0
+registry:
+  models_dir: "C:\\ProgramData\\NanoLLM\\models"
+ui:
+  enabled: false
+log:
+  level: info
+  format: text

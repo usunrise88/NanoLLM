@@ -1,0 +1,218 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "standard",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "b11600-n4-11-ge6ce070",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "aad9f95e3ad7d397a4e54770d0e712ae281cd9af"
+    },
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Intel",
+      "model": "Intel Core i7-12700H",
+      "cores": 14,
+      "threads": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ]
+    },
+    "memory": {
+      "total_bytes": 34070962176,
+      "speed_mts": 3200
+    },
+    "gpus": [
+      {
+        "name": "Intel(R) Iris(R) Xe Graphics",
+        "vram_bytes": 17035481088,
+        "unified": true
+      }
+    ],
+    "system": {
+      "vendor": "GIGABYTE",
+      "family": "AERO",
+      "product": "AERO 5 XE",
+      "form_factor": "laptop",
+      "chassis": "notebook"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11",
+      "kernel_mm": "10.26200"
+    },
+    "power": {
+      "source": "ac",
+      "profile": "Performance"
+    },
+    "disk": {
+      "type": "nvme"
+    }
+  },
+  "runs": [
+    {
+      "preset": "uma-15g",
+      "plan_hash": "2671544d4feb381c",
+      "plan": {
+        "mode": "vram-full",
+        "device": "llamacpp:vulkan0",
+        "gpu_layers": -1,
+        "n_ctx": 32768,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 2926.881,
+        "pp_tok_s": 386.30025383397344,
+        "tg_tok_s": {
+          "d0": 9.29933562617362
+        },
+        "ttft_ms": 262.961,
+        "chat_tok_s": 8.168876220112518,
+        "mtp": {
+          "acceptance": 0.4713375796178344,
+          "speedup": 1.7881939509369245,
+          "tok_s": 14.607535042757693
+        },
+        "peak_rss": 8129769472,
+        "peak_vram": 4820513586,
+        "buffers": {
+          "CPU_Mapped": 2000683008,
+          "Vulkan0": 2658318417
+        },
+        "stddev": {
+          "chat_tok_s": 0.3340712311686893,
+          "mtp_tok_s": 0.31333243476011735,
+          "pp_tok_s": 158.21146311202972,
+          "tg_tok_s.d0": 0.11393408493647242,
+          "ttft_ms": 23.992772126899645
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "uma-8g",
+      "plan_hash": "2671544d4feb381c",
+      "plan": {
+        "mode": "vram-full",
+        "device": "llamacpp:vulkan0",
+        "gpu_layers": -1,
+        "n_ctx": 32768,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "tg_tok_s": {}
+      },
+      "reps": 0,
+      "output": {},
+      "status": "skipped",
+      "reason": "same plan as uma-15g",
+      "same_as": "uma-15g"
+    },
+    {
+      "preset": "uma-4g",
+      "plan_hash": "51e2544453b9e6d2",
+      "plan": {
+        "mode": "vram-ple-disk",
+        "device": "llamacpp:vulkan0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 2416.348,
+        "pp_tok_s": 366.8178309574476,
+        "tg_tok_s": {
+          "d0": 9.10296618791372
+        },
+        "ttft_ms": 262.745,
+        "chat_tok_s": 9.321182738602241,
+        "mtp": {
+          "acceptance": 0.4713375796178344,
+          "speedup": 1.5763904276105039,
+          "tok_s": 14.693823243140834
+        },
+        "peak_rss": 6461693952,
+        "peak_vram": 3310564146,
+        "buffers": {
+          "CPU_Mapped": 2000683008,
+          "Vulkan0": 2658318417
+        },
+        "stddev": {
+          "chat_tok_s": 0.055753984926733176,
+          "mtp_tok_s": 0.22054605804482247,
+          "pp_tok_s": 3.5523156214716054,
+          "tg_tok_s.d0": 0.10310722517135419,
+          "ttft_ms": 0.45734778888717914
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    }
+  ],
+  "date": "2026-10-20",
+  "duration_s": 250.1242823
+}

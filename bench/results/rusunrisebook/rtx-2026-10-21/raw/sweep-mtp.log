@@ -1,0 +1,49 @@
+﻿=== [1/12] draft_max=2 start 2026-10-21T18:22:36 gpu 65C
+[1/1] vram-4g draft_max=2 …
+[1/1] vram-4g  draft_max=2              ok       pp 5761.3 tok/s  tg 89.6 tok/s  
+=== [1/12] draft_max=2 exit 0 2026-10-21T18:22:59
+=== [2/12] draft_max=3 start 2026-10-21T18:25:01 gpu 66C
+[1/1] vram-4g draft_max=3 …
+[1/1] vram-4g  draft_max=3              ok       pp 5388.5 tok/s  tg 89.6 tok/s  
+=== [2/12] draft_max=3 exit 0 2026-10-21T18:25:24
+=== [3/12] draft_max=4 start 2026-10-21T18:27:05 gpu 66C
+[1/1] vram-4g draft_max=4 …
+[1/1] vram-4g  draft_max=4              ok       pp 5571.8 tok/s  tg 92.6 tok/s  
+=== [3/12] draft_max=4 exit 0 2026-10-21T18:27:28
+=== [4/12] draft_max=6 start 2026-10-21T18:28:48 gpu 66C
+[1/1] vram-4g draft_max=6 …
+[1/1] vram-4g  draft_max=6              ok       pp 5350.2 tok/s  tg 90.8 tok/s  
+=== [4/12] draft_max=6 exit 0 2026-10-21T18:29:11
+=== [5/12] draft_max=4;draft_p_min=0.5 start 2026-10-21T18:31:33 gpu 66C
+[1/1] vram-4g draft_max=4,draft_p_min=0.5 …
+[1/1] vram-4g  draft_max=4,draft_p_min=0.5 ok       pp 5450.6 tok/s  tg 91.1 tok/s  
+=== [5/12] draft_max=4;draft_p_min=0.5 exit 0 2026-10-21T18:31:55
+=== [6/12] draft_max=6;draft_p_min=0.5 start 2026-10-21T18:33:11 gpu 66C
+[1/1] vram-4g draft_max=6,draft_p_min=0.5 …
+[1/1] vram-4g  draft_max=6,draft_p_min=0.5 ok       pp 5444.4 tok/s  tg 92.3 tok/s  
+=== [6/12] draft_max=6;draft_p_min=0.5 exit 0 2026-10-21T18:33:34
+=== [7/12] draft_max=6;draft_p_min=0.5 start 2026-10-21T18:34:44 gpu 66C
+[1/1] vram-4g draft_max=6,draft_p_min=0.5 …
+[1/1] vram-4g  draft_max=6,draft_p_min=0.5 ok       pp 5552.7 tok/s  tg 92.4 tok/s  
+=== [7/12] draft_max=6;draft_p_min=0.5 exit 0 2026-10-21T18:35:07
+=== [8/12] draft_max=4;draft_p_min=0.5 start 2026-10-21T18:36:38 gpu 66C
+[1/1] vram-4g draft_max=4,draft_p_min=0.5 …
+[1/1] vram-4g  draft_max=4,draft_p_min=0.5 ok       pp 5420.0 tok/s  tg 92.2 tok/s  
+=== [8/12] draft_max=4;draft_p_min=0.5 exit 0 2026-10-21T18:37:00
+=== [9/12] draft_max=6 start 2026-10-21T18:39:32 gpu 69C
+[1/1] vram-4g draft_max=6 …
+[1/1] vram-4g  draft_max=6              ok       pp 5134.3 tok/s  tg 89.3 tok/s  
+=== [9/12] draft_max=6 exit 0 2026-10-21T18:39:55
+=== [10/12] draft_max=4 start 2026-10-21T18:41:32 gpu 66C
+[1/1] vram-4g draft_max=4 …
+[1/1] vram-4g  draft_max=4              ok       pp 5809.2 tok/s  tg 92.3 tok/s  
+=== [10/12] draft_max=4 exit 0 2026-10-21T18:41:53
+=== [11/12] draft_max=3 start 2026-10-21T18:43:50 gpu 66C
+[1/1] vram-4g draft_max=3 …
+[1/1] vram-4g  draft_max=3              ok       pp 4921.5 tok/s  tg 89.7 tok/s  
+=== [11/12] draft_max=3 exit 0 2026-10-21T18:44:13
+=== [12/12] draft_max=2 start 2026-10-21T18:45:49 gpu 66C
+[1/1] vram-4g draft_max=2 …
+[1/1] vram-4g  draft_max=2              ok       pp 5293.0 tok/s  tg 91.6 tok/s  
+=== [12/12] draft_max=2 exit 0 2026-10-21T18:46:11
+ALL DONE

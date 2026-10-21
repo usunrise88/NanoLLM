@@ -1,0 +1,3 @@
+[1/1] uma-4g sampling=device …
+[1/1] uma-4g   sampling=device          ok       pp 52.6 tok/s  tg 11.3 tok/s  
+result: raw/igpu-uma4g-sampling-device.json

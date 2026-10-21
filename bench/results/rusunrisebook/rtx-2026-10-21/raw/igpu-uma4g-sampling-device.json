@@ -1,0 +1,140 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "b11600-n7-2-g143b577-dirty-bs2",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "9c268ceeb3a2500e4b4ef7414c915b2e2c75b7ea"
+    },
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Intel",
+      "model": "Intel Core i7-12700H",
+      "cores": 14,
+      "threads": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ]
+    },
+    "memory": {
+      "total_bytes": 34070962176,
+      "speed_mts": 3200
+    },
+    "gpus": [
+      {
+        "name": "Intel(R) Iris(R) Xe Graphics",
+        "vram_bytes": 17035481088,
+        "unified": true
+      }
+    ],
+    "system": {
+      "vendor": "GIGABYTE",
+      "family": "AERO",
+      "product": "AERO 5 XE",
+      "form_factor": "laptop",
+      "chassis": "notebook"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11",
+      "kernel_mm": "10.26200"
+    },
+    "power": {
+      "source": "ac",
+      "profile": "Performance"
+    },
+    "disk": {
+      "type": "nvme"
+    }
+  },
+  "runs": [
+    {
+      "preset": "uma-4g",
+      "plan_hash": "25ac2a419ce0afed",
+      "plan": {
+        "mode": "vram-ple-disk",
+        "device": "llamacpp:vulkan0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 2913.408,
+        "pp_tok_s": 52.61391261470347,
+        "tg_tok_s": {
+          "d0": 11.285167792895312
+        },
+        "ttft_ms": 1014.937,
+        "chat_tok_s": 11.270454832782569,
+        "mtp": {
+          "acceptance": 0.453416149068323,
+          "speedup": 1.3224767733896898,
+          "tok_s": 14.90491474189253
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 3.128577088116834,
+          "tok_s": 34.9471130478844
+        },
+        "peak_rss": 6633070592,
+        "peak_vram": 3398644530,
+        "buffers": {
+          "CPU_Mapped": 2000683008,
+          "Vulkan0": 2658318417
+        },
+        "stddev": {
+          "chat_tok_s": 0,
+          "echo_draft_tok_s": 0,
+          "echo_tok_s": 0,
+          "mtp_tok_s": 0,
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0,
+          "ttft_ms": 0
+        }
+      },
+      "reps": 1,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "sampling=device"
+    }
+  ],
+  "date": "2026-10-21",
+  "duration_s": 63.8030097
+}

@@ -1,0 +1,29 @@
+server:
+  addr: "127.0.0.1:8090"
+  data_dir: "C:\\Projects\\runtimes\\results\\nano-data"
+auth:
+  mode: open
+backends:
+  lib_dir: "C:\\Projects\\runtimes\\nanollm-libs-sycl"
+  enabled: [llamacpp]
+devices:
+  default: llamacpp:sycl0
+  fallback: false
+models:
+  default: gemma-4-e4b-qat
+  preload: [gemma-4-e4b-qat]
+  overrides:
+    gemma-4-e4b-qat:
+      preset: uma-4g
+      mode: auto
+      speculative:
+        type: mtp
+        n_max: 2
+        p_min: 0.0
+registry:
+  models_dir: "C:\\ProgramData\\NanoLLM\\models"
+ui:
+  enabled: false
+log:
+  level: info
+  format: text

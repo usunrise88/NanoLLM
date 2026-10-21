@@ -1,0 +1,10 @@
+run            tokens  kernels/tok  ms/tok (kernel time)   top kernels (ms/token)
+d_off              65         1195                 9.621   mmvq 7.366  norm 1.048  flash_attn 0.467  quantize 0.429  other 0.312
+d_def              65         1062                 8.653   mmvq 6.806  norm 0.858  flash_attn 0.445  other 0.304  quantize 0.240
+d_noq8norm         65         1147                 8.773   mmvq 6.896  norm 0.709  flash_attn 0.466  quantize 0.379  other 0.323
+d_noq8             65         1195                 8.697   mmvq 6.852  norm 0.676  flash_attn 0.437  quantize 0.427  other 0.305
+d_nolean           65         1062                 8.997   mmvq 6.862  norm 1.134  flash_attn 0.444  other 0.310  quantize 0.247
+d_def2             65         1062                 8.525   mmvq 6.825  norm 0.692  flash_attn 0.458  other 0.305  quantize 0.245
+d_fin              65         1062                 8.451   mmvq 6.691  norm 0.729  flash_attn 0.462  other 0.315  quantize 0.253
+v_off              65         1268                 9.925   mmvq 7.486  norm 1.082  quantize 0.491  flash_attn 0.490  other 0.375
+v_fin              65         1111                 9.070   mmvq 7.159  norm 0.754  flash_attn 0.506  other 0.385  quantize 0.265

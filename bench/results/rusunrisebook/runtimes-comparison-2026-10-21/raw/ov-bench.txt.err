@@ -1,0 +1,4 @@
+load_backend: loaded RPC backend from C:\Projects\runtimes\llamacpp-b11600\openvino\ggml-rpc.dll
+OpenVINO: using device GPU.0
+load_backend: loaded OPENVINO backend from C:\Projects\runtimes\llamacpp-b11600\openvino\ggml-openvino.dll
+load_backend: loaded CPU backend from C:\Projects\runtimes\llamacpp-b11600\openvino\ggml-cpu-alderlake.dll

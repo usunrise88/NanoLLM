@@ -1,0 +1,17 @@
+﻿=== [1/4] sampling=device start 2026-10-21T19:16:48 gpu 66C
+[1/1] vram-4g sampling=device …
+[1/1] vram-4g  sampling=device          ok       pp 5425.6 tok/s  tg 92.5 tok/s  
+=== [1/4] sampling=device exit 0 2026-10-21T19:17:14
+=== [2/4] sampling=host start 2026-10-21T19:19:26 gpu 66C
+[1/1] vram-4g sampling=host …
+[1/1] vram-4g  sampling=host            ok       pp 4791.5 tok/s  tg 81.2 tok/s  
+=== [2/4] sampling=host exit 0 2026-10-21T19:19:51
+=== [3/4] sampling=host start 2026-10-21T19:22:23 gpu 71C
+[1/1] vram-4g sampling=host …
+[1/1] vram-4g  sampling=host            ok       pp 3997.4 tok/s  tg 71.9 tok/s  
+=== [3/4] sampling=host exit 0 2026-10-21T19:22:52
+=== [4/4] sampling=device start 2026-10-21T19:25:24 gpu 69C
+[1/1] vram-4g sampling=device …
+[1/1] vram-4g  sampling=device          ok       pp 4763.2 tok/s  tg 77.8 tok/s  
+=== [4/4] sampling=device exit 0 2026-10-21T19:25:50
+ALL DONE

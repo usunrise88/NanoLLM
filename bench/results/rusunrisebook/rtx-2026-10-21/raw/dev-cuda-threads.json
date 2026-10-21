@@ -1,0 +1,341 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "b11600-n7-2-g143b577-dirty",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "9c268ceeb3a2500e4b4ef7414c915b2e2c75b7ea"
+    },
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Intel",
+      "model": "Intel Core i7-12700H",
+      "cores": 14,
+      "threads": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ]
+    },
+    "memory": {
+      "total_bytes": 34070962176,
+      "speed_mts": 3200
+    },
+    "gpus": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vendor": "NVIDIA",
+        "vram_bytes": 8589410304,
+        "driver_major": "581"
+      }
+    ],
+    "system": {
+      "vendor": "GIGABYTE",
+      "family": "AERO",
+      "product": "AERO 5 XE",
+      "form_factor": "laptop",
+      "chassis": "notebook"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11",
+      "kernel_mm": "10.26200"
+    },
+    "power": {
+      "source": "ac",
+      "profile": "Performance"
+    },
+    "disk": {
+      "type": "nvme"
+    }
+  },
+  "runs": [
+    {
+      "preset": "vram-4g",
+      "plan_hash": "9a65682c1ff90350",
+      "plan": {
+        "mode": "vram-ple-host",
+        "device": "llamacpp:cuda0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 1,
+        "enforcement": "advisory",
+        "threads_batch": 1,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 3527.983,
+        "pp_tok_s": 5171.570905065311,
+        "tg_tok_s": {
+          "d0": 88.27029559984392
+        },
+        "ttft_ms": 25.477,
+        "chat_tok_s": 87.31477236695086,
+        "mtp": {
+          "acceptance": 0.4713375796178344,
+          "speedup": 1.496184877080491,
+          "tok_s": 130.63904196115743
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 2.487867305963729,
+          "tok_s": 204.03097736461058
+        },
+        "peak_rss": 2704949248,
+        "peak_vram": 3315817512,
+        "buffers": {
+          "CUDA0": 2658328903,
+          "CUDA_Host": 2000683008
+        },
+        "stddev": {
+          "chat_tok_s": 0.8450122994436585,
+          "echo_draft_tok_s": 3.0134155752850056,
+          "echo_tok_s": 0.15277783397561515,
+          "mtp_tok_s": 2.8937011047084,
+          "pp_tok_s": 1344.7123902598387,
+          "tg_tok_s.d0": 1.1570347247751906,
+          "ttft_ms": 0.8631317010360224
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "8271256b02a077d34caef99e1bb9db5199d19534140121e5d14b8e0ff02c0c7c",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "threads=1"
+    },
+    {
+      "preset": "vram-4g",
+      "plan_hash": "b86a2c3d2ff0992e",
+      "plan": {
+        "mode": "vram-ple-host",
+        "device": "llamacpp:cuda0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 2,
+        "enforcement": "advisory",
+        "threads_batch": 2,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 3837.967,
+        "pp_tok_s": 5102.178091924906,
+        "tg_tok_s": {
+          "d0": 82.69390973028632
+        },
+        "ttft_ms": 28.982,
+        "chat_tok_s": 80.71252765198486,
+        "mtp": {
+          "acceptance": 0.4713375796178344,
+          "speedup": 1.5091217099814618,
+          "tok_s": 121.80502774708941
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 2.3659379793852215,
+          "tok_s": 184.10711961077146
+        },
+        "peak_rss": 2704343040,
+        "peak_vram": 3315817512,
+        "buffers": {
+          "CUDA0": 2658328903,
+          "CUDA_Host": 2000683008
+        },
+        "stddev": {
+          "chat_tok_s": 0.8949891207152006,
+          "echo_draft_tok_s": 3.2068129795924882,
+          "echo_tok_s": 0.44621297930550374,
+          "mtp_tok_s": 2.328999883706742,
+          "pp_tok_s": 1426.8733778959283,
+          "tg_tok_s.d0": 1.0874446590534694,
+          "ttft_ms": 1.8334467540673238
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "8271256b02a077d34caef99e1bb9db5199d19534140121e5d14b8e0ff02c0c7c",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "threads=2"
+    },
+    {
+      "preset": "vram-4g",
+      "plan_hash": "0531a0a39d993dae",
+      "plan": {
+        "mode": "vram-ple-host",
+        "device": "llamacpp:cuda0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "advisory",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 3944.597,
+        "pp_tok_s": 5412.851504973586,
+        "tg_tok_s": {
+          "d0": 73.09085394576947
+        },
+        "ttft_ms": 32.743,
+        "chat_tok_s": 72.714335092963,
+        "mtp": {
+          "acceptance": 0.4713375796178344,
+          "speedup": 1.4439215330945812,
+          "tok_s": 104.99379420538423
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 2.316554976718467,
+          "tok_s": 165.47302418368704
+        },
+        "peak_rss": 2704359424,
+        "peak_vram": 3315817512,
+        "buffers": {
+          "CUDA0": 2658328903,
+          "CUDA_Host": 2000683008
+        },
+        "stddev": {
+          "chat_tok_s": 0.2039359338086129,
+          "echo_draft_tok_s": 1.3609154265931585,
+          "echo_tok_s": 0.04653186847418686,
+          "mtp_tok_s": 2.062137060242428,
+          "pp_tok_s": 1438.1425952366483,
+          "tg_tok_s.d0": 2.9651894400013785,
+          "ttft_ms": 0.5031898250163636
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "8271256b02a077d34caef99e1bb9db5199d19534140121e5d14b8e0ff02c0c7c",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "threads=4"
+    },
+    {
+      "preset": "vram-4g",
+      "plan_hash": "e11a0d0658608c38",
+      "plan": {
+        "mode": "vram-ple-host",
+        "device": "llamacpp:cuda0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 6,
+        "enforcement": "advisory",
+        "threads_batch": 6,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 3877.891,
+        "pp_tok_s": 5083.86894341912,
+        "tg_tok_s": {
+          "d0": 73.09179201045708
+        },
+        "ttft_ms": 33.014,
+        "chat_tok_s": 72.54249862297773,
+        "mtp": {
+          "acceptance": 0.4713375796178344,
+          "speedup": 1.414631755729237,
+          "tok_s": 102.62092219200875
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 2.2972470377634107,
+          "tok_s": 163.13431631821007
+        },
+        "peak_rss": 2704588800,
+        "peak_vram": 3315817512,
+        "buffers": {
+          "CUDA0": 2658328903,
+          "CUDA_Host": 2000683008
+        },
+        "stddev": {
+          "chat_tok_s": 0.2612981466562049,
+          "echo_draft_tok_s": 5.920235783504208,
+          "echo_tok_s": 0.5040981475477363,
+          "mtp_tok_s": 1.196499362900542,
+          "pp_tok_s": 1552.1827434223849,
+          "tg_tok_s.d0": 3.6054937218940846,
+          "ttft_ms": 0.7197964990189918
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "8271256b02a077d34caef99e1bb9db5199d19534140121e5d14b8e0ff02c0c7c",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "threads=6"
+    }
+  ],
+  "date": "2026-10-21",
+  "duration_s": 104.5997557
+}

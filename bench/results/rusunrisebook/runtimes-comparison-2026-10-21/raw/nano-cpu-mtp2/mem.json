@@ -1,0 +1,9 @@
+{
+    "variant":  "nano-cpu-mtp2",
+    "ready":  true,
+    "peak_proc_shared":  278528,
+    "peak_proc_dedicated":  24576,
+    "peak_adapter_shared":  590102528,
+    "peak_working_set_os":  6008840192,
+    "peak_private_sampled":  6279794688
+}

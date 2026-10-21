@@ -1,0 +1,21 @@
+# The dev suite on the RTX through our own ggml-cuda.dll (docs/AUTOTUNE.md, 'ggml-cuda'): the lib directory is the n7
+# libraries without ggml-vulkan.dll, plus the ggml-cuda.dll of build-libs-windows.ps1 -Cuda and the CUDA 13 runtime.
+server:
+  addr: "127.0.0.1:8091"
+  data_dir: 'C:\ProgramData\NanoLLM'
+auth:
+  mode: open
+backends:
+  lib_dir: 'C:\Projects\runtimes\libs\dev-cuda'
+  enabled: [llamacpp]
+devices:
+  default: llamacpp:cuda0
+  fallback: false
+models:
+  default: gemma-4-e4b-qat
+registry:
+  models_dir: 'C:\ProgramData\NanoLLM\models'
+bench:
+  submit: never
+ui:
+  enabled: false

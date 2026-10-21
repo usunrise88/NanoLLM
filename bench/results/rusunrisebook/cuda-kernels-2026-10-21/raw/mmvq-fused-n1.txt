@@ -1,0 +1,2 @@
+shape                              0        11        12        21        31   best
+gate/up geglu 10240x2560       1.6us     1.6us     1.6us     1.6us     1.6us   12 (18905 GB/s)

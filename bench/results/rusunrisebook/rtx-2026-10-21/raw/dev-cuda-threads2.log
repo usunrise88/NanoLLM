@@ -1,0 +1,6 @@
+[1/2] vram-4g threads=6 …
+[1/2] vram-4g  threads=6                ok       pp 5446.2 tok/s  tg 88.8 tok/s  
+      about 0 min left
+[2/2] vram-4g threads=1 …
+[2/2] vram-4g  threads=1                ok       pp 5482.6 tok/s  tg 81.7 tok/s  
+result: raw/dev-cuda-threads2.json

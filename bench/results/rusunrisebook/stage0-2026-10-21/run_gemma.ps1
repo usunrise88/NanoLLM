@@ -19,6 +19,8 @@ param(
     [string[]]$EnvPairs = @(),
     # models.<id>.flash_attention: auto, on, off or small ('' leaves the key out).
     [string]$FlashAttention = '',
+    # models.<id>.sampling: auto, host or device ('' leaves the key out).
+    [string]$Sampling = '',
     [string]$intelLuid = 'luid_0x00000000_0x0C4E07D4'
 )
 $ErrorActionPreference = 'Stop'
@@ -67,7 +69,7 @@ models:
   overrides:
     gemma-4-e4b-qat:
       preset: $Preset
-      mode: auto$(if ($FlashAttention) { "`n      flash_attention: $FlashAttention" })
+      mode: auto$(if ($FlashAttention) { "`n      flash_attention: $FlashAttention" })$(if ($Sampling) { "`n      sampling: $Sampling" })
       speculative:
         $(Spec $v)
 registry:

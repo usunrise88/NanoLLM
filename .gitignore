@@ -32,3 +32,21 @@
 .claude/worktrees/
 __pycache__/
 .pytest_cache/
+
+# Private: the answers of the owner's gemma.json transcript, and what the stage-0 runs kept of them. Never committed.
+answers.json
+/bench/results/*/stage0-*/gemma/
+/bench/results/*/stage0-*/raw/
+
+# Scratch of the measurement drivers, profiler traces and the Vulkan bandwidth probe's binaries.
+/bench/results/*/*/driver*.log
+/bench/results/*/*/driver*.stdout.txt
+/bench/results/*/*/standard-*.log
+*.nsys-rep
+*.sqlite
+/bench/results/*/stage0-*/vkbw/vkbw.exe
+/bench/results/*/stage0-*/vkbw/vkbw.obj
+/bench/results/*/stage0-*/vkbw/read.spv
+/llama.log
+# The ik_llama.cpp server logs echo pieces of the prompt.
+/bench/results/*/runtimes-comparison-*/raw/ik-*/serve.log

@@ -1,0 +1,9 @@
+{
+    "variant":  "nano-openvino-mtp2",
+    "ready":  true,
+    "peak_proc_shared":  473075712,
+    "peak_proc_dedicated":  28672,
+    "peak_adapter_shared":  1063690240,
+    "peak_working_set_os":  13141712896,
+    "peak_private_sampled":  9088270336
+}

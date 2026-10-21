@@ -1,0 +1,141 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "dev",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "9c268ceeb3a2500e4b4ef7414c915b2e2c75b7ea"
+    },
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Intel",
+      "model": "Intel Core i7-12700H",
+      "cores": 14,
+      "threads": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ]
+    },
+    "memory": {
+      "total_bytes": 34070962176,
+      "speed_mts": 3200
+    },
+    "gpus": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vendor": "NVIDIA",
+        "vram_bytes": 8589410304,
+        "driver_major": "581"
+      }
+    ],
+    "system": {
+      "vendor": "GIGABYTE",
+      "family": "AERO",
+      "product": "AERO 5 XE",
+      "form_factor": "laptop",
+      "chassis": "notebook"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11",
+      "kernel_mm": "10.26200"
+    },
+    "power": {
+      "source": "ac",
+      "profile": "Performance"
+    },
+    "disk": {
+      "type": "nvme"
+    }
+  },
+  "runs": [
+    {
+      "preset": "vram-4g",
+      "plan_hash": "b3c0effcdd589fdb",
+      "plan": {
+        "mode": "vram-ple-host",
+        "device": "llamacpp:cuda0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 2672.912,
+        "pp_tok_s": 4505.744714802347,
+        "tg_tok_s": {
+          "d0": 101.11773697750883
+        },
+        "ttft_ms": 24.583,
+        "chat_tok_s": 100.82529574490096,
+        "mtp": {
+          "acceptance": 0.38285714285714284,
+          "speedup": 1.4866552393160715,
+          "tok_s": 149.89245417474942
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 2.8150038990426216,
+          "tok_s": 280.43074398237536
+        },
+        "peak_rss": 2830774272,
+        "peak_vram": 3315817512,
+        "buffers": {
+          "CUDA0": 2658328903,
+          "CUDA_Host": 2000683008
+        },
+        "stddev": {
+          "chat_tok_s": 0.11800064774352399,
+          "echo_draft_tok_s": 0.06169408282067317,
+          "echo_tok_s": 0.08312615671710169,
+          "mtp_tok_s": 3.0666685773939926,
+          "pp_tok_s": 1683.4490658605612,
+          "tg_tok_s.d0": 0.5487962144534678,
+          "ttft_ms": 2.9549992385785835
+        }
+      },
+      "reps": 2,
+      "output": {
+        "sha256": "29291c69437de4b6483a6da6558dcbac9c37e1e61fe5eae7d7ad60b528f90d95",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "env.GGML_CUDA_NANO_MMVQ_NWARPS=0,env.GGML_CUDA_NANO_MMVQ_NWARPS_N=0"
+    }
+  ],
+  "date": "2026-10-21",
+  "duration_s": 15.140921
+}

@@ -1,0 +1,9 @@
+{
+    "variant":  "nano-sycl-mtp2",
+    "ready":  true,
+    "peak_proc_shared":  3905617920,
+    "peak_proc_dedicated":  28672,
+    "peak_adapter_shared":  4496232448,
+    "peak_working_set_os":  7519617024,
+    "peak_private_sampled":  4956905472
+}

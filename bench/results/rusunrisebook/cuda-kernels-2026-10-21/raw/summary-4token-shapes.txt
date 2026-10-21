@@ -1,0 +1,15 @@
+llama-bench -p 4 (the shape of a draft's verification), nsys; nofuse = upstream shapes and no fusion, fuse = fused gate/up for 4 tokens, nfNN = shape NN, unfused
+run          evals  fused4 us  gate/up unfused us  mmvq4 ms  gelu*up ms  all kernels ms
+n4_nofuse       65        0.0                41.3     4.033       0.056           9.436
+n4_fuse         65      155.7                 0.0     5.794       0.000          11.105
+n4_12           65       89.1                 0.0     4.170       0.000           9.521
+n4_14           65      106.4                 0.0     4.526       0.000           9.841
+n4_22           65      104.4                 0.0     4.520       0.000           9.888
+n4_24           65      131.9                 0.0     5.282       0.000          10.618
+n4_32           65      116.3                 0.0     4.891       0.000          10.298
+n4_34           65      139.6                 0.0     5.459       0.000          10.832
+n4_nf12         65        0.0                38.4     3.850       0.055           9.204
+n4_nf22         65        0.0                40.3     3.974       0.057           9.468
+n4_nf32         65        0.0                38.5     3.856       0.060           9.307
+n4_nf14         65        0.0                38.1     3.821       0.053           9.101
+n4_nf24         65        0.0                39.9     3.938       0.055           9.291

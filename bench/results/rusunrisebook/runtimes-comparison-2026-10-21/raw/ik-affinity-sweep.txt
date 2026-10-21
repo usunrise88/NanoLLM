@@ -1,0 +1,9 @@
+
+P-phys 6T        mask 0x555 t=6 : pp512 86.77 ± 1.00   tg128 8.77 ± 0.10
+P-phys 5T        mask 0x155 t=5 : pp512 77.71 ± 0.88   tg128 8.93 ± 0.10
+P-phys 4T        mask 0x55 t=4 : pp512 63.84 ± 1.06   tg128 8.87 ± 0.05
+P-HT 12T         mask 0xFFF t=12: pp512 79.36 ± 0.56   tg128 6.78 ± 0.04
+P-phys+E 14T     mask 0xFF555 t=14: pp512 59.66 ± 1.41   tg128 6.13 ± 0.06
+E-only 8T        mask 0xFF000 t=8 : pp512 43.50 ± 0.99   tg128 3.41 ± 0.13
+P-phys+4E 10T    mask 0xF0555 t=10: pp512 63.10 ± 3.79   tg128 7.19 ± 0.11
+all 20T          mask 0xFFFFF t=20: pp512 63.96 ± 6.45   tg128 4.75 ± 0.06

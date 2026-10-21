@@ -1,0 +1,29 @@
+time=2026-10-20T23:18:45.979+02:00 level=INFO msg="starting nanollm" version=b11600-n4-11-ge6ce070 llama_cpp=b11600 addr=127.0.0.1:8090 dialects="[openai native]" backends=[llamacpp]
+time=2026-10-20T23:18:46.131+02:00 level=INFO msg="backend opened" backend=llamacpp version="b11600 (aad9f95e3)" lib_dir=C:\Projects\nanollm\dist\windows_amd64\lib
+time=2026-10-20T23:18:46.137+02:00 level=INFO msg="loading model" key="gemma-4-e4b-qat@8c5a9e4f llamacpp:vulkan0 uma-4g/vram-ple-disk ctx=8192" gpu_layers=-1 n_ctx=8192 slots=1
+time=2026-10-20T23:18:46.148+02:00 level=WARN msg="authentication disabled" addr=127.0.0.1:8090 note="open mode is only permitted on a loopback address"
+time=2026-10-20T23:18:46.525+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-20T23:18:46.633+02:00 level=WARN msg="load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-20T23:18:46.634+02:00 level=WARN msg="load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-20T23:18:46.681+02:00 level=WARN msg="load: '</s>' is a normal token here, removing it from EOG list" component=llama.cpp
+time=2026-10-20T23:18:47.035+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-20T23:18:47.549+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-20T23:18:48.032+02:00 level=WARN msg="llama_kv_cache_iswa: using full-size SWA cache (ref: https://github.com/ggml-org/llama.cpp/pull/13194#issuecomment-2868343055)" component=llama.cpp
+time=2026-10-20T23:18:48.062+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-20T23:18:48.572+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-20T23:18:48.735+02:00 level=WARN msg="load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-20T23:18:48.736+02:00 level=WARN msg="load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-20T23:18:48.789+02:00 level=WARN msg="load: '</s>' is a normal token here, removing it from EOG list" component=llama.cpp
+time=2026-10-20T23:18:48.841+02:00 level=WARN msg="llama_kv_cache_iswa: using full-size SWA cache (ref: https://github.com/ggml-org/llama.cpp/pull/13194#issuecomment-2868343055)" component=llama.cpp
+time=2026-10-20T23:18:48.841+02:00 level=WARN msg="llama_kv_cache: layer   3: sharing with layer 41. k = 0000000006001000, v = 0000000007001000" component=llama.cpp
+time=2026-10-20T23:18:48.841+02:00 level=WARN msg="llama_kv_cache: layer   0: sharing with layer 40. k = 0000000013001000, v = 0000000013801000" component=llama.cpp
+time=2026-10-20T23:18:48.841+02:00 level=WARN msg="llama_kv_cache: layer   1: sharing with layer 40. k = 0000000013001000, v = 0000000013801000" component=llama.cpp
+time=2026-10-20T23:18:48.842+02:00 level=WARN msg="llama_kv_cache: layer   2: sharing with layer 40. k = 0000000013001000, v = 0000000013801000" component=llama.cpp
+time=2026-10-20T23:18:48.857+02:00 level=INFO msg="model loaded" model=gemma-4-e4b-qat
+time=2026-10-20T23:18:49.082+02:00 level=INFO msg=request method=GET path=/readyz status=200 ms=0
+time=2026-10-20T23:19:13.746+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=24445
+time=2026-10-20T23:19:36.610+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=22845
+time=2026-10-20T23:19:59.912+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=23274
+time=2026-10-20T23:20:14.646+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=14709
+time=2026-10-20T23:20:36.021+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=21372
+time=2026-10-20T23:20:36.039+02:00 level=INFO msg=request method=GET path=/api/v1/models status=200 ms=0

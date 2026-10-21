@@ -1,0 +1,245 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "standard",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "b11600-n7-1-ga02a725",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "9c268ceeb3a2500e4b4ef7414c915b2e2c75b7ea"
+    },
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Intel",
+      "model": "Intel Core i7-12700H",
+      "cores": 14,
+      "threads": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ]
+    },
+    "memory": {
+      "total_bytes": 34070962176,
+      "speed_mts": 3200
+    },
+    "gpus": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vendor": "NVIDIA",
+        "vram_bytes": 8407482368,
+        "driver_major": "581"
+      }
+    ],
+    "system": {
+      "vendor": "GIGABYTE",
+      "family": "AERO",
+      "product": "AERO 5 XE",
+      "form_factor": "laptop",
+      "chassis": "notebook"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11",
+      "kernel_mm": "10.26200"
+    },
+    "power": {
+      "source": "ac",
+      "profile": "Performance"
+    },
+    "disk": {
+      "type": "nvme"
+    }
+  },
+  "runs": [
+    {
+      "preset": "vram-7g",
+      "plan_hash": "42e5cef621ebcae8",
+      "plan": {
+        "mode": "vram-full",
+        "device": "llamacpp:vulkan0",
+        "gpu_layers": -1,
+        "n_ctx": 16384,
+        "slots": 2,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 4083.13,
+        "pp_tok_s": 5022.6953234978755,
+        "tg_tok_s": {
+          "d0": 88.19632474108997
+        },
+        "ttft_ms": 30.588,
+        "chat_tok_s": 87.1137260776791,
+        "mtp": {
+          "acceptance": 0.4303030303030303,
+          "speedup": 1.236685855459882,
+          "tok_s": 107.73231285667242
+        },
+        "peak_rss": 2509619200,
+        "peak_vram": 6716338994,
+        "buffers": {
+          "Vulkan0": 4621252689,
+          "Vulkan_Host": 37748736
+        },
+        "stddev": {
+          "chat_tok_s": 1.1130046672448952,
+          "mtp_tok_s": 28.953017314518988,
+          "pp_tok_s": 1283.7964587716954,
+          "tg_tok_s.d0": 1.0172190465806172,
+          "ttft_ms": 5891.927641141226
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "vram-8g",
+      "plan_hash": "5045c46b3b257200",
+      "plan": {
+        "mode": "vram-full",
+        "device": "llamacpp:vulkan0",
+        "gpu_layers": -1,
+        "n_ctx": 32768,
+        "slots": 4,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 4092.545,
+        "pp_tok_s": 3646.287338836948,
+        "tg_tok_s": {
+          "d0": 89.95942971388297
+        },
+        "ttft_ms": 32.382,
+        "chat_tok_s": 87.67107854686637,
+        "mtp": {
+          "acceptance": 0.4303030303030303,
+          "speedup": 1.2074765209983587,
+          "tok_s": 105.86076891594405
+        },
+        "peak_rss": 2747908096,
+        "peak_vram": 7154643762,
+        "buffers": {
+          "Vulkan0": 4621252689,
+          "Vulkan_Host": 37748736
+        },
+        "stddev": {
+          "chat_tok_s": 1.7656133442979471,
+          "mtp_tok_s": 2.7865501337092966,
+          "pp_tok_s": 1133.575487049408,
+          "tg_tok_s.d0": 1.779336160013287,
+          "ttft_ms": 3.0551226380185366
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "vram-4g",
+      "plan_hash": "cd4e8a91b5034772",
+      "plan": {
+        "mode": "vram-ple-host",
+        "device": "llamacpp:vulkan0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 3729.202,
+        "pp_tok_s": 4890.671521677042,
+        "tg_tok_s": {
+          "d0": 93.41620944826253
+        },
+        "ttft_ms": 34.426,
+        "chat_tok_s": 93.28944762656954,
+        "mtp": {
+          "acceptance": 0.4303030303030303,
+          "speedup": 1.1284673931297957,
+          "tok_s": 105.27409976967354
+        },
+        "peak_rss": 2537910272,
+        "peak_vram": 3310564146,
+        "buffers": {
+          "Vulkan0": 2658318417,
+          "Vulkan_Host": 2000683008
+        },
+        "stddev": {
+          "chat_tok_s": 0.5817481775708632,
+          "mtp_tok_s": 1.8878591983339936,
+          "pp_tok_s": 2594.428994262886,
+          "tg_tok_s.d0": 0.26717449825809486,
+          "ttft_ms": 3.65371390961763
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    }
+  ],
+  "date": "2026-10-21",
+  "duration_s": 65.654986
+}

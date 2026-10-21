@@ -1,0 +1,22 @@
+time=2026-10-21T01:19:12.854+02:00 level=INFO msg="starting nanollm" version=b11600-n4-11-ge6ce070 llama_cpp=b11600 addr=127.0.0.1:8090 dialects="[openai native]" backends=[llamacpp]
+time=2026-10-21T01:19:13.014+02:00 level=INFO msg="backend opened" backend=llamacpp version="b11600 (aad9f95e3)" lib_dir=C:\Projects\nanollm\dist\windows_amd64\lib
+time=2026-10-21T01:19:13.020+02:00 level=INFO msg="loading model" key="gemma-4-e4b-qat@8c5a9e4f llamacpp:cpu ram-6g/ram-full ctx=16384" gpu_layers=0 n_ctx=16384 slots=1
+time=2026-10-21T01:19:13.032+02:00 level=WARN msg="authentication disabled" addr=127.0.0.1:8090 note="open mode is only permitted on a loopback address"
+time=2026-10-21T01:19:13.365+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:19:13.509+02:00 level=WARN msg="load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-21T01:19:13.509+02:00 level=WARN msg="load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-21T01:19:13.554+02:00 level=WARN msg="load: '</s>' is a normal token here, removing it from EOG list" component=llama.cpp
+time=2026-10-21T01:19:13.879+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:19:14.389+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:19:14.896+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:19:15.405+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:19:15.878+02:00 level=WARN msg="llama_kv_cache_iswa: using full-size SWA cache (ref: https://github.com/ggml-org/llama.cpp/pull/13194#issuecomment-2868343055)" component=llama.cpp
+time=2026-10-21T01:19:15.914+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:19:16.064+02:00 level=INFO msg="model loaded" model=gemma-4-e4b-qat
+time=2026-10-21T01:19:16.427+02:00 level=INFO msg=request method=GET path=/readyz status=200 ms=0
+time=2026-10-21T01:20:10.030+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=53385
+time=2026-10-21T01:21:03.713+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=53663
+time=2026-10-21T01:22:00.557+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=56826
+time=2026-10-21T01:22:28.521+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=27939
+time=2026-10-21T01:23:01.902+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=200 ms=33366
+time=2026-10-21T01:23:01.929+02:00 level=INFO msg=request method=GET path=/api/v1/models status=200 ms=1

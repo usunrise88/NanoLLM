@@ -1,0 +1,24 @@
+# The standard suite on the RTX 3070 Ti Laptop through CUDA (run_rtx.ps1), not submitted. The lib directory is
+# the n7 libraries without ggml-vulkan.dll plus the windows_amd64_cuda add-on (CUDA 12.4, upstream b11600).
+server:
+  addr: "127.0.0.1:8091"
+  data_dir: 'C:\ProgramData\NanoLLM'
+auth:
+  mode: open
+backends:
+  lib_dir: 'C:\Projects\runtimes\libs\n7-cuda'
+  enabled: [llamacpp]
+devices:
+  default: llamacpp:cuda0
+  fallback: false
+models:
+  default: gemma-4-e4b-qat
+  overrides:
+    gemma-4-e4b-qat:
+      sampling: host
+registry:
+  models_dir: 'C:\ProgramData\NanoLLM\models'
+bench:
+  submit: never
+ui:
+  enabled: false

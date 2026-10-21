@@ -1,0 +1,14 @@
+﻿0.01.488.995 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.489.424 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.533.098 W load: '</s>' is a normal token here, removing it from EOG list
+0.02.845.780 I cmn          init: llama threadpool init, n_threads = 14
+0.02.912.932 I 
+0.02.912.972 I system_info: n_threads = 14 (n_threads_batch = 14) / 20 | CUDA : ARCHS = 860 | USE_GRAPHS = 1 | FA_QUANTS = q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16 | NANOLLM = 14 | NANO_GRAPH_SHAPES = 1 | NANO_MMVQ_NWARPS = -1 | NANO_MMVQ_NWARPS_N = -1 | NANO_FUSE_BATCH = 0 | NANO_Q8_CACHE = 1 | NANO_NORM_LEAN = 1 | NANO_GELU_MUL = 1 | NANO_FA_VEC = 0 | NANO_NORM_Q8 = 1 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | REPACK_Q4_0_ROWS = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.02.913.240 I perplexity: saving all logits to C:\Projects\runtimes\kld-cuda-off-base.bin
+0.02.913.250 I perplexity: tokenizing the input ..
+0.03.002.092 I perplexity: tokenization took 88.835 ms
+0.03.002.145 I perplexity: calculating perplexity over 6 chunks, n_ctx=2048, batch_size=2048, n_seq=1
+0.07 minutes
+[1]7.7953,[2]9.3795,[3]14.9183,[4]15.4228,[5]17.4171,[6]20.0040,
+0.03.931.422 I perplexity: 0.74 seconds per pass - ETA 0.13.995.107 I Final estimate: PPL = 20.0040 +/- 1.01290
+

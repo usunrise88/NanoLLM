@@ -1,0 +1,39 @@
+time=2026-10-21T01:03:19.494+02:00 level=INFO msg="starting nanollm" version=b11600-n4-11-ge6ce070 llama_cpp=b11600 addr=127.0.0.1:8090 dialects="[openai native]" backends=[llamacpp]
+time=2026-10-21T01:03:19.767+02:00 level=INFO msg="backend opened" backend=llamacpp version="b11600 (aad9f95e3)" lib_dir=C:\Projects\runtimes\nanollm-libs-openvino
+time=2026-10-21T01:03:19.773+02:00 level=INFO msg="loading model" key="gemma-4-e4b-qat@8c5a9e4f llamacpp:openvino1 uma-4g/vram-ple-disk ctx=8192" gpu_layers=-1 n_ctx=8192 slots=1
+time=2026-10-21T01:03:19.784+02:00 level=WARN msg="authentication disabled" addr=127.0.0.1:8090 note="open mode is only permitted on a loopback address"
+time=2026-10-21T01:03:20.191+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:20.339+02:00 level=WARN msg="load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-21T01:03:20.340+02:00 level=WARN msg="load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-21T01:03:20.403+02:00 level=WARN msg="load: '</s>' is a normal token here, removing it from EOG list" component=llama.cpp
+time=2026-10-21T01:03:20.704+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:21.217+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:21.731+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:22.243+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:22.758+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:23.268+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:23.781+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:24.293+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:24.806+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:25.316+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:25.466+02:00 level=WARN msg="llama_kv_cache_iswa: using full-size SWA cache (ref: https://github.com/ggml-org/llama.cpp/pull/13194#issuecomment-2868343055)" component=llama.cpp
+time=2026-10-21T01:03:25.828+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:26.187+02:00 level=WARN msg="load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-21T01:03:26.187+02:00 level=WARN msg="load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden" component=llama.cpp
+time=2026-10-21T01:03:26.239+02:00 level=WARN msg="load: '</s>' is a normal token here, removing it from EOG list" component=llama.cpp
+time=2026-10-21T01:03:26.339+02:00 level=INFO msg=request method=GET path=/readyz status=503 ms=0
+time=2026-10-21T01:03:26.658+02:00 level=WARN msg="llama_kv_cache_iswa: using full-size SWA cache (ref: https://github.com/ggml-org/llama.cpp/pull/13194#issuecomment-2868343055)" component=llama.cpp
+time=2026-10-21T01:03:26.659+02:00 level=WARN msg="llama_kv_cache: layer   3: sharing with layer 41. k = FFFFB80206010000, v = FFFFB80207010000" component=llama.cpp
+time=2026-10-21T01:03:26.659+02:00 level=WARN msg="llama_kv_cache: layer   0: sharing with layer 40. k = FFFFB8021B010000, v = FFFFB8021B810000" component=llama.cpp
+time=2026-10-21T01:03:26.660+02:00 level=WARN msg="llama_kv_cache: layer   1: sharing with layer 40. k = FFFFB8021B010000, v = FFFFB8021B810000" component=llama.cpp
+time=2026-10-21T01:03:26.660+02:00 level=WARN msg="llama_kv_cache: layer   2: sharing with layer 40. k = FFFFB8021B010000, v = FFFFB8021B810000" component=llama.cpp
+time=2026-10-21T01:03:26.671+02:00 level=INFO msg="model loaded" model=gemma-4-e4b-qat
+time=2026-10-21T01:03:26.854+02:00 level=INFO msg=request method=GET path=/readyz status=200 ms=0
+time=2026-10-21T01:03:33.332+02:00 level=ERROR msg="GGML OpenVINO backend ov::Exception: Check 'product.get_static_in() == 0' failed at src\\core\\shape_inference\\include\\reshape_shape_inference.hpp:343:" component=llama.cpp
+time=2026-10-21T01:03:33.332+02:00 level=ERROR msg="While validating node 'opset1::Reshape Reshape_7761 (opset1::Unsqueeze Unsqueeze_7759_node_1201#n1198[0]:i32[1,?,?,1], opset1::Constant Constant_7760[0]:i64[4]) -> (dynamic[...])' with friendly_name 'Reshape_7761':" component=llama.cpp
+time=2026-10-21T01:03:33.333+02:00 level=ERROR msg="Cannot infer '-1' dimension with zero-size output dimension unless at least one input dimension is also zero-size" component=llama.cpp
+time=2026-10-21T01:03:33.333+02:00 level=ERROR msg="graph_compute: ggml_backend_sched_graph_compute_async failed with error -1" component=llama.cpp
+time=2026-10-21T01:03:33.333+02:00 level=ERROR msg="process_ubatch: failed to compute graph, compute status: -1" component=llama.cpp
+time=2026-10-21T01:03:33.333+02:00 level=WARN msg="decode: removing memory module entries for seq_id = 0, pos = [0, +inf)" component=llama.cpp
+time=2026-10-21T01:03:33.333+02:00 level=INFO msg=request method=POST path=/v1/chat/completions status=500 ms=6232
+time=2026-10-21T01:03:33.429+02:00 level=INFO msg=request method=GET path=/api/v1/models status=200 ms=0

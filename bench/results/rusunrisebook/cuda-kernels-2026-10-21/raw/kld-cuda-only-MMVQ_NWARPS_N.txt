@@ -1,0 +1,58 @@
+﻿0.01.518.547 W load: control-looking token:     50 '<|tool_response>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.518.941 W load: control-looking token:    212 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.01.561.606 W load: '</s>' is a normal token here, removing it from EOG list
+0.02.963.044 I cmn          init: llama threadpool init, n_threads = 14
+0.03.037.208 I 
+0.03.037.249 I system_info: n_threads = 14 (n_threads_batch = 14) / 20 | CUDA : ARCHS = 860 | USE_GRAPHS = 1 | FA_QUANTS = q4_0-q4_0,q8_0-q8_0,f16-f16,bf16-bf16 | NANOLLM = 14 | NANO_GRAPH_SHAPES = 1 | NANO_MMVQ_NWARPS = -1 | NANO_MMVQ_NWARPS_N = -1 | NANO_FUSE_BATCH = 0 | NANO_Q8_CACHE = 1 | NANO_NORM_LEAN = 1 | NANO_GELU_MUL = 1 | NANO_FA_VEC = 0 | NANO_NORM_Q8 = 1 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | REPACK_Q4_0_ROWS = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.03.131.225 I kl_divergence: computing over 6 chunks, n_ctx=2048, batch_size=2048, n_seq=1
+0.07 minutes
+
+chunk             PPL               ln(PPL(Q)/PPL(base))          KL Divergence              Δp RMS            Same top p
+   1       7.7953 ±    0.8501       0.01009 ±    0.00756       0.00000 ±    0.00000     0.001 ±  0.000 %    100.000 ±  0.000 %
+   2       9.3795 ±    0.7356       0.01298 ±    0.00546      -0.00000 ±    0.00000     0.001 ±  0.000 %    100.000 ±  0.000 %
+   3      14.9183 ±    1.0179       0.01902 ±    0.00742      -0.00000 ±    0.00000     0.001 ±  0.000 %    100.000 ±  0.000 %
+   4      15.4228 ±    0.9295       0.02268 ±    0.00728       0.00000 ±    0.00000     0.001 ±  0.000 %    99.976 ±  0.024 %
+   5      17.4171 ±    0.9484       0.02252 ±    0.00623      -0.00000 ±    0.00000     0.001 ±  0.000 %    99.980 ±  0.020 %
+   6      20.0040 ±    1.0129       0.02366 ±    0.00557       0.00000 ±    0.00000     0.001 ±  0.000 %    99.984 ±  0.016 %
+
+====== Perplexity statistics ======
+Mean PPL(Q)                   :  20.004016 ±   1.012905
+Mean PPL(base)                :  19.536331 ±   0.962257
+Cor(ln(PPL(Q)), ln(PPL(base))):  99.42%
+Mean ln(PPL(Q)/PPL(base))     :   0.023657 ±   0.005574
+Mean PPL(Q)/PPL(base)         :   1.023939 ±   0.005707
+Mean PPL(Q)-PPL(base)         :   0.467685 ±   0.118157
+
+====== KL divergence statistics ======
+Mean    KLD:   0.000000 ±   0.000000
+Maximum KLD:   0.000060
+99.9%   KLD:   0.000054
+99.0%   KLD:   0.000038
+95.0%   KLD:   0.000023
+90.0%   KLD:   0.000015
+Median  KLD:  -0.000000
+10.0%   KLD:  -0.000014
+ 5.0%   KLD:  -0.000022
+ 1.0%   KLD:  -0.000037
+ 0.1%   KLD:  -0.000050
+Minimum KLD:  -0.000056
+
+====== Token probability statistics ======
+Mean    Δp: -0.000 ± 0.000 %
+Maximum Δp:  0.005%
+99.9%   Δp:  0.004%
+99.0%   Δp:  0.002%
+95.0%   Δp:  0.000%
+90.0%   Δp:  0.000%
+75.0%   Δp:  0.000%
+Median  Δp:  0.000%
+25.0%   Δp:  0.000%
+10.0%   Δp: -0.000%
+ 5.0%   Δp: -0.000%
+ 1.0%   Δp: -0.002%
+ 0.1%   Δp: -0.004%
+Minimum Δp: -0.005%
+RMS Δp    :  0.001 ± 0.000 %
+Same top p: 99.984 ± 0.016 %
+
+0.03.887.494 I kl_divergence: 0.76 seconds per pass - ETA 
