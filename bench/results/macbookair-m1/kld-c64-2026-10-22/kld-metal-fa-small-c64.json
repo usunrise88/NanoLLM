@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 64 -ngl 99",
+    "name": "metal-fa-small-c64"
+  },
+  "date": "2026-10-22",
+  "extra": {
+    "kld_max": 1.126199,
+    "kld_mean": 0.001684,
+    "kld_median": 0.000386,
+    "kld_p99": 0.018545,
+    "ppl_ratio": 1.00758,
+    "top1_pct": 98.725
+  },
+  "model": "gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}

@@ -46,7 +46,8 @@ models:
       # repack: off       # auto | off | on: off keeps the weights as the file has them (generic kernels);
       #                   # on repacks even where the planner keeps them in the file (breaks that mode's memory budget)
       # flash_attention: auto  # auto | on | off | small: small keeps flash attention for batches of up to 8 tokens and
-      #                   # prefills through the matmul attention (auto on an Intel iGPU with Vulkan on Windows)
+      #                   # prefills through the matmul attention (auto on an Intel iGPU with Vulkan on Windows
+      #                   # and on Metal on an Apple M1)
       # sampling: auto    # auto | host | device: device samples in the GPU graph, only the token comes back
       #                   # (auto on CUDA); a grammar, penalties or logprobs sample on the host anyway
       # cuda_nano: {MMVQ_NWARPS: 12}  # switches of NanoLLM's own ggml-cuda (the NANO_* names that `nanollm devices`
