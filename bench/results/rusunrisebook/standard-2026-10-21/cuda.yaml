@@ -1,0 +1,22 @@
+# The standard suite on the RTX 3070 Ti Laptop through CUDA (run_standard_cuda.ps1): the release v0.1.0-rc.1 as its archives
+# unpack (windows-amd64.zip + windows-amd64-cuda13.zip), without ggml-vulkan.dll so that the one GPU the suite can pick is
+# the CUDA device (the same card also shows up as a Vulkan device).
+server:
+  addr: "127.0.0.1:8091"
+  data_dir: 'C:\ProgramData\NanoLLM'
+auth:
+  mode: open
+backends:
+  lib_dir: 'D:\n8rc\lib-cuda'
+  enabled: [llamacpp]
+devices:
+  default: llamacpp:cuda0
+  fallback: false
+models:
+  default: gemma-4-e4b-qat
+registry:
+  models_dir: 'C:\ProgramData\NanoLLM\models'
+bench:
+  submit_url: https://nano.llmto.day
+ui:
+  enabled: false

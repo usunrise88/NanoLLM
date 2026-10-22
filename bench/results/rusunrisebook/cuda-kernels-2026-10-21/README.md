@@ -212,3 +212,21 @@ the app archive, the add-on unpacked over it, in a directory of its own; no serv
 
 Not tried: `install.ps1` itself on this machine (it elevates, registers a service, edits the machine PATH and the firewall and
 writes a configuration with keys into C:\ProgramData\NanoLLM, where the development models live).
+
+## The public standard suite on the RTX, submitted (release v0.1.0-rc.1)
+
+`standard-2026-10-21/run_standard_cuda.ps1` (config `cuda.yaml`: the release's lib directory without ggml-vulkan.dll, so that the
+card is the CUDA device), the quick choice (the derived preset and two representative ones, 3 repetitions), sent with
+`--submit` to nano.llmto.day: <https://nano.llmto.day/benchmarks/s/arhylwj7h2rca>. Not a quiet machine, by the owner's choice:
+Chrome, Steam and Sunshine held 3.2 GiB of the card and 15 % of its utilisation during the run, so the numbers are
+what the working desk gets, below the clean ones of the dev suite (tg 104-106).
+
+| Preset | Mode, context x slots | pp | tg | chat | MTP chat (acc.) | Peak VRAM |
+| --- | --- | --- | --- | --- | --- | --- |
+| vram-6.5g (derived) | vram-full, 16k x 2 | 5226 | 102.5 | 103.9 | 172.1 (0.46) | 5.41 GB |
+| vram-8g | vram-full, 32k x 4 | 272 | 68.0 | 66.8 | 46.9 (0.46) | 7.13 GB |
+| vram-4g | vram-ple-host, 8k x 1 | 5783 | 99.9 | 100.7 | 164.2 (0.46) | 3.32 GB |
+
+Against the same suite on the n7 series with upstream's CUDA 12.4 DLL (`../rtx-2026-10-21`, 2026-10-21 evening): derived
+preset tg 89.1 -> 102.5, MTP 147.3 -> 172.1; vram-4g tg 88.8 -> 99.9, MTP 139.2 -> 164.2. vram-8g does not fit next to the
+desktop (the driver spills it to shared memory: pp 272, tg 68), as before; the derived preset is the one to use here.
