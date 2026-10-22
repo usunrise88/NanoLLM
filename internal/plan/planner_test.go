@@ -507,3 +507,27 @@ func TestStreamRanges(t *testing.T) {
 		}
 	}
 }
+
+// ggml names the Apple GPU "mtl0": the plan must know it as Metal on unified
+// memory, or a Mac plans as a discrete card with a driver's overhead.
+func TestMetalDeviceKind(t *testing.T) {
+	for id, want := range map[string]string{
+		"mtl0": BackendMetal, "metal": BackendMetal, "cuda1": BackendCUDA, "vulkan0": BackendVulkan,
+	} {
+		if got := Kind(id); got != want {
+			t.Errorf("Kind(%q) = %q, want %q", id, got, want)
+		}
+	}
+	for _, sel := range []string{"llamacpp:mtl0", "mtl0", "llamacpp:metal0"} {
+		d, err := ParseDevice(sel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d.Backend != BackendMetal || !d.Unified {
+			t.Errorf("ParseDevice(%q) = %+v, want metal on unified memory", sel, d)
+		}
+	}
+	if d := SyntheticDevice(preset(t, "uma-4g")); d.Selector != "llamacpp:mtl0" || !d.Unified {
+		t.Errorf("synthetic uma device: %+v", d)
+	}
+}

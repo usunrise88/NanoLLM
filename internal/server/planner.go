@@ -73,7 +73,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		r.FlashAttnSmallBatch = req.Device.Has(backend.FeatureFlashAttnSmallBatch)
 		r.BackendSampling = req.Device.Has(backend.FeatureBackendSampling)
 		r.Device = &plan.Device{
-			Selector: req.Device.Selector(), Backend: strings.TrimRight(req.Device.ID, "0123456789"),
+			Selector: req.Device.Selector(), Backend: plan.Kind(req.Device.ID),
 			Memory: plan.DeviceMemory(req.Device), Unified: req.Device.Unified,
 		}
 	}

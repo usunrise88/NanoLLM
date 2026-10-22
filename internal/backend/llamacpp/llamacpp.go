@@ -124,6 +124,7 @@ func (b *llamaBackend) Devices(context.Context) ([]backend.Device, error) {
 			d.Features = cpuFeatures(llamaPrintSystemInfo())
 		case GgmlBackendDeviceTypeGpu:
 			d.Type = backend.GPU
+			d.Unified = unifiedGPU(d.ID, runtime.GOOS, runtime.GOARCH)
 			d.Features = gpuFeatures(d.ID, llamaPrintSystemInfo())
 		case GgmlBackendDeviceTypeIgpu:
 			d.Type = backend.GPU
@@ -247,6 +248,14 @@ func igpuFeatures(id, name, goos string) []string {
 		return []string{backend.FeatureFlashAttnSmallBatch}
 	}
 	return nil
+}
+
+// unifiedGPU reports whether a GPU-type device shares the host's memory. ggml
+// reports Metal as a plain GPU ("mtl0") even on Apple Silicon, where it maps
+// the host's memory, so the platform decides; a Mac with a discrete GPU is not
+// unified.
+func unifiedGPU(id, goos, goarch string) bool {
+	return goos == "darwin" && goarch == "arm64" && strings.HasPrefix(id, "mtl")
 }
 
 // cpuFeatures reads the device features out of llama_print_system_info, which

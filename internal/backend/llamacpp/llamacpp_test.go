@@ -66,6 +66,7 @@ func TestBackendLibPattern(t *testing.T) {
 	for name, want := range map[string]string{
 		"libggml-vulkan.so": "vulkan", "ggml-cuda.dll": "cuda", "libggml-rpc.so": "rpc",
 		"libggml-base.so": "base", "libggml-cpu-haswell.so": "", "libggml.so": "", "libggml-vulkan.so.0": "",
+		"libggml-metal.dylib": "metal", "libggml-metal.0.dylib": "", "libggml-metal.0.26.0.dylib": "", "libggml.dylib": "",
 	} {
 		m := backendLib.FindStringSubmatch(name)
 		got := ""
@@ -224,5 +225,37 @@ func TestIGPUFeatures(t *testing.T) {
 		if got := igpuFeatures(c[0], c[1], c[2]); len(got) != 0 {
 			t.Errorf("%v: %v", c, got)
 		}
+	}
+}
+
+func TestUnifiedGPU(t *testing.T) {
+	for _, c := range []struct {
+		id, goos, goarch string
+		want             bool
+	}{
+		{"mtl0", "darwin", "arm64", true},     // Apple Silicon: Metal maps the host's memory
+		{"mtl0", "darwin", "amd64", false},    // an Intel Mac may carry a discrete GPU
+		{"vulkan0", "darwin", "arm64", false}, // another backend (MoltenVK) says its own
+		{"cuda0", "linux", "amd64", false},
+		{"mtl0", "linux", "arm64", false},
+	} {
+		if got := unifiedGPU(c.id, c.goos, c.goarch); got != c.want {
+			t.Errorf("%+v: %v, want %v", c, got, c.want)
+		}
+	}
+}
+
+func TestProbeBackendsMetalRegistersAsMTL(t *testing.T) {
+	dir := t.TempDir()
+	for _, n := range []string{"libggml-metal.dylib", "libggml-metal.0.dylib", "libggml-base.dylib"} {
+		if err := os.WriteFile(filepath.Join(dir, n), []byte("not a library"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := probeBackends(dir, map[string]bool{"cpu": true, "mtl": true}); len(got) != 0 {
+		t.Errorf("Metal registered as MTL, yet warned: %v", got)
+	}
+	if got := probeBackends(dir, map[string]bool{"cpu": true}); len(got) != 1 || !strings.HasPrefix(got[0], "libggml-metal.dylib:") {
+		t.Errorf("an unregistered Metal library should warn once: %v", got)
 	}
 }

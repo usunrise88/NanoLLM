@@ -297,7 +297,7 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 	v.Plan(&req)
 	if onGPU {
 		req.Device = &plan.Device{
-			Selector: gpu.Selector(), Backend: strings.TrimRight(gpu.ID, "0123456789"),
+			Selector: gpu.Selector(), Backend: plan.Kind(gpu.ID),
 			Memory: gpu.MemoryTotal, Unified: gpu.Unified,
 		}
 	}

@@ -219,9 +219,11 @@ func cpuVariantOf(path string) string {
 }
 
 // backendLib matches a ggml backend library file name and captures the
-// backend: libggml-vulkan.so, ggml-cuda.dll. The CPU variants are
+// backend: libggml-vulkan.so, ggml-cuda.dll, libggml-metal.dylib (versioned
+// names like libggml-metal.0.dylib are the symlinks of the same file and do
+// not match). The CPU variants are
 // alternatives of which ggml loads only the best one, so they are not listed.
-var backendLib = regexp.MustCompile(`^(?:lib)?ggml-([a-z0-9]+)\.(?:so|dll)$`)
+var backendLib = regexp.MustCompile(`^(?:lib)?ggml-([a-z0-9]+)\.(?:so|dll|dylib)$`)
 
 // probeBackends names each backend library in dir that did not register,
 // with the loader's reason. ggml_backend_load_all_from_path skips a library
@@ -238,7 +240,11 @@ func probeBackends(dir string, regs map[string]bool) []string {
 		if m == nil || m[1] == "base" || m[1] == "cpu" {
 			continue
 		}
-		if regs[m[1]] {
+		name := m[1]
+		if name == "metal" {
+			name = "mtl" // ggml-metal registers as "MTL", like its devices
+		}
+		if regs[name] {
 			continue
 		}
 		path := filepath.Join(dir, e.Name())
