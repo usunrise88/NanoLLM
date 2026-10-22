@@ -62,6 +62,9 @@ func collect(ctx context.Context) benchfmt.Machine {
 		if looksVirtual(info.vendor, info.product) {
 			m.System.FormFactor = benchfmt.FormVM
 		}
+		if cleanSystem(&m.System, info.boardVendor, info.boardProduct) {
+			m.Extra = append(m.Extra, benchfmt.Field{Key: "system_name_from", Value: "baseboard"})
+		}
 	}
 
 	var ps struct {

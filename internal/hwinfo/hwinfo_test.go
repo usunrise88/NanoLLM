@@ -82,6 +82,51 @@ func TestLinuxVMAndWSL(t *testing.T) {
 	}
 }
 
+// A server board that left the system strings as placeholders and filled only
+// the baseboard's (the hyper EPYC host): the machine is named by its board, and
+// the result says so.
+func TestLinuxPlaceholdersNameTheBoard(t *testing.T) {
+	m := linuxProfile(fstest.MapFS{
+		"proc/cpuinfo":                     file("processor : 0\nmodel name : AMD EPYC 7351P 16-Core Processor\nflags : avx2\n"),
+		"sys/class/dmi/id/sys_vendor":      file("To Be Filled By O.E.M.\n"),
+		"sys/class/dmi/id/product_name":    file("To Be Filled By O.E.M.\n"),
+		"sys/class/dmi/id/product_family":  file("To Be Filled By O.E.M.\n"),
+		"sys/class/dmi/id/product_version": file("To Be Filled By O.E.M.\n"),
+		"sys/class/dmi/id/board_vendor":    file("ASRockRack\n"),
+		"sys/class/dmi/id/board_name":      file("EPYCD8-2T\n"),
+		"sys/class/dmi/id/board_serial":    file("MUST-NOT-BE-READ\n"),
+		"sys/class/dmi/id/chassis_type":    file("3\n"),
+	})
+	if m.System.Vendor != "ASRockRack" || m.System.Family != "EPYCD8-2T" || m.System.Product != "EPYCD8-2T" {
+		t.Errorf("system %+v", m.System)
+	}
+	from := ""
+	for _, f := range m.Extra {
+		if f.Key == "system_name_from" {
+			from = f.Value
+		}
+	}
+	if from != "baseboard" {
+		t.Errorf("extra %+v", m.Extra)
+	}
+	b, _ := json.Marshal(m)
+	if strings.Contains(string(b), "MUST-NOT-BE-READ") {
+		t.Fatal("a board serial leaked into the profile")
+	}
+
+	// A real system name wins; the board is not consulted for the name.
+	m = linuxProfile(fstest.MapFS{
+		"proc/cpuinfo":                    file("processor : 0\nmodel name : x\n"),
+		"sys/class/dmi/id/sys_vendor":     file("LENOVO\n"),
+		"sys/class/dmi/id/product_family": file("ThinkPad X1 Carbon Gen 11\n"),
+		"sys/class/dmi/id/board_vendor":   file("LENOVO\n"),
+		"sys/class/dmi/id/board_name":     file("21HM\n"),
+	})
+	if m.System.Family != "ThinkPad X1 Carbon Gen 11" || len(m.Extra) > 0 && m.Extra[len(m.Extra)-1].Key == "system_name_from" {
+		t.Errorf("system %+v extra %+v", m.System, m.Extra)
+	}
+}
+
 // smbiosStruct builds one SMBIOS structure: formatted area, then strings.
 func smbiosStruct(typ byte, formatted []byte, strs ...string) []byte {
 	b := append([]byte{typ, byte(4 + len(formatted)), 0, 0}, formatted...)
@@ -109,14 +154,19 @@ func TestParseSMBIOS(t *testing.T) {
 	binary.LittleEndian.PutUint16(t17[0x15-4:], 4800)
 	binary.LittleEndian.PutUint16(t17[0x20-4:], 4800)
 	mem := smbiosStruct(17, t17)
+	// Type 2: manufacturer=1, product=2, version=3, serial=4 (never read).
+	base := smbiosStruct(2, []byte{1, 2, 3, 4, 0, 0, 0, 0}, "ASUSTeK COMPUTER INC.", "ROG Zephyrus G14 board", "Rev 1.0", "BOARD-SERIAL-NOT-READ")
 	end := smbiosStruct(127, nil)
-	table := append(append(append(sys, enc...), mem...), end...)
+	table := append(append(append(append(sys, base...), enc...), mem...), end...)
 	raw := append([]byte{0, 3, 4, 0, 0, 0, 0, 0}, table...)
 	binary.LittleEndian.PutUint32(raw[4:], uint32(len(table)))
 
 	info := parseSMBIOS(raw)
 	if info.vendor != "ASUSTeK COMPUTER INC." || info.product != "ROG Zephyrus G14 GA402RJ" || info.family != "ROG Zephyrus G14" {
 		t.Fatalf("%+v", info)
+	}
+	if info.boardVendor != "ASUSTeK COMPUTER INC." || info.boardProduct != "ROG Zephyrus G14 board" {
+		t.Fatalf("baseboard %+v", info)
 	}
 	if info.chassis != 10 || info.memMTS != 4800 {
 		t.Fatalf("%+v", info)

@@ -490,8 +490,8 @@ soak; оптимизации за переключателем, результа
 | № | Задача | Состояние |
 | --- | --- | --- |
 | 1 | Отмена клиентом: код и статус 499 вместо 500, счётчик отмен | готово: `core.CodeCancelled` и `StatusClientClosedRequest`, тест на пяти маршрутах (`TestClientCancelIs499`); счётчик отмен `nanollm_requests_total{outcome="cancelled"}` уже был |
-| 8 | Заглушки SMBIOS: имя платы вместо «To Be Filled By O.E.M.» | в работе |
-| 6 | Разбор `tool/bad_output` (4,8 % в soak): модель или парсер | очередь |
+| 8 | Заглушки SMBIOS: имя платы вместо «To Be Filled By O.E.M.» | готово: `benchfmt.Placeholder` общий для клиента и сервиса, `hwinfo.cleanSystem` берёт `board_vendor` и `board_name` (Linux) и SMBIOS type 2 (Windows), в `Extra` пишется `system_name_from=baseboard`; на hyper теперь «ASRockRack EPYCD8-2T», форм-фактор server; версия нормализатора 2. Уже отправленный результат остаётся «unknown» |
+| 6 | Разбор `tool/bad_output` (4,8 % в soak): модель или парсер | в работе |
 | 3 | Документы: устаревшие строки STAGE2, аудит в ROADMAP; «этап 2 закрыт» после задачи 2 | очередь |
 | 5 | Пропускная способность с MTP при 1, 2, 4 слотах (CPU-часть O3) | очередь |
 | 4 | KLD при 4096 токенов, KV q8_0 и пара шума при 4096 | очередь |
