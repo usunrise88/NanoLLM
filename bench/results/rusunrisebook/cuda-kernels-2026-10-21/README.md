@@ -144,7 +144,7 @@ The graph per shape removes the old cost of a minimum probability (it was 130 ag
 
 - The gate/up GEGLU fusion for 2-4 tokens (`FUSE_BATCH`): the kernel takes 156 us for four tokens (89 us with one warp) against
   87 us for the two mat-vecs and the GEGLU launch it replaces. Off.
-- The vector flash attention kernel for one token on Ampere (`FA_VEC`): no change on cc 8.6. Off.
+- The vector flash attention kernel for one token on Ampere (`FA_VEC`): no change on cc 8.6, at any depth (below). Off.
 - `gelu*mul` in one launch: no measurable change (42 launches of 1.2 us); kept, it is exact.
 
 ## The add-ons of release b11600-n8, from CI, on the RTX
@@ -172,3 +172,22 @@ upstream's own 12.4 and 13.4 builds differ). What matters is that the property t
 `NANOLLM_TEST_DEVICE=cuda0 go test -tags native` with each add-on, `TestNativeBatchInvariance` (largest difference 0 for
 batches of 2, 3 and 4 on both prompts), `TestNativeMTPEquivalence` (MTP == plain decoding on 13 prompts, 12.4: 310 of 847
 drafts accepted, 85 -> 150 tok/s; 13.4: 309 of 860, 85 -> 144), `TestNativeCudaNano` and `TestNativeBackendSampling` pass.
+
+## Flash attention kernel for one token, by depth (plan item 1.7)
+
+Upstream picks the MMA kernel for D=256 on Ampere and the vector kernel from Ada on; `GGML_CUDA_NANO_FA_VEC=1` takes the vector
+kernel for one token on cc 8.6 too. `fa_depth.ps1`: `llama-bench -fa 1 -p 0 -n 64 -d 0,4096,8192 -r 2`, A B B A, each from a
+cool GPU (<= 66 C), with the ggml-cuda.dll of the b11600-n8 CUDA 13.4 add-on (`raw/fa-depth-*.csv`), tg in tokens/s:
+
+| depth | FA_VEC=0 (MMA) | FA_VEC=1 (vector) |
+| --- | --- | --- |
+| 0 | 104.1, 104.7 | 104.2, 104.9 |
+| 4096 | 97.9, 98.0 | 97.4, 97.2 |
+| 8192 | 95.9, 95.4 | 96.1, 96.4 |
+
+No difference at any depth (< 1 %). nsys of the same model at depth 4096 (`raw/nsys-fa-vec.txt`) shows the switch changes the
+kernel: 100 launches of `flash_attn_ext_f16<256,256,2,4>` (10.05 us) + 100 `stream_k_fixup` (2.6 us) become 100 of
+`flash_attn_ext_vec<256,1>` (11.35 us) + 65 `combine_results` (2.0 us): 1.26 ms against 1.26 ms. The D=512 layers have no vector
+kernel (the vector instances stop at 256) and 2-4 tokens go to the MMA kernel on Ampere for an unquantized cache, so there is
+nothing to choose there. All flash attention is 0.46 ms of the 8.45 ms of a token: whatever the choice, it can move the token
+by 5 % at most, and by measurement it moves it by nothing. The rule for cc 8.6 stays upstream's (`FA_VEC` 0).

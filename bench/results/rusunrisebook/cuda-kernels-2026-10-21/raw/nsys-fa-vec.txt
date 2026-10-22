@@ -1,0 +1,19 @@
+FA_VEC=0  (llama-bench -p 0 -n 16 -d 4096 -r 1, nsys; launches, total ns, kernel)
+    32  26151928  void flash_attn_ext_f16<(int)512, (int)512, (int)16, (int)4, (bool)0, (bool)0, (bool)0>
+   160  23284477  void flash_attn_ext_f16<(int)256, (int)256, (int)16, (int)4, (bool)0, (bool)0, (bool)0>
+   160   7079544  void flash_attn_stream_k_fixup_general<(int)256, (int)16, (int)4>(float *, const float2 *, int, int, int, int, uint3, uint3, uint3, uint3)
+    32   1594574  void flash_attn_stream_k_fixup_general<(int)512, (int)16, (int)4>(float *, const float2 *, int, int, int, int, uint3, uint3, uint3, uint3)
+   100   1005098  void flash_attn_ext_f16<(int)256, (int)256, (int)2, (int)4, (bool)0, (bool)0, (bool)0>
+    20    764233  void flash_attn_ext_f16<(int)512, (int)512, (int)2, (int)4, (bool)0, (bool)0, (bool)0>
+   100    256610  void flash_attn_stream_k_fixup_uniform<(int)256, (int)2, (int)4>(float *, const float2 *, int, int, int, int, int, int, uint3, uint3, uint3)
+    20    101952  void flash_attn_stream_k_fixup_uniform<(int)512, (int)2, (int)4>(float *, const float2 *, int, int, int, int, int, int, uint3, uint3, uint3)
+
+FA_VEC=1  (llama-bench -p 0 -n 16 -d 4096 -r 1, nsys; launches, total ns, kernel)
+    32  27333564  void flash_attn_ext_f16<(int)512, (int)512, (int)16, (int)4, (bool)0, (bool)0, (bool)0>
+   160  22567818  void flash_attn_ext_f16<(int)256, (int)256, (int)16, (int)4, (bool)0, (bool)0, (bool)0>
+   160   7499846  void flash_attn_stream_k_fixup_general<(int)256, (int)16, (int)4>(float *, const float2 *, int, int, int, int, uint3, uint3, uint3, uint3)
+    32   1586252  void flash_attn_stream_k_fixup_general<(int)512, (int)16, (int)4>(float *, const float2 *, int, int, int, int, uint3, uint3, uint3, uint3)
+   100   1135343  void flash_attn_ext_vec<(int)256, (int)1, (ggml_type)1, (ggml_type)1, (bool)0>
+    20    787465  void flash_attn_ext_f16<(int)512, (int)512, (int)2, (int)4, (bool)0, (bool)0, (bool)0>
+    65    128962  void flash_attn_combine_results<(int)256>
+    20    107810  void flash_attn_stream_k_fixup_uniform<(int)512, (int)2, (int)4>(float *, const float2 *, int, int, int, int, int, int, uint3, uint3, uint3)
