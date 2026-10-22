@@ -72,6 +72,6 @@ jobs:
         run: |
           ./scripts/fetch-libs.sh "${{ needs.release.outputs.tag }}" \
             linux_amd64 linux_arm64 windows_amd64 windows_arm64 darwin_universal \
-            linux_amd64_cuda windows_amd64_cuda
+            linux_amd64_cuda windows_amd64_cuda windows_amd64_cuda13
       - name: layout
         run: for d in dist/*/lib; do echo "== $d"; ls -l "$d"; done
