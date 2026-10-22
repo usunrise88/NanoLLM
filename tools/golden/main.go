@@ -7,16 +7,23 @@
 //
 // The file name carries what the golden depends on: cpu-<variant>[-<kv>].json,
 // and cpu-mtp-<variant>[-<kv>].json with a drafter (the KV type is left out
-// for f16). The native tests pick every file whose variant and model match
-// the machine they run on; the tool says when -out is not that name.
+// for f16). A generic CPU library has no variant (darwin), and the CPU's name
+// stands in: cpu-apple-m1.json. With -device the whole model runs on that
+// ggml device, and its kind and name stand in for the CPU's:
+//
+//	go run ./tools/golden -device mtl0 -model gemma-4-e4b.gguf \
+//	    -out testdata/golden/b11600/gemma-4-e4b-qat/mtl-apple-m1.json
+//
+// The native tests pick every file whose kernels and model match the run
+// (NANOLLM_TEST_DEVICE for a GPU); the tool says when -out is not that name.
 //
 // It starts llama-server on loopback with the settings the native test uses
 // (one slot, flash attention, f16 KV, repacked CPU weights, n_batch and
 // n_ubatch 512), asks it to tokenize the prompt and to complete it greedily,
 // and writes the prompt, both token lists, the text and the ggml CPU variant
-// the server picked. Greedy decoding on the same CPU kernels is
-// deterministic, so the test compares ids exactly; on another CPU variant
-// the kernels differ and the test skips.
+// the server picked (or the device). Greedy decoding on the same kernels is
+// deterministic, so the test compares ids exactly; on another CPU variant or
+// another GPU the kernels differ and the test skips.
 //
 // With -drafter the server runs with the MTP drafter (--spec-type
 // draft-mtp, greedy drafting) and the file also records how many tokens it
@@ -58,7 +65,14 @@ type Golden struct {
 	ModelSHA256 string `json:"model_sha256"`
 	CPUVariant  string `json:"cpu_variant"`
 	CPUFeatures string `json:"cpu_features,omitempty"`
-	Threads     int    `json:"threads"`
+	// CPUName names the CPU of a recording on it (sysctl's brand string on
+	// darwin), for the file name where the library has no variant.
+	CPUName string `json:"cpu_name,omitempty"`
+	// Device is the ggml device the whole model ran on (mtl0, cuda0), and
+	// DeviceName its description (Apple M1); empty is the CPU.
+	Device     string `json:"device,omitempty"`
+	DeviceName string `json:"device_name,omitempty"`
+	Threads    int    `json:"threads"`
 	// KVType is the K and V cache type, and the drafter's with MTP; empty is
 	// f16.
 	KVType       string  `json:"kv_type,omitempty"`
@@ -92,6 +106,7 @@ func main() {
 	n := flag.Int("n", 32, "tokens to generate")
 	threads := flag.Int("threads", 4, "CPU threads")
 	kv := flag.String("kv", "f16", "KV cache type for K and V (and the drafter's): f16 or q8_0")
+	device := flag.String("device", "", "ggml device to run the whole model on (mtl0, cuda0: llama-server --list-devices); empty is the CPU")
 	drafter := flag.String("drafter", "", "MTP drafter GGUF: record a speculative run")
 	draftMax := flag.Int("draft-max", 3, "tokens drafted per step at most")
 	draftPMin := flag.Float64("draft-p-min", 0, "draft probability floor")
@@ -104,7 +119,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "golden: -kv must be f16 or q8_0")
 		os.Exit(2)
 	}
-	if err := run(*tools, *model, *out, *prompt, *n, *threads, *kv, *drafter, *draftMax, *draftPMin); err != nil {
+	if err := run(*tools, *model, *out, *prompt, *n, *threads, *kv, *device, *drafter, *draftMax, *draftPMin); err != nil {
 		fmt.Fprintln(os.Stderr, "golden:", err)
 		os.Exit(1)
 	}
@@ -114,7 +129,7 @@ func defaultTools() string {
 	return filepath.Join("dist", runtime.GOOS+"_"+runtime.GOARCH, "tools")
 }
 
-func run(tools, model, out, prompt string, n, threads int, kv, drafter string, draftMax int, draftPMin float64) error {
+func run(tools, model, out, prompt string, n, threads int, kv, device, drafter string, draftMax int, draftPMin float64) error {
 	st, err := os.Stat(model)
 	if err != nil {
 		return err
@@ -149,7 +164,23 @@ func run(tools, model, out, prompt string, n, threads int, kv, drafter string, d
 	if kv != "f16" {
 		g.KVType = kv
 	}
-	var extra []string
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
+	defer cancel()
+	// The CPU alone, as the binding loads a model for the CPU device: with no
+	// -dev llama-server offloads to every GPU it finds (Metal on a Mac).
+	dev, layers := "none", "0"
+	if device != "" {
+		name, desc, err := findDevice(ctx, server, device)
+		if err != nil {
+			return err
+		}
+		g.Device, g.DeviceName = strings.ToLower(name), desc
+		g.Generator += ", on " + name
+		dev, layers = name, "all"
+	} else {
+		g.CPUName = cpuName()
+	}
+	extra := []string{"-dev", dev, "-ngl", layers}
 	if drafter != "" {
 		dst, err := os.Stat(drafter)
 		if err != nil {
@@ -158,13 +189,12 @@ func run(tools, model, out, prompt string, n, threads int, kv, drafter string, d
 		g.DrafterFile, g.DrafterSize, g.DraftMax, g.DraftPMin = filepath.Base(drafter), dst.Size(), draftMax, draftPMin
 		g.DrafterSHA = sha256File(drafter)
 		g.Generator += ", MTP draft-mtp"
-		extra = []string{"-md", drafter, "--spec-type", "draft-mtp",
+		extra = append(extra, "-md", drafter, "--spec-type", "draft-mtp",
 			"--spec-draft-n-max", strconv.Itoa(draftMax), "--spec-draft-p-min", strconv.FormatFloat(draftPMin, 'f', -1, 64),
-			// The binding's drafter inherits the target's cache types.
-			"-ctkd", kv, "-ctvd", kv}
+			// The binding's drafter inherits the target's cache types and
+			// runs on the target's device.
+			"-ctkd", kv, "-ctvd", kv, "-devd", dev, "-ngld", layers)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
-	defer cancel()
 	cmd := exec.CommandContext(ctx, server, append([]string{
 		"-m", model, "--host", "127.0.0.1", "--port", strconv.Itoa(port),
 		"-c", strconv.Itoa(g.NCtx), "-np", "1", "-t", strconv.Itoa(threads), "-tb", strconv.Itoa(threads),
@@ -268,8 +298,12 @@ func run(tools, model, out, prompt string, n, threads int, kv, drafter string, d
 	if err := os.WriteFile(out, append(data, '\n'), 0o644); err != nil {
 		return err
 	}
-	fmt.Printf("%s: %d prompt tokens, %d generated, cpu %s, kv %s, drafted %d accepted %d\n%s\n",
-		out, len(g.PromptTokens), len(g.Tokens), g.CPUVariant, kv, g.Drafted, g.Accepted, g.Text)
+	on := "cpu " + g.CPUVariant
+	if g.Device != "" {
+		on = g.Device + " (" + g.DeviceName + ")"
+	}
+	fmt.Printf("%s: %d prompt tokens, %d generated, %s, kv %s, drafted %d accepted %d\n%s\n",
+		out, len(g.PromptTokens), len(g.Tokens), on, kv, g.Drafted, g.Accepted, g.Text)
 	if want := FileName(g); filepath.Base(out) != want {
 		fmt.Printf("note: the tests expect this golden to be named %s\n", want)
 	}
@@ -337,16 +371,79 @@ func readTrimmed(path string) (string, error) {
 	return strings.TrimSpace(string(b)), nil
 }
 
+// listedDevice is a line of llama-server --list-devices: "  MTL0: Apple M1 (5461 MiB, 5460 MiB free)".
+var listedDevice = regexp.MustCompile(`^\s+(\S+): (.+) \(\d+ MiB, \d+ MiB free\)$`)
+
+// findDevice looks id up in llama-server --list-devices regardless of case
+// (ggml lists MTL0 and Vulkan0) and returns the name -dev takes and the
+// device's description, which tells GPUs of one backend apart.
+func findDevice(ctx context.Context, server, id string) (name, desc string, err error) {
+	out, err := exec.CommandContext(ctx, server, "--list-devices").CombinedOutput()
+	if err != nil {
+		return "", "", fmt.Errorf("llama-server --list-devices: %w\n%s", err, out)
+	}
+	var names []string
+	for _, line := range strings.Split(string(out), "\n") {
+		m := listedDevice.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		if strings.EqualFold(m[1], id) {
+			return m[1], m[2], nil
+		}
+		names = append(names, m[1])
+	}
+	return "", "", fmt.Errorf("llama-server lists no device %q (it has: %s)", id, strings.Join(names, ", "))
+}
+
+// cpuName is the CPU's brand string on darwin, where ggml's CPU library has
+// no variant to name a golden by; empty elsewhere.
+func cpuName() string {
+	if runtime.GOOS != "darwin" {
+		return ""
+	}
+	out, err := exec.Command("sysctl", "-n", "machdep.cpu.brand_string").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
 // FileName is the name a golden file is stored under: cpu-<variant>[-<kv>] or,
-// recorded with a drafter, cpu-mtp-<variant>[-<kv>].
+// recorded with a drafter, cpu-mtp-<variant>[-<kv>]. A CPU library without a
+// variant is named by the CPU (cpu-apple-m1), a device by its kind and name
+// (mtl-apple-m1, mtl-mtp-apple-m1).
 func FileName(g Golden) string {
-	name := "cpu-"
+	kind, who := "cpu", g.CPUVariant
+	switch {
+	case g.Device != "":
+		kind, who = strings.TrimRight(g.Device, "0123456789"), slug(g.DeviceName)
+	case who == "" && g.CPUName != "":
+		who = slug(g.CPUName)
+	case who == "":
+		who = "generic"
+	}
+	name := kind + "-"
 	if g.DrafterFile != "" {
 		name += "mtp-"
 	}
-	name += g.CPUVariant
+	name += who
 	if g.KVType != "" && g.KVType != "f16" {
 		name += "-" + g.KVType
 	}
 	return name + ".json"
+}
+
+// slug turns "Apple M1" into "apple-m1".
+func slug(s string) string {
+	var b strings.Builder
+	for _, f := range strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
+		return (r < 'a' || r > 'z') && (r < '0' || r > '9')
+	}) {
+		if b.Len() > 0 {
+			b.WriteByte('-')
+		}
+		b.WriteString(f)
+	}
+	return b.String()
 }

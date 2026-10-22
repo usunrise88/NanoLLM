@@ -116,11 +116,9 @@ func TestNativeMTPLoads(t *testing.T) {
 
 // TestNativeMTPMatchesServer compares the state machine with llama-server's
 // own MTP (tools/golden -drafter) under greedy decoding: the same tokens and
-// the same numbers of drafted and accepted tokens.
+// the same numbers of drafted and accepted tokens, on the kernels the golden
+// was recorded on (goldenKernels).
 func TestNativeMTPMatchesServer(t *testing.T) {
-	if !testOnCPU() {
-		t.Skip("the goldens are the CPU's tokens (NANOLLM_TEST_DEVICE is set)")
-	}
 	files := goldenFiles(true)
 	if len(files) == 0 {
 		t.Skip("no MTP golden files for " + bindingTag)
@@ -140,9 +138,13 @@ func TestNativeMTPMatchesServer(t *testing.T) {
 		if err := json.Unmarshal(data, &g); err != nil {
 			t.Fatal(err)
 		}
-		if g.ModelSize != fi.Size() || g.DrafterSize != di.Size() || g.CPUVariant != b.CPUVariant() ||
+		if g.ModelSize != fi.Size() || g.DrafterSize != di.Size() ||
 			g.ModelSHA256 != "" && g.ModelSHA256 != fileSHA256(t, path) || g.DrafterSHA != "" && g.DrafterSHA != fileSHA256(t, drafter) {
-			t.Logf("%s: recorded for other files or another CPU variant", f)
+			t.Logf("%s: recorded for other files", f)
+			continue
+		}
+		if why := goldenKernels(t, b, g); why != "" {
+			t.Logf("%s: %s", f, why)
 			continue
 		}
 		ran = true
@@ -172,7 +174,7 @@ func TestNativeMTPMatchesServer(t *testing.T) {
 		mm.Close()
 	}
 	if !ran {
-		t.Skip("no MTP golden matches these files and this CPU variant")
+		t.Skip("no MTP golden matches these files and these kernels")
 	}
 }
 
