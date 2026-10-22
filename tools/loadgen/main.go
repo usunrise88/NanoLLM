@@ -22,10 +22,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"math/rand/v2"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -45,6 +47,10 @@ func main() {
 	maxTokens := flag.Int("max-tokens", 96, "tokens per answer")
 	seed := flag.Uint64("seed", 1, "random seed of the mix")
 	analyze := flag.String("analyze", "", "analyze a report file instead of running")
+	only := flag.String("only", "", "run one kind of request only: chat, abandon, tool, json or long (default: the mix)")
+	count := flag.Int("n", 0, "stop after this many requests (0: run for -duration)")
+	extra := flag.String("extra", "", "JSON object merged into every request body, e.g. '{\"max_reasoning_tokens\":64}'")
+	badOut := flag.String("bad-out", "", "append every answer the checker rejected (request and response) to this JSON-lines file")
 	flag.Parse()
 
 	if *analyze != "" {
@@ -64,8 +70,27 @@ func main() {
 		defer f.Close()
 		w = f
 	}
+	if *only != "" && !slices.Contains(kinds, *only) {
+		fmt.Fprintf(os.Stderr, "loadgen: -only is one of %s\n", strings.Join(kinds, ", "))
+		os.Exit(2)
+	}
 	g := &gen{base: strings.TrimRight(*base, "/"), key: *key, model: *model, maxTokens: *maxTokens, pid: *pid,
-		http: &http.Client{Timeout: 0}, start: time.Now()}
+		http: &http.Client{Timeout: 0}, start: time.Now(), only: *only, limit: *count}
+	if *extra != "" {
+		if err := json.Unmarshal([]byte(*extra), &g.extra); err != nil {
+			fmt.Fprintln(os.Stderr, "loadgen: -extra:", err)
+			os.Exit(2)
+		}
+	}
+	if *badOut != "" {
+		f, err := os.OpenFile(*badOut, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "loadgen:", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		g.bad = f
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), *duration)
 	defer cancel()
 	var wg sync.WaitGroup
@@ -76,11 +101,15 @@ func main() {
 			g.worker(ctx, rand.New(rand.NewPCG(*seed, uint64(i)+1)), i)
 		}()
 	}
+	finished := make(chan struct{}) // every worker has spent its share of -n
+	go func() { wg.Wait(); close(finished) }()
 	t := time.NewTicker(*interval)
 	defer t.Stop()
 	for done := false; !done; {
 		select {
 		case <-ctx.Done():
+			done = true
+		case <-finished:
 			done = true
 		case <-t.C:
 		}
@@ -95,6 +124,12 @@ type gen struct {
 	maxTokens, pid   int
 	http             *http.Client
 	start            time.Time
+
+	extra map[string]any // merged into every request body
+	only  string         // one kind of request, or "" for the mix
+	limit int            // requests to send before stopping; 0 is no limit
+	sent  int
+	bad   io.Writer // rejected answers, one JSON object per line
 
 	mu     sync.Mutex
 	window []sample // since the last report
@@ -275,16 +310,50 @@ var topics = []string{
 
 var followups = []string{"Explain it more simply.", "Give one example.", "Summarize in one sentence.", "Объясни проще.", "Приведи пример.", "Сократи до одного предложения."}
 
+// kinds are the request kinds -only picks from.
+var kinds = []string{"chat", "abandon", "tool", "json", "long"}
+
+// claim says whether this worker may send another request: the -n budget is
+// shared by all workers. A worker that finds it spent leaves its loop; the
+// requests the others still have in flight run to their end.
+func (g *gen) claim() bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.limit > 0 && g.sent >= g.limit {
+		return false
+	}
+	g.sent++
+	return true
+}
+
+// pick is the kind of the next request: the one -only fixes, else the mix.
+func (g *gen) pick(rng *rand.Rand) string {
+	if g.only != "" {
+		return g.only
+	}
+	switch r := rng.Float64(); {
+	case r < 0.55:
+		return "chat"
+	case r < 0.70:
+		return "abandon"
+	case r < 0.80:
+		return "tool"
+	case r < 0.90:
+		return "json"
+	}
+	return "long"
+}
+
 func (g *gen) worker(ctx context.Context, rng *rand.Rand, id int) {
-	for n := 0; ctx.Err() == nil; n++ {
-		switch r := rng.Float64(); {
-		case r < 0.55:
+	for n := 0; ctx.Err() == nil && g.claim(); n++ {
+		switch g.pick(rng) {
+		case "chat":
 			g.conversation(ctx, rng, fmt.Sprintf("lg-%d-%d", id, n))
-		case r < 0.70:
+		case "abandon":
 			g.abandoned(ctx, rng)
-		case r < 0.80:
+		case "tool":
 			g.toolCall(ctx, rng)
-		case r < 0.90:
+		case "json":
 			g.jsonSchema(ctx, rng)
 		default:
 			g.longPrompt(ctx, rng)
@@ -302,6 +371,7 @@ func (g *gen) body(msgs []chatMsg, session string, stream bool) map[string]any {
 	if g.model != "" {
 		b["model"] = g.model
 	}
+	maps.Copy(b, g.extra)
 	if session != "" {
 		b["session_id"] = session
 	}
@@ -409,9 +479,70 @@ func (g *gen) plain(ctx context.Context, kind string, body map[string]any, check
 		g.add(sample{kind: kind, outcome: "http_" + strconv.Itoa(resp.StatusCode)})
 	case check != nil && !check(data):
 		g.add(sample{kind: kind, outcome: "bad_output"})
+		g.record(kind, body, data)
 	default:
 		g.add(sample{kind: kind, outcome: "ok", total: float64(time.Since(t0).Microseconds()) / 1000})
 	}
+}
+
+// answer is what the checks look at in a chat completion.
+type answer struct {
+	finish    string
+	content   string
+	reasoning bool
+	toolCalls int
+}
+
+// answerOf reads the first choice of a chat completion; an unreadable body is
+// the zero answer.
+func answerOf(d []byte) answer {
+	var r struct {
+		Choices []struct {
+			FinishReason string `json:"finish_reason"`
+			Message      struct {
+				Content          string `json:"content"`
+				ReasoningContent string `json:"reasoning_content"`
+				ToolCalls        []any  `json:"tool_calls"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if json.Unmarshal(d, &r) != nil || len(r.Choices) == 0 {
+		return answer{}
+	}
+	c := r.Choices[0]
+	return answer{c.FinishReason, c.Message.Content, c.Message.ReasoningContent != "", len(c.Message.ToolCalls)}
+}
+
+// why names the cause of a rejected answer for -bad-out, so that the file can
+// be counted instead of read.
+func (a answer) why() string {
+	switch {
+	case a.finish == "":
+		return "unreadable"
+	case a.finish == "length" && a.reasoning && strings.TrimSpace(a.content) == "":
+		return "budget spent on reasoning"
+	case a.finish == "length":
+		return "budget spent on the answer"
+	case strings.TrimSpace(a.content) != "":
+		return "text instead of a call"
+	}
+	return "empty"
+}
+
+// record keeps a rejected answer with the request that produced it, to be
+// sorted by cause afterwards (-bad-out).
+func (g *gen) record(kind string, body map[string]any, resp []byte) {
+	if g.bad == nil {
+		return
+	}
+	var parsed any
+	if json.Unmarshal(resp, &parsed) != nil {
+		parsed = string(resp)
+	}
+	line, _ := json.Marshal(map[string]any{"kind": kind, "why": answerOf(resp).why(), "request": body, "response": parsed})
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	fmt.Fprintln(g.bad, string(line))
 }
 
 func (g *gen) toolCall(ctx context.Context, rng *rand.Rand) {
@@ -420,8 +551,8 @@ func (g *gen) toolCall(ctx context.Context, rng *rand.Rand) {
 		"name": "get_weather", "description": "Current weather in a city",
 		"parameters": map[string]any{"type": "object", "properties": map[string]any{"city": map[string]any{"type": "string"}}, "required": []string{"city"}},
 	}}}
-	b["max_tokens"] = 128
-	g.plain(ctx, "tool", b, func(d []byte) bool { return bytes.Contains(d, []byte("tool_calls")) })
+	b["max_tokens"] = max(128, g.maxTokens) // -max-tokens may raise the floor, never lower it
+	g.plain(ctx, "tool", b, func(d []byte) bool { return answerOf(d).toolCalls > 0 })
 }
 
 func (g *gen) jsonSchema(ctx context.Context, rng *rand.Rand) {
