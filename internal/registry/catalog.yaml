@@ -39,7 +39,10 @@
     thinking_default: false
   # Passed the golden tests (token for token against the pinned llama-server,
   # MTP equivalence, state round-trip) on the ggml CPU variant haswell
-  # (docs/STAGE2.md 2.2); sapphirerapids was verified in stage 1.
-  verified: [llamacpp:cpu]
+  # (docs/STAGE2.md 2.2); sapphirerapids was verified in stage 1. Metal
+  # passed them on an Apple M1, with KLD against the CPU and the OpenAI
+  # conformance suite (docs/AUTOTUNE.md,
+  # «Metal на M1: golden, conformance, KLD на 64 чанках»).
+  verified: [llamacpp:cpu, llamacpp:mtl0]
   license: Apache-2.0
   commercial: permitted
