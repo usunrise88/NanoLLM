@@ -1,0 +1,4 @@
+fa=on round=1 total_wall=93.9s ttft_sum=57.8s out=843 min_mem=21 level_end=0
+fa=small round=1 total_wall=95.0s ttft_sum=54.8s out=872 min_mem=17 level_end=2
+fa=small round=2 total_wall=90.1s ttft_sum=51.7s out=872 min_mem=19 level_end=1
+fa=on round=2 total_wall=95.5s ttft_sum=58.2s out=843 min_mem=19 level_end=1

@@ -1,0 +1,12 @@
+draft-none round=1 wall=100.4s ttft=51.0s decode=49.4s out=872 decode_tok_s=17.67 accept=0.00 min_mem=29 level_end=2
+draft-1 round=1 wall=93.0s ttft=50.8s decode=42.2s out=872 decode_tok_s=20.66 accept=0.60 min_mem=23 level_end=1
+draft-2 round=1 wall=88.3s ttft=50.9s decode=37.4s out=872 decode_tok_s=23.33 accept=0.47 min_mem=23 level_end=1
+draft-3 round=1 wall=87.6s ttft=50.8s decode=36.8s out=872 decode_tok_s=23.70 accept=0.36 min_mem=24 level_end=1
+draft-4 round=1 wall=87.2s ttft=50.7s decode=36.5s out=872 decode_tok_s=23.88 accept=0.31 min_mem=24 level_end=1
+draft-4 round=2 wall=89.7s ttft=51.1s decode=38.6s out=872 decode_tok_s=22.60 accept=0.31 min_mem=19 level_end=1
+draft-3 round=2 wall=90.2s ttft=51.2s decode=39.0s out=872 decode_tok_s=22.35 accept=0.36 min_mem=17 level_end=1
+draft-2 round=2 wall=90.6s ttft=51.5s decode=39.1s out=872 decode_tok_s=22.33 accept=0.47 min_mem=16 level_end=1
+draft-1 round=2 wall=95.2s ttft=51.2s decode=44.0s out=872 decode_tok_s=19.83 accept=0.60 min_mem=17 level_end=1
+draft-none round=2 wall=101.1s ttft=51.1s decode=50.0s out=872 decode_tok_s=17.45 accept=0.00 min_mem=20 level_end=1
+
+[exited with code 0]

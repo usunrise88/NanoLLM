@@ -1,0 +1,7 @@
+fa=1 ub=512 waited=60s level_after=0 pp4096=281.9 282 281
+fa=0 ub=256 waited=30s level_after=1 pp4096=316.9 317 317
+fa=0 ub=512 waited=116s level_after=0 pp4096=310.8 310 311
+fa=1 ub=256 waited=30s level_after=1 pp4096=285.3 286 285
+fa=1 ub=512 waited=106s level_after=0 pp4096=284.5 285 284
+
+[exited with code 0]

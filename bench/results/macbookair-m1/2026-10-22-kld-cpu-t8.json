@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 8 -t 8 -ngl 0",
+    "name": "cpu-t8"
+  },
+  "date": "2026-10-22",
+  "extra": {
+    "kld_max": 0.000054,
+    "kld_mean": -0,
+    "kld_median": -0,
+    "kld_p99": 0.000038,
+    "ppl_ratio": 1.013131,
+    "top1_pct": 100
+  },
+  "model": "gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}

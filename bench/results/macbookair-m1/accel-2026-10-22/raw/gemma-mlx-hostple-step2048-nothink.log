@@ -1,0 +1,9 @@
+host PLE: max abs difference against the GPU table 0
+load 9.1 s, active 2.44 GiB
+step 0: prompt 4371, out 776, ttft 20420 ms, prefill 229.0 tok/s, decode 16.41 tok/s, wall 67.7 s, finish stop, peak 4.20 GB
+step 1: prompt 4631, out 635, ttft 20025 ms, prefill 231.3 tok/s, decode 16.13 tok/s, wall 59.4 s, finish stop, peak 4.20 GB
+step 2: prompt 4578, out 988, ttft 21942 ms, prefill 208.7 tok/s, decode 15.64 tok/s, wall 85.2 s, finish stop, peak 4.20 GB
+step 3: prompt 2016, out 936, ttft 10232 ms, prefill 197.1 tok/s, decode 15.66 tok/s, wall 70.0 s, finish stop, peak 4.20 GB
+step 4: prompt 732, out 1552, ttft 4794 ms, prefill 152.7 tok/s, decode 15.08 tok/s, wall 107.8 s, finish stop, peak 4.20 GB
+total wall 390.1 s
+exit 0 min_mem=19 level_end=2
