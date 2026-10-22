@@ -191,3 +191,24 @@ kernel: 100 launches of `flash_attn_ext_f16<256,256,2,4>` (10.05 us) + 100 `stre
 kernel (the vector instances stop at 256) and 2-4 tokens go to the MMA kernel on Ampere for an unquantized cache, so there is
 nothing to choose there. All flash attention is 0.46 ms of the 8.45 ms of a token: whatever the choice, it can move the token
 by 5 % at most, and by measurement it moves it by nothing. The rule for cc 8.6 stays upstream's (`FA_VEC` 0).
+
+## The release v0.1.0-rc.1, as a user gets it
+
+Tag v0.1.0-rc.1 on 62ba57a (pre-release; libs b11600-n8). The release workflow built and smoke-tested 5 platforms and published 16
+files, among them `nanollm-v0.1.0-rc.1-windows-amd64.zip` (35 MB), `...-windows-amd64-cuda.zip` (625 MB, CUDA 12.4),
+`...-windows-amd64-cuda13.zip` (534 MB, CUDA 13.4) and `sha256sums.txt`. Checked on the RTX machine (the installer's own layout:
+the app archive, the add-on unpacked over it, in a directory of its own; no service, PATH or configuration):
+
+- the two archives match `sha256sums.txt`; the cuda13 zip is byte for byte the size the dry-run of the release workflow built
+  (560091338), so the packaging is reproducible;
+- `nanollm version`: `v0.1.0-rc.1`, `llama.cpp b11600 c96d19c52`; `nanollm devices -lib-dir lib`: the RTX lists
+  `backend-sampling cuda-nano`, the Iris Xe `fa-small-batch`, the CPU variant is alderlake with `multirow-q4_0`;
+- `install.ps1`'s own `Get-CudaFlavour` answers `cuda13` here (driver 581, cc 8.6; `cuda` for driver 535, for cc 6.1, for two
+  GPUs with one old driver and without nvidia-smi), and its `Test-ReleaseAsset` finds both add-ons in the real release (and not a
+  made-up one);
+- the dev suite through this layout (`run_dev_sweep.ps1 -Exe ...\app\nanollm.exe`): status ok, output sha 52793f74, the same
+  as the dev build and the CI add-on. Its speed (tg 88) is not a result: the GPU was shared with a running game and a streaming
+  encoder (32 % utilisation and 71 C before the run), the file is not kept.
+
+Not tried: `install.ps1` itself on this machine (it elevates, registers a service, edits the machine PATH and the firewall and
+writes a configuration with keys into C:\ProgramData\NanoLLM, where the development models live).
