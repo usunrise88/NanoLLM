@@ -1,6 +1,6 @@
 module github.com/usunrise88/nanollm
 
-go 1.25.0
+go 1.27.3
 
 require (
 	github.com/ebitengine/purego v0.11.2

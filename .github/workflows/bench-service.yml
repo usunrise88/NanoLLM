@@ -58,7 +58,7 @@ jobs:
       - run: go vet ./...
       - uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.5
+          version: v2.15
           working-directory: services/bench
           verify: false # the schema check fetches golangci-lint.run
       # -short skips the e2e, which has a job of its own.

@@ -7,7 +7,7 @@
 # and services/bench/. After the service moves out (git subtree split), it
 # depends on a tagged benchfmt and the COPY of benchfmt/ goes away.
 
-FROM golang:1.25-alpine AS build
+FROM golang:1.27-alpine AS build
 WORKDIR /src
 COPY benchfmt/ benchfmt/
 COPY services/bench/go.mod services/bench/go.sum services/bench/

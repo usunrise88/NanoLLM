@@ -82,7 +82,7 @@ docker run -d -p 8080:8080 -v nanollm-data:/data --ulimit memlock=-1 \
 
 ## Build
 
-Requirements: Go 1.25+, and Node 22+ for the web UI.
+Requirements: Go 1.27+, and Node 22+ for the web UI.
 
 ```sh
 make web build    # the SPA into internal/ui/dist, then dist/nanollm with it embedded

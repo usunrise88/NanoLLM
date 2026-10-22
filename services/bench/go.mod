@@ -1,6 +1,6 @@
 module github.com/usunrise88/nanollm/services/bench
 
-go 1.25.0
+go 1.27.3
 
 require (
 	github.com/usunrise88/nanollm/benchfmt v0.0.0

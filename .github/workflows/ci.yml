@@ -22,7 +22,7 @@ jobs:
         run: test -z "$(gofmt -l cmd internal)" || { gofmt -l cmd internal; exit 1; }
       - uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.5
+          version: v2.15
           # The config schema check fetches golangci-lint.run and has failed
           # a run on its timeout; `make lint` keeps it locally.
           verify: false
