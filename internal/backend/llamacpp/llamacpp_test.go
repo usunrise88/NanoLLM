@@ -192,20 +192,32 @@ func TestCPUFeatures(t *testing.T) {
 func TestGPUFeatures(t *testing.T) {
 	const own = "CPU : SSE3 = 1 | AVX2 = 1 | REPACK = 1 | CUDA : ARCHS = 860 | USE_GRAPHS = 1 | FA_QUANTS = 1 | NANOLLM = 8 | NANO_GRAPH_SHAPES = 1 |"
 	upstream := strings.Replace(own, "NANOLLM = 8 | NANO_GRAPH_SHAPES = 1 |", "", 1)
-	if got := gpuFeatures("cuda0", own); len(got) != 2 || got[0] != backend.FeatureBackendSampling || got[1] != backend.FeatureCudaNano {
+	const rtx = "NVIDIA GeForce RTX 3070 Ti Laptop GPU"
+	if got := gpuFeatures("cuda0", rtx, own); len(got) != 2 || got[0] != backend.FeatureBackendSampling || got[1] != backend.FeatureCudaNano {
 		t.Errorf("our ggml-cuda: %v", got)
 	}
 	for _, info := range []string{upstream, "", "CUDA :"} {
-		if got := gpuFeatures("cuda0", info); len(got) != 1 || got[0] != backend.FeatureBackendSampling {
+		if got := gpuFeatures("cuda0", rtx, info); len(got) != 1 || got[0] != backend.FeatureBackendSampling {
 			t.Errorf("upstream's ggml-cuda %q: %v", info, got)
 		}
 	}
 	// another backend's entry does not make a CUDA device ours
-	if got := gpuFeatures("cuda0", "Vulkan : NANOLLM = 9 |"); len(got) != 1 {
+	if got := gpuFeatures("cuda0", rtx, "Vulkan : NANOLLM = 9 |"); len(got) != 1 {
 		t.Errorf("a NANOLLM outside the CUDA entry: %v", got)
 	}
-	if got := gpuFeatures("vulkan0", own); len(got) != 0 {
+	if got := gpuFeatures("vulkan0", rtx, own); len(got) != 0 {
 		t.Errorf("a Vulkan device: %v", got)
+	}
+	// Metal: the matmul attention for long batches where measured (M1)
+	for _, name := range []string{"Apple M1", "Apple M1 Max"} {
+		if got := gpuFeatures("mtl0", name, ""); len(got) != 1 || got[0] != backend.FeatureFlashAttnSmallBatch {
+			t.Errorf("Metal on %s: %v", name, got)
+		}
+	}
+	for _, name := range []string{"Apple M2", "Apple M4 Pro", "Apple M5"} {
+		if got := gpuFeatures("mtl0", name, ""); len(got) != 0 {
+			t.Errorf("Metal on %s (not measured): %v", name, got)
+		}
 	}
 	if n := cudaNanoLevel("CUDA : NANOLLM = 12 | NANO_X = 1 |"); n != 12 {
 		t.Errorf("level %d, want 12", n)
