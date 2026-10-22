@@ -1,0 +1,5 @@
+# one layer of 64 tokens (PROBE_Q=64), pal4, ane, native; the attention is only costed (the reshapes are not Gemma's)
+swa layer          : each_ms 1.83 (python 2.62), 31 ops on the ANE, package 45947753 bytes, build peak 830 MiB
+full-attention layer: each_ms 2.54 (python 3.57), 31 ops on the ANE, package 52507499 bytes, build peak 802 MiB
+2 swa layers       : each_ms 3.43, package 91894550 bytes, build peak 1108 MiB
+2 swa + 1 full     : each_ms 5.62, package 144401181 bytes, build peak 1446 MiB  (so a full layer costs 2.19 ms in this chain)

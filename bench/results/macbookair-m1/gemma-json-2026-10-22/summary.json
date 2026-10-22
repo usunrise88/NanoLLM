@@ -1,0 +1,126 @@
+{
+ "a-uma4g-mtp2": {
+  "label": "Metal, uma-4g (режим M3), MTP draft 2",
+  "rows": [
+   {
+    "step": 1,
+    "prompt_tokens": 4365,
+    "cached_tokens": 0,
+    "out_tokens": 124,
+    "wall_s": 22.6,
+    "ttft_ms": 16746,
+    "prefill_tok_s": 260.7,
+    "decode_tok_s": 21.21,
+    "draft_acceptance": 0.48
+   },
+   {
+    "step": 2,
+    "prompt_tokens": 4625,
+    "cached_tokens": 132,
+    "out_tokens": 115,
+    "wall_s": 23.5,
+    "ttft_ms": 17120,
+    "prefill_tok_s": 262.4,
+    "decode_tok_s": 17.96,
+    "draft_acceptance": 0.33
+   },
+   {
+    "step": 3,
+    "prompt_tokens": 4572,
+    "cached_tokens": 132,
+    "out_tokens": 136,
+    "wall_s": 23.3,
+    "ttft_ms": 16695,
+    "prefill_tok_s": 265.9,
+    "decode_tok_s": 20.46,
+    "draft_acceptance": 0.44
+   },
+   {
+    "step": 4,
+    "prompt_tokens": 2010,
+    "cached_tokens": 132,
+    "out_tokens": 124,
+    "wall_s": 12.5,
+    "ttft_ms": 6461,
+    "prefill_tok_s": 290.7,
+    "decode_tok_s": 20.38,
+    "draft_acceptance": 0.41
+   },
+   {
+    "step": 5,
+    "prompt_tokens": 726,
+    "cached_tokens": 86,
+    "out_tokens": 344,
+    "wall_s": 13.7,
+    "ttft_ms": 2092,
+    "prefill_tok_s": 305.9,
+    "decode_tok_s": 29.56,
+    "draft_acceptance": 0.69
+   }
+  ],
+  "out_tokens_total": 843,
+  "wall_s_total": 95.7
+ },
+ "b-uma5g-mtp3": {
+  "label": "Metal, uma-5g (всё в памяти), MTP draft 3",
+  "rows": [
+   {
+    "step": 1,
+    "prompt_tokens": 4365,
+    "cached_tokens": 0,
+    "out_tokens": 124,
+    "wall_s": 22.2,
+    "ttft_ms": 16346,
+    "prefill_tok_s": 267.0,
+    "decode_tok_s": 21.26,
+    "draft_acceptance": 0.37
+   },
+   {
+    "step": 2,
+    "prompt_tokens": 4625,
+    "cached_tokens": 132,
+    "out_tokens": 115,
+    "wall_s": 23.0,
+    "ttft_ms": 16431,
+    "prefill_tok_s": 273.5,
+    "decode_tok_s": 17.35,
+    "draft_acceptance": 0.24
+   },
+   {
+    "step": 3,
+    "prompt_tokens": 4572,
+    "cached_tokens": 132,
+    "out_tokens": 136,
+    "wall_s": 22.8,
+    "ttft_ms": 16119,
+    "prefill_tok_s": 275.4,
+    "decode_tok_s": 20.24,
+    "draft_acceptance": 0.34
+   },
+   {
+    "step": 4,
+    "prompt_tokens": 2010,
+    "cached_tokens": 132,
+    "out_tokens": 124,
+    "wall_s": 12.2,
+    "ttft_ms": 6297,
+    "prefill_tok_s": 298.2,
+    "decode_tok_s": 21.17,
+    "draft_acceptance": 0.3
+   },
+   {
+    "step": 5,
+    "prompt_tokens": 726,
+    "cached_tokens": 86,
+    "out_tokens": 344,
+    "wall_s": 13.1,
+    "ttft_ms": 2085,
+    "prefill_tok_s": 307.0,
+    "decode_tok_s": 31.19,
+    "draft_acceptance": 0.57
+   }
+  ],
+  "out_tokens_total": 843,
+  "wall_s_total": 93.4
+ }
+}

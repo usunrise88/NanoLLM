@@ -1,0 +1,18 @@
+### pal4 ane
+{"units":"ane","load_s":5.14,"iters":60,"step_ms_median":8.83,"step_ms_p90":9.45,"step_ms_min":7.70,"footprint_mib":48}
+### pal4 gpu
+{"units":"gpu","load_s":3.26,"iters":60,"step_ms_median":100.87,"step_ms_p90":102.87,"step_ms_min":96.70,"footprint_mib":806}
+### pal4 plan(ane)
+{'ops': {'MLNeuralEngineComputeDevice': 181}, 'ane_share': 1.0}
+### i8c ane
+{"units":"ane","load_s":7.47,"iters":60,"step_ms_median":11.32,"step_ms_p90":12.45,"step_ms_min":10.45,"footprint_mib":35}
+### i8c gpu
+{"units":"gpu","load_s":3.35,"iters":60,"step_ms_median":29.84,"step_ms_p90":31.86,"step_ms_min":25.14,"footprint_mib":1620}
+### i8c plan(ane)
+{'ops': {'MLNeuralEngineComputeDevice': 181}, 'ane_share': 1.0}
+### q4b ane
+{"units":"ane","load_s":4.29,"iters":60,"step_ms_median":28.04,"step_ms_p90":29.23,"step_ms_min":26.51,"footprint_mib":122}
+### q4b gpu
+{"units":"gpu","load_s":4.66,"iters":60,"step_ms_median":134.60,"step_ms_p90":138.19,"step_ms_min":130.10,"footprint_mib":806}
+### q4b plan(ane)
+{'ops': {'MLCPUComputeDevice': 181}, 'ane_share': 0.0}

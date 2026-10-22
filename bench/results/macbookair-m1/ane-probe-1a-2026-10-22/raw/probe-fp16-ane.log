@@ -1,0 +1,14 @@
+# fp16, 6 layers (package 1127297056 bytes), first run (the compute plan call failed: compile_model on a compiled model)
+{"variant": "fp16", "units": "ane", "coremltools": "9.0", "load_s": 4.59, "footprint_after_load_mib": 137, "free_drop_mib": 2250, "step_ms_median": 30.53, "step_ms_p90": 32.82, "footprint_after_run_mib": 137, "compute_plan_error": "TypeError: This model has already been compiled. Call \"get_compiled_model_path\" to get the compiled model."}
+# second run, compute plan fixed: every operation prefers the CPU
+{"variant": "fp16", "units": "ane", "coremltools": "9.0", "load_s": 6.9, "footprint_after_load_mib": 137, "free_drop_mib": 1360, "step_ms_median": 30.21, "step_ms_p90": 31.06, "footprint_after_run_mib": 137, "ops": {"MLCPUComputeDevice": 181}, "ane_share": 0.0}
+# bisection by layers (PROBE_IDX / PROBE_LAYERS / PROBE_PARTS), fp16, ANE
+1 layer  ffn            : load 1.31 s, step 3.16 ms, ANE 11 ops, 3 none (ane_share 0.786 counted with the constants)
+1 layer  norm,ffn       : load 1.81 s, step 3.24 ms, ANE 16 ops
+1 layer  norm,attn      : load 0.88 s, step 1.02 ms, ANE 20 ops (1.0)
+1 layer  norm,attn,ffn  : load 1.70 s, step 3.58 ms, ANE 31 ops (1.0)
+2 layers norm,attn,ffn  : load 3.08 s, step 7.03 ms, ANE 61 ops (1.0)
+3 layers norm,attn,ffn  : load 4.65 s, step 10.40 ms, ANE 91 ops (1.0)
+5 layers (sliding-window): load 7.84 s, step 17.04 ms, ANE 151 ops (1.0)
+full-attention layer only: load 1.70 s, step 4.95 ms, ANE 31 ops (1.0); its attention alone 2.22 ms, its FFN alone 3.99 ms
+6 sliding-window layers : load 8.88 s, step 27.62 ms, CPU 181 ops (ane_share 0.0): rejected as a whole, 1.1 GB of fp16 weights

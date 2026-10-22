@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 8 -t 4 -ngl 0",
+    "name": "carrier-mix"
+  },
+  "date": "2026-10-22",
+  "extra": {
+    "kld_max": 5.519859,
+    "kld_mean": 0.056234,
+    "kld_median": 0.020241,
+    "kld_p99": 0.3747,
+    "ppl_ratio": 1.125216,
+    "top1_pct": 92.402
+  },
+  "model": "carrier-mix.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}

@@ -1,0 +1,5 @@
+step 0: prompt 4365 (cached 0), out 153, ttft 14529 ms, prefill 300.4 tok/s, decode 20.56 tok/s, accept 0.46835443037974683, wall 22.0 s, finish stop
+step 1: prompt 4625 (cached 132), out 115, ttft 14512 ms, prefill 309.6 tok/s, decode 17.47 tok/s, accept 0.32857142857142857, wall 21.1 s, finish stop
+step 2: prompt 4572 (cached 132), out 136, ttft 14362 ms, prefill 309.1 tok/s, decode 19.82 tok/s, accept 0.4383561643835616, wall 21.2 s, finish stop
+step 3: prompt 2010 (cached 132), out 124, ttft 6079 ms, prefill 308.9 tok/s, decode 20.72 tok/s, accept 0.4057971014492754, wall 12.1 s, finish stop
+step 4: prompt 726 (cached 86), out 344, ttft 2067 ms, prefill 309.6 tok/s, decode 28.42 tok/s, accept 0.6862068965517242, wall 14.2 s, finish stop
