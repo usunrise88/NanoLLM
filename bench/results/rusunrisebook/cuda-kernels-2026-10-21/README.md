@@ -146,3 +146,29 @@ The graph per shape removes the old cost of a minimum probability (it was 130 ag
   87 us for the two mat-vecs and the GEGLU launch it replaces. Off.
 - The vector flash attention kernel for one token on Ampere (`FA_VEC`): no change on cc 8.6. Off.
 - `gelu*mul` in one launch: no measurable change (42 launches of 1.2 us); kept, it is exact.
+
+## The add-ons of release b11600-n8, from CI, on the RTX
+
+The two archives the libs-build workflow published (`nanollm-libs-windows_amd64_cuda.tar.gz`, CUDA 12.4, 655 MB, and
+`..._cuda13.tar.gz`, CUDA 13.4, 561 MB; sha256 as in `scripts/libs.sha256`, checked after the download) unpacked over a lib
+directory of the same series: `llama.dll`, `ggml.dll`, `ggml-base.dll` built from the clean tree c96d19c52 by
+`build-libs-windows.ps1 -Variants none -Core`, and the CPU variants and libomp of n7 (patch 0008 does not touch them).
+`nanollm devices` lists `backend-sampling cuda-nano` for the card with both. Their ggml-cuda.dll is the full release list
+of architectures (75, 80, 86 real, 89 real, 90, and for 12.4 the PTX of 50, 61, 70): 585 MB for 12.4, 151 MB for 13.4,
+against the 32 MB of the sm_86-only dev build.
+
+The dev suite, one run each from a cool GPU (`run_dev_sweep.ps1 -Once -Reps 2`; `../rtx-2026-10-21/raw/dev-n8cu12-*`,
+`dev-n8cu13-*`); single runs, the direction not the decimal:
+
+| ggml-cuda.dll | pp | tg | chat | MTP chat (acc.) | echo | output sha |
+| --- | --- | --- | --- | --- | --- | --- |
+| dev build, 13.4, sm_86 only (`dev-fin-2`) | 3973 | 106.5 | 107.2 | 174.2 (0.46) | 285.7 | 52793f74 |
+| release add-on, 13.4 | 4651 | 104.3 | 104.5 | 169.2 (0.46) | 282.4 | 52793f74 |
+| release add-on, 12.4 | 4207 | 102.4 | 102.3 | 169.1 (0.47) | 273.7 | 8271256b |
+
+The 13.4 add-on gives the output of the dev build bit for bit and the speed within the noise. The 12.4 one is 2-4 % slower
+and writes other tokens in the greedy chat run (another compiler, other rounding in the places the patch leaves to it, as
+upstream's own 12.4 and 13.4 builds differ). What matters is that the property the patch exists for holds in it too:
+`NANOLLM_TEST_DEVICE=cuda0 go test -tags native` with each add-on, `TestNativeBatchInvariance` (largest difference 0 for
+batches of 2, 3 and 4 on both prompts), `TestNativeMTPEquivalence` (MTP == plain decoding on 13 prompts, 12.4: 310 of 847
+drafts accepted, 85 -> 150 tok/s; 13.4: 309 of 860, 85 -> 144), `TestNativeCudaNano` and `TestNativeBackendSampling` pass.
