@@ -178,7 +178,7 @@ func run(tools, model, out, prompt string, n, threads int, kv, device, drafter s
 		g.Generator += ", on " + name
 		dev, layers = name, "all"
 	} else {
-		g.CPUName = cpuName()
+		g.CPUName = cpuName(ctx)
 	}
 	extra := []string{"-dev", dev, "-ngl", layers}
 	if drafter != "" {
@@ -398,11 +398,11 @@ func findDevice(ctx context.Context, server, id string) (name, desc string, err 
 
 // cpuName is the CPU's brand string on darwin, where ggml's CPU library has
 // no variant to name a golden by; empty elsewhere.
-func cpuName() string {
+func cpuName(ctx context.Context) string {
 	if runtime.GOOS != "darwin" {
 		return ""
 	}
-	out, err := exec.Command("sysctl", "-n", "machdep.cpu.brand_string").Output()
+	out, err := exec.CommandContext(ctx, "sysctl", "-n", "machdep.cpu.brand_string").Output()
 	if err != nil {
 		return ""
 	}
