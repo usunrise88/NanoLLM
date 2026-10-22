@@ -291,3 +291,27 @@ func TestOpenAISessionAndCachePrompt(t *testing.T) {
 		t.Fatalf("cache_prompt:false still reused %d tokens", n)
 	}
 }
+
+// A caller that went away is not a server fault: before the first byte every
+// route answers 499 with the code "cancelled", never a 500, so the access log
+// and anything that counts 5xx do not report a client hanging up.
+func TestClientCancelIs499(t *testing.T) {
+	srv := server(t)
+	for _, tc := range []struct{ path, body string }{
+		{"/v1/chat/completions", `{"messages":[{"role":"user","content":"x"}]}`},
+		{"/v1/chat/completions", `{"stream":true,"messages":[{"role":"user","content":"x"}]}`},
+		{"/v1/completions", `{"prompt":"x"}`},
+		{"/api/v1/chat", `{"messages":[{"role":"user","content":"x"}]}`},
+		{"/api/v1/chat", `{"stream":true,"messages":[{"role":"user","content":"x"}]}`},
+	} {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		req := httptest.NewRequestWithContext(ctx, http.MethodPost, tc.path, strings.NewReader(tc.body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		srv.Config.Handler.ServeHTTP(rec, req)
+		if rec.Code != core.StatusClientClosedRequest || !strings.Contains(rec.Body.String(), `"cancelled"`) {
+			t.Errorf("%s %s: %d %s", tc.path, tc.body, rec.Code, rec.Body.String())
+		}
+	}
+}
