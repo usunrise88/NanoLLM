@@ -42,6 +42,28 @@ func TestExampleConfigLoads(t *testing.T) {
 	}
 }
 
+// The ollama dialect is opt-in: a default server speaks OpenAI and the native
+// API only, and naming ollama in api.dialects (file or environment) is valid.
+func TestOllamaDialectIsOptIn(t *testing.T) {
+	c := Default()
+	if c.API.DialectEnabled(DialectOllama) {
+		t.Fatalf("the default dialects are %q", c.API.Dialects)
+	}
+	if err := decode([]byte("api:\n  dialects: [openai, native, ollama]\n"), &c); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Validate(); err != nil || !c.API.DialectEnabled(DialectOllama) {
+		t.Fatalf("dialects %q: %v", c.API.Dialects, err)
+	}
+	e := Default()
+	if err := applyEnv(&e, envOf(map[string]string{"NANOLLM_API_DIALECTS": "openai, ollama"})); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.Validate(); err != nil || !e.API.DialectEnabled(DialectOllama) {
+		t.Fatalf("dialects from the environment %q: %v", e.API.Dialects, err)
+	}
+}
+
 func TestUnknownKeyIsRefused(t *testing.T) {
 	c := Default()
 	err := decode([]byte("server:\n  adr: 0.0.0.0:80\n"), &c)
