@@ -47,6 +47,9 @@ func (p *Plan) LoadSpec(modelPath, drafterPath string) (backend.LoadSpec, error)
 	if p.Device != nil {
 		s.Device = p.Device.Selector
 	}
+	if p.Head != nil {
+		s.HeadShortlist = append([]int32(nil), p.headIDs...)
+	}
 	if p.MTP.Enabled {
 		s.DrafterPath = drafterPath
 		s.DraftMax = p.MTP.DraftMax

@@ -103,12 +103,33 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	case "device":
 		r.BackendSampling = true
 	}
+	// OPT-4: the output shortlist, where the device's library has it. An
+	// explicit setting the device cannot keep is not an error (the same
+	// configuration serves machines with different libraries): the plan says so.
+	var headNote string
+	if ov.Head != "" && ov.Head != registry.HeadFull {
+		switch {
+		case req.Device.Type != backend.CPU:
+			headNote = fmt.Sprintf("head: %s is a CPU option; the whole head runs on %s", ov.Head, req.Device.ID)
+		case !req.Device.Has(backend.FeatureOutputShortlist):
+			headNote = fmt.Sprintf("head: %s needs libraries with patch 0009 (device feature %s); the whole head runs", ov.Head, backend.FeatureOutputShortlist)
+		default:
+			ids, err := registry.ShortlistIDs(req.Manifest, ov.Head)
+			if err != nil {
+				return Placement{}, err
+			}
+			r.Head, r.HeadIDs = ov.Head, ids
+		}
+	}
 	p, err := plan.Make(r)
 	if err != nil {
 		return Placement{}, err
 	}
 	if !p.OK() {
 		return Placement{}, fmt.Errorf("preset %s: %s", preset.Name, p.Refused)
+	}
+	if headNote != "" {
+		p.Warnings = append(p.Warnings, headNote)
 	}
 	if req.DrafterPath == "" {
 		p.MTP.Enabled = false

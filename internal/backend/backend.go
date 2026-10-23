@@ -65,6 +65,11 @@ const (
 	// REPACK_Q4_0_ROWS of the CPU backend). Without it speculative decoding
 	// on the CPU does not pay (docs/AUTOTUNE.md, the cost of a batch).
 	FeatureMultiRowQ4_0 = "multirow-q4_0"
+	// FeatureOutputShortlist means the library can compute the logits of a
+	// subset of the vocabulary and spread them over a full row
+	// (patches/llama.cpp/0009; LoadSpec.HeadShortlist, OPT-4): the head reads
+	// fewer rows of the 262144-row matrix on every token.
+	FeatureOutputShortlist = "output-shortlist"
 	// FeatureFlashAttnSmallBatch means flash attention on this GPU is slow for
 	// long batches: the matmul attention prefills faster as the context grows
 	// (Iris Xe, Vulkan, Windows driver: pp512 at 4096 tokens of context 385
@@ -269,6 +274,11 @@ type LoadSpec struct {
 	// step, stopping when the drafter's top probability drops below DraftPMin.
 	DraftMax  int
 	DraftPMin float64
+	// HeadShortlist are the vocabulary ids (ascending, unique, a multiple of 8
+	// of them) whose logits the output head computes while no request needs
+	// the whole vocabulary; empty keeps the whole head. The model holds a
+	// second, repacked copy of those rows (FeatureOutputShortlist).
+	HeadShortlist []int32
 	// VerifyRows bounds the rows of a step spent on drafts and their checks,
 	// summed over the decoding slots (Σ 1 + drafts); zero is no bound. The
 	// scheduler enforces it (sched.Loop.SetVerifyRows).

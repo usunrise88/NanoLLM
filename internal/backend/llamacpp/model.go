@@ -65,6 +65,9 @@ type model struct {
 	stream   *memlock.Streamer
 	streamID uintptr
 
+	// head is the output shortlist (head.go), nil without one.
+	head *headState
+
 	slots []slot
 }
 
@@ -96,6 +99,11 @@ type slot struct {
 	hist    []backend.Token
 	histBad bool
 	ng      ngram.Backoff
+
+	// outside: the slot's cache holds a token the output shortlist leaves
+	// out; wholeVocab: its sampler needs logits for any token (head.go).
+	outside    bool
+	wholeVocab bool
 }
 
 func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend.Model, error) {
@@ -134,6 +142,9 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 	runtime.KeepAlive(keep)
 	if m.mdl == 0 {
 		return nil, fmt.Errorf("llamacpp: load %s failed%s", spec.Path, lastErrors(m.loadLog))
+	}
+	if len(spec.HeadShortlist) > 0 {
+		m.attachHead(spec.HeadShortlist)
 	}
 	if st := spec.Stream.WithEnv(); st.Active() {
 		m.attachStream(st, &cp)

@@ -157,6 +157,16 @@ type ModelOverride struct {
 	// to spare and for experiments, the ram-2g / 1.5g runs of docs/AUTOTUNE.md
 	// show what happens under a tight budget).
 	Repack string `yaml:"repack"`
+	// Head is "" or "full" (the output head computes the whole vocabulary) or
+	// a shortlist: "shortlist" (65 % of the rows: the tokens the corpus used
+	// plus the Latin, Cyrillic and common-symbol part of the vocabulary) or
+	// "shortlist-small" (37 %). The head computes only the listed tokens'
+	// logits while no request needs the others (logprobs, a grammar, a logit
+	// bias, a prompt with a token outside the list) and falls back to the whole
+	// head for such a batch; the model holds a second copy of the listed rows
+	// (245 MiB for "shortlist"). A CPU option of libraries with patch 0009
+	// (the output-shortlist device feature); docs/AUTOTUNE.md, OPT-4.
+	Head string `yaml:"head"`
 	// FlashAttention is "" or "auto" (on; on a GPU that lists fa-small-batch,
 	// on batches of up to 8 tokens only), "on" (on for every batch), "off" (the
 	// matmul attention everywhere; a q8_0 cache needs flash attention) or

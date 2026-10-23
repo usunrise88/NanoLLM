@@ -92,6 +92,15 @@ type MTP struct {
 	VerifyRows int `json:"verify_rows,omitempty"`
 }
 
+// Head is the output shortlist (OPT-4, docs/AUTOTUNE.md): the head computes the
+// logits of Rows tokens while no request needs the whole vocabulary. The model
+// keeps a second, repacked copy of those rows (Bytes of memory).
+type Head struct {
+	Kind  string `json:"kind"`
+	Rows  int    `json:"rows"`
+	Bytes int64  `json:"bytes"`
+}
+
 // NGram is prompt-lookup drafting (OPT-5): drafts come from the sequence
 // itself, no drafter model is loaded.
 type NGram struct {
@@ -178,6 +187,10 @@ type Plan struct {
 	MTP          MTP           `json:"mtp"`
 	// NGram is set only when the request asked for it.
 	NGram *NGram `json:"ngram,omitempty"`
+	// Head is the output shortlist the plan runs, nil for the whole head.
+	Head *Head `json:"head,omitempty"`
+	// headIDs are the ids of the shortlist, for LoadSpec; not part of the plan's JSON.
+	headIDs []int32
 
 	// Groups is bytes per placement group and target; G5 is the KV cache,
 	// G7 the compute and output buffers of both contexts.

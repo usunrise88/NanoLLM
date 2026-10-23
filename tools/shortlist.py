@@ -10,6 +10,7 @@
 #   tools/shortlist.py local  DIR [MB]            # source code and docs on this machine
 #   tools/shortlist.py count  DIR MODEL.gguf      # llama-tokenize every DIR/*.txt -> DIR/counts-*.npy
 #   tools/shortlist.py curve  DIR MODEL.gguf LOGITS.bin [TOOLS_DIR]
+#   tools/shortlist.py export DIR MODEL.gguf LIST OUT.bin   # LIST: a name of DIR/lists.npz (written by curve)
 #
 # The texts are CC BY-SA (Wikipedia) or the licences of the sources; only counts leave DIR.
 import glob
@@ -258,6 +259,29 @@ def curve(out, model, logits, tools):
     np.savez_compressed(os.path.join(out, "lists.npz"), **{k: m for k, m in lists.items()})
 
 
+def export(out, model, name, dst):
+    """Write list NAME of lists.npz as a bitmap resource bound to the model file's sha256 (internal/registry/shortlist)."""
+    import hashlib
+    toks, ty = read_vocab(model)
+    n = len(toks)
+    lists = np.load(os.path.join(out, "lists.npz"))
+    mask = lists[name].copy()
+    total = sum(np.load(p) for p in sorted(glob.glob(os.path.join(out, "counts-*.npy"))))
+    # The repacked kernels work in groups of 8 rows: top up with the most frequent tokens left out.
+    spare = [i for i in np.argsort(-total, kind="stable") if not mask[i]]
+    for i in spare[: (-int(mask.sum())) % 8]:
+        mask[i] = True
+    assert mask.sum() % 8 == 0
+    h = hashlib.sha256()
+    with open(model, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 24), b""):
+            h.update(chunk)
+    bits = np.packbits(mask, bitorder="little").tobytes()
+    with open(dst, "wb") as f:
+        f.write(b"NLSL" + struct.pack("<III", 1, n, int(mask.sum())) + h.digest() + bits)
+    print(f"{dst}: {int(mask.sum())} of {n} rows ({mask.sum() / n:.1%}), model sha256 {h.hexdigest()[:16]}…")
+
+
 if __name__ == "__main__":
     cmd, out = sys.argv[1], sys.argv[2]
     tools = os.path.abspath("dist/linux_amd64-upstream/tools")
@@ -269,5 +293,7 @@ if __name__ == "__main__":
         count(out, sys.argv[3], tools)
     elif cmd == "curve":
         curve(out, sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else tools)
+    elif cmd == "export":
+        export(out, sys.argv[3], sys.argv[4], sys.argv[5])
     else:
         sys.exit(__doc__)

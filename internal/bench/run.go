@@ -295,6 +295,18 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		req.BackendSampling = gpu.Has(backend.FeatureBackendSampling)
 	}
 	v.Plan(&req)
+	if kind := v["head"]; kind != "" && kind != registry.HeadFull {
+		if onGPU || cpu == nil || !cpu.Has(backend.FeatureOutputShortlist) {
+			run.Status, run.Reason = benchfmt.StatusRefused, "head="+kind+" needs a CPU and libraries with patch 0009 (device feature output-shortlist)"
+			return run, WorkerSpec{}, true
+		}
+		ids, herr := registry.ShortlistIDs(o.Manifest, kind)
+		if herr != nil {
+			run.Status, run.Reason = benchfmt.StatusRefused, herr.Error()
+			return run, WorkerSpec{}, true
+		}
+		req.Head, req.HeadIDs = kind, ids
+	}
 	if onGPU {
 		req.Device = &plan.Device{
 			Selector: gpu.Selector(), Backend: plan.Kind(gpu.ID),

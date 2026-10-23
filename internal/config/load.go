@@ -341,6 +341,11 @@ func (o ModelOverride) validate() error {
 	default:
 		return fmt.Errorf("kv_type must be %s or %s, got %q", KVF16, KVQ8_0, o.KVType)
 	}
+	switch o.Head {
+	case "", "full", "shortlist", "shortlist-small":
+	default:
+		return fmt.Errorf("head must be full, shortlist or shortlist-small, got %q", o.Head)
+	}
 	switch o.Repack {
 	case "", "auto", "on", "off":
 	default:

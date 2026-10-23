@@ -122,6 +122,9 @@ func (b *llamaBackend) Devices(context.Context) ([]backend.Device, error) {
 		case GgmlBackendDeviceTypeCpu:
 			d.Type = backend.CPU
 			d.Features = cpuFeatures(llamaPrintSystemInfo())
+			if b.lib.cxx["llama_model_set_output_shortlist"] && b.lib.cxx["llama_set_output_shortlist"] {
+				d.Features = append(d.Features, backend.FeatureOutputShortlist)
+			}
 		case GgmlBackendDeviceTypeGpu:
 			d.Type = backend.GPU
 			d.Unified = unifiedGPU(d.ID, runtime.GOOS, runtime.GOARCH)

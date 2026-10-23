@@ -28,6 +28,21 @@ func TestVariantStreamKeys(t *testing.T) {
 	}
 }
 
+func TestVariantHeadKey(t *testing.T) {
+	for _, ok := range []string{"full", "shortlist", "shortlist-small"} {
+		if _, err := ParseSets([]string{"head=" + ok}); err != nil {
+			t.Errorf("head=%s: %v", ok, err)
+		}
+	}
+	if _, err := ParseSets([]string{"head=tiny"}); err == nil {
+		t.Error("head=tiny accepted")
+	}
+	vs, err := ParseSets([]string{"head=full,shortlist"})
+	if err != nil || len(vs) != 2 {
+		t.Fatalf("%v %v", vs, err)
+	}
+}
+
 func TestVariantSetsSpeculation(t *testing.T) {
 	if (Variant{}).setsSpeculation() || (Variant{"threads": "8", "kv": "q8_0"}).setsSpeculation() {
 		t.Error("a variant with no speculation key must get the CPU default")

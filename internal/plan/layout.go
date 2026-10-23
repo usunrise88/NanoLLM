@@ -114,6 +114,11 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 		case !spec.gpu && (spec.hostAnon || spec.repack):
 			dup.RAMLocked = tn.Bytes
 		}
+		// OPT-4: the shortlist is one more copy of part of the head's rows, in
+		// anonymous memory in every CPU mode.
+		if n := pl.headRows(); n > 0 && role == "model" && !spec.gpu {
+			dup.RAMLocked += HeadBytes(n, pl.h.EmbeddingLength)
+		}
 		add(g, dup)
 	}
 

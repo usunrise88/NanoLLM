@@ -33,6 +33,7 @@ var variantKeys = map[string]string{
 	"mtp":           "on or off",
 	"ngram":         "prompt-lookup drafting: the match length (2 or more), 0 is off; replaces the MTP drafter",
 	"repack":        "on or off: CPU repacked weights (use_extra_bufts)",
+	"head":          "full, shortlist or shortlist-small: the logits of all the tokens or of a shortlist while no request needs the rest (CPU, libraries with patch 0009; OPT-4)",
 	"mode":          "memory mode: auto, M1…M10 or a name",
 	"load":          "none, mmap, mlock, mmap+mlock or dio",
 	"lazy":          "off, auto or on",
@@ -138,6 +139,12 @@ func checkValue(key, v string) error {
 	case "sampling":
 		if v != "host" && v != "device" {
 			return fmt.Errorf("%q is not host or device", v)
+		}
+	case "head":
+		switch v {
+		case "full", "shortlist", "shortlist-small":
+		default:
+			return fmt.Errorf("%q is not full, shortlist or shortlist-small", v)
 		}
 	case "stream_method":
 		if v != "advise" && v != "pread" {

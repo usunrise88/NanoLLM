@@ -16,6 +16,7 @@ func (m *model) resetHistory(seq int) {
 	sl := &m.slots[seq]
 	sl.hist, sl.histBad = sl.hist[:0], false
 	sl.ng = ngram.Backoff{}
+	sl.outside = false
 }
 
 // noteTokens records the inputs a step put in the slot's cache: the step's

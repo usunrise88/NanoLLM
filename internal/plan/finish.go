@@ -80,6 +80,11 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 		p.Overrides = append(p.Overrides, backend.BufferOverride{Pattern: pat, Device: backend.DeviceCPURepack})
 	}
 
+	if n := pl.headRows(); n > 0 && !t.spec.gpu {
+		p.Head = &Head{Kind: pl.req.Head, Rows: n, Bytes: HeadBytes(n, pl.h.EmbeddingLength)}
+		p.headIDs = pl.req.HeadIDs
+	}
+
 	switch {
 	case pl.req.Model.Drafter == nil:
 		p.MTP = MTP{Reason: "the model has no drafter"}

@@ -63,6 +63,13 @@ type Request struct {
 	// over the decoding sequences. Zero asks for the default (the CPU rule of
 	// DefaultCPUMTP, none elsewhere); a negative number is no bound.
 	VerifyRows int
+	// Head asks for the output shortlist (OPT-4): "", "full" computes the
+	// whole head, any other name is a list, whose vocabulary ids are HeadIDs
+	// (ascending, a multiple of 8 of them; the caller loads them from the
+	// registry). The plan counts the second copy of the head's rows and puts
+	// the ids into the LoadSpec. CPU plans only.
+	Head    string
+	HeadIDs []int32
 	// NGram turns on prompt-lookup drafting with this match length (OPT-5);
 	// an MTP drafter, when the plan runs one, takes precedence.
 	NGram int
