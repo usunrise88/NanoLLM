@@ -20,7 +20,8 @@ auth:
     - {name: user,  secret: sk-nanollm-replace-me-user, rps: 10}
 
 api:
-  dialects: [openai, native]   # + ollama in v2
+  dialects: [openai, native]   # + ollama: the Ollama API (/api/chat, /api/tags, ...) for Ollama clients and Open WebUI.
+                               # Off by default. A client that hardcodes port 11434 needs server.addr set to it.
 
 backends:
   lib_dir: ./lib          # ggml backends and optional onnxruntime-genai; relative to the binary
