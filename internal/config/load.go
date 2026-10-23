@@ -346,6 +346,11 @@ func (o ModelOverride) validate() error {
 	default:
 		return fmt.Errorf("repack must be auto, on or off, got %q", o.Repack)
 	}
+	switch o.Layout {
+	case "", LayoutOriginal, LayoutNano:
+	default:
+		return fmt.Errorf("layout must be %s or %s, got %q", LayoutOriginal, LayoutNano, o.Layout)
+	}
 	switch o.FlashAttention {
 	case "", "auto", "on", "off", "small":
 	default:

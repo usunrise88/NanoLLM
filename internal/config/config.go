@@ -138,6 +138,12 @@ const (
 	KVQ8_0 = "q8_0"
 )
 
+// Tensor orders of the model file a model override accepts (OPT-7).
+const (
+	LayoutOriginal = "original"
+	LayoutNano     = "nano"
+)
+
 // ModelOverride is how one model is loaded. Every field is optional; an empty
 // one means the planner or the manifest decides.
 type ModelOverride struct {
@@ -182,6 +188,13 @@ type ModelOverride struct {
 	// Stream tunes the file-backed layers of the modes that leave weights
 	// in the file (M8, M9); every field zero leaves the loader alone.
 	Stream Stream `yaml:"stream"`
+	// Layout is the tensor order of the model file that loads: "" or
+	// "original" (the file as published) or "nano" (the copy `nanollm models
+	// relayout` wrote beside it: tensors in execution order, the pinned set
+	// in one range, a layer's weights in one range; the plan is made from
+	// that file's own offsets). Nano needs the copy and refuses to load
+	// without it; the bytes of every tensor are the same.
+	Layout string `yaml:"layout"`
 }
 
 // Stream is OPT-8: the layers a plan leaves file-backed are read ahead of
