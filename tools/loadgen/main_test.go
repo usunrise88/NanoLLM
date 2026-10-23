@@ -4,11 +4,18 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"io"
+	"log/slog"
 	"math/rand/v2"
 	"net/http"
+	"net/http/httptest"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/usunrise88/nanollm/internal/core"
+	"github.com/usunrise88/nanollm/internal/queue"
 )
 
 func TestAnswerAndWhy(t *testing.T) {
@@ -127,5 +134,51 @@ func TestPickMixWithAndWithoutJobs(t *testing.T) {
 	}
 	if c := count(&gen{only: "tool"}); c["tool"] != 4000 {
 		t.Errorf("-only: %v", c)
+	}
+}
+
+// echoService answers every chat with its last message.
+type echoService struct{ core.Service }
+
+func (echoService) Chat(_ context.Context, req core.ChatRequest, _ core.Sink) (*core.ChatResult, error) {
+	return &core.ChatResult{Message: core.Message{Role: core.RoleAssistant, Content: req.Messages[len(req.Messages)-1].Content}, FinishReason: core.FinishStop}, nil
+}
+
+// A job the generator builds is a batch the real queue accepts, runs and
+// announces in a webhook that verifies: the format of the lines, the signature,
+// the retry after the receiver's first 500.
+func TestJobAgainstTheRealQueue(t *testing.T) {
+	h, stop, err := startHooks("127.0.0.1:0", "s3cret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stop()
+	q, err := queue.Open(echoService{}, queue.Options{
+		Path: filepath.Join(t.TempDir(), "q.db"), WebhookSecret: "s3cret", HTTP: http.DefaultClient,
+		Log: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer q.Close()
+	mux := http.NewServeMux()
+	q.MountNative(mux)
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	g := &gen{base: srv.URL, http: http.DefaultClient, hooks: h}
+	rng := rand.New(rand.NewPCG(7, 7))
+	for range 12 { // enough jobs that one of them meets the 500 of the receiver
+		g.job(context.Background(), rng)
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	ok, other := g.totals["job/ok"], 0
+	for k, v := range g.totals {
+		if k != "job/ok" && k != "job/cancelled" {
+			other += v
+		}
+	}
+	if other != 0 || ok+g.totals["job/cancelled"] != 12 || ok == 0 {
+		t.Fatalf("totals %v", g.totals)
 	}
 }

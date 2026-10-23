@@ -25,43 +25,77 @@ import urllib.request
 import numpy as np
 
 UA = "NanoLLM-shortlist/1 (https://github.com/usunrise88/NanoLLM; token statistics)"
-SITES = {  # name: (api URL, share of the per-site budget)
-    "ru-wiki": ("https://ru.wikipedia.org/w/api.php", 1.0),
-    "en-wiki": ("https://en.wikipedia.org/w/api.php", 1.0),
-    "ru-news": ("https://ru.wikinews.org/w/api.php", 0.25),
-    "ru-books": ("https://ru.wikibooks.org/w/api.php", 0.25),
-    "en-books": ("https://en.wikibooks.org/w/api.php", 0.25),
-}
+
+
+def get_json(url, tries=4):
+    for attempt in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=40) as r:
+                return json.load(r)
+        except Exception as e:  # a failed request is retried after a pause
+            print("retry:", e, file=sys.stderr)
+            time.sleep(3 * (attempt + 1))
+    return None
+
+
+def top_titles(project, months=("2026/09", "2026/08", "2026/07")):
+    """The most read articles of a few months: the long, well-kept ones people ask about."""
+    seen, out = set(), []
+    for ym in months:
+        d = get_json(f"https://wikimedia.org/api/rest_v1/metrics/pageviews/top/{project}/all-access/{ym}/all-days")
+        for a in (d or {}).get("items", [{}])[0].get("articles", []):
+            t = a["article"].replace("_", " ")
+            if t in seen or ":" in t or t in ("Заглавная страница", "Main Page"):
+                continue
+            seen.add(t)
+            out.append(t)
+    return out
 
 
 def fetch(out, mb):
     os.makedirs(out, exist_ok=True)
-    for name, (api, share) in SITES.items():
+    # The two big encyclopedias: whole articles of the most read pages.
+    for name, project, api in (("ru-wiki", "ru.wikipedia", "https://ru.wikipedia.org/w/api.php"),
+                               ("en-wiki", "en.wikipedia", "https://en.wikipedia.org/w/api.php")):
         path = os.path.join(out, name + ".txt")
+        want = int(mb * 1e6)
         have = os.path.getsize(path) if os.path.exists(path) else 0
+        t0 = time.time()
+        with open(path, "a", encoding="utf-8") as f:
+            for title in top_titles(project):
+                if have >= want:
+                    break
+                q = urllib.parse.urlencode({"action": "query", "titles": title, "prop": "extracts", "explaintext": 1,
+                                            "format": "json", "formatversion": 2})
+                d = get_json(api + "?" + q)
+                for p in (d or {}).get("query", {}).get("pages", []):
+                    t = (p.get("extract") or "").strip()
+                    if len(t) > 500:
+                        f.write(t + "\n\n")
+                        f.flush()
+                        have += len(t.encode())
+                time.sleep(0.25)
+        print(f"{name}: {have / 1e6:.1f} MB in {time.time() - t0:.0f} s", flush=True)
+    # The small wikis: the introductions of random pages (no whole-article extracts for several pages at once).
+    for name, api, share in (("ru-news", "https://ru.wikinews.org/w/api.php", 0.2), ("ru-books", "https://ru.wikibooks.org/w/api.php", 0.2),
+                             ("en-books", "https://en.wikibooks.org/w/api.php", 0.2)):
+        path = os.path.join(out, name + ".txt")
         want = int(mb * share * 1e6)
+        have = os.path.getsize(path) if os.path.exists(path) else 0
         t0 = time.time()
         with open(path, "a", encoding="utf-8") as f:
             while have < want:
-                q = urllib.parse.urlencode({
-                    "action": "query", "generator": "random", "grnnamespace": 0, "grnlimit": 20,
-                    "prop": "extracts", "explaintext": 1, "exintro": 1, "exlimit": 20, "format": "json", "formatversion": 2,
-                })
-                try:
-                    req = urllib.request.Request(api + "?" + q, headers={"User-Agent": UA})
-                    with urllib.request.urlopen(req, timeout=30) as r:
-                        pages = json.load(r).get("query", {}).get("pages", [])
-                except Exception as e:  # a failed request is retried after a pause
-                    print(name, "retry:", e, file=sys.stderr)
-                    time.sleep(5)
-                    continue
-                for p in pages:
+                q = urllib.parse.urlencode({"action": "query", "generator": "random", "grnnamespace": 0, "grnlimit": 20,
+                                            "prop": "extracts", "explaintext": 1, "exintro": 1, "exlimit": 20, "format": "json", "formatversion": 2})
+                d = get_json(api + "?" + q)
+                for p in (d or {}).get("query", {}).get("pages", []):
                     t = (p.get("extract") or "").strip()
-                    if len(t) > 200:
+                    if len(t) > 60:
                         f.write(t + "\n\n")
                         have += len(t.encode())
-                time.sleep(0.4)
-        print(f"{name}: {have / 1e6:.1f} MB in {time.time() - t0:.0f} s")
+                time.sleep(0.3)
+        print(f"{name}: {have / 1e6:.1f} MB in {time.time() - t0:.0f} s", flush=True)
 
 
 def local(out, mb):

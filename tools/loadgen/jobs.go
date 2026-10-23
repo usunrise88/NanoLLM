@@ -230,7 +230,7 @@ func (g *gen) job(ctx context.Context, rng *rand.Rand) {
 	var body bytes.Buffer
 	for i := range lines {
 		l, _ := json.Marshal(map[string]any{
-			"custom_id": "l" + strconv.Itoa(i), "max_tokens": 24, "temperature": 0.7,
+			"custom_id": "l" + strconv.Itoa(i), "max_tokens": 24,
 			"messages": []chatMsg{{"user", "Name one thing about " + topics[rng.IntN(len(topics))] + ", in six words."}},
 		})
 		body.Write(l)
