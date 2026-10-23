@@ -110,7 +110,7 @@ func runScripted(t *testing.T, mode Mode, s *Survey, b *scriptedBackend, m regis
 		Options: Options{
 			Mode:   mode,
 			Survey: SurveyOptions{Backends: []backend.Backend{b}, Manifest: m, ModelPath: "fake.gguf", DrafterPath: "fake-drafter.gguf"},
-			Plan:   PlanInput{Manifest: m, ModelPath: "fake.gguf", DrafterPath: "fake-drafter.gguf", Matrix: mx},
+			Plan:   PlanInput{Manifest: m, ModelPath: "fake.gguf", DrafterPath: "fake-drafter.gguf", Matrix: mx, GOOS: s.OS.Name},
 		},
 		Runner:   InProcessRunner{Backend: b},
 		Survey:   s,
