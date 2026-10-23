@@ -64,6 +64,10 @@ type WorkerSpec struct {
 	// Strict means the worker runs alone in a cgroup with a memory limit:
 	// its memory.peak and page cache are then the run's own, and recorded.
 	Strict bool `json:"strict,omitempty"`
+	// Layout is "nano" when Load.Path is the relaid copy of the model file
+	// (OPT-7); the path and the ranges already differ, this makes the plan
+	// hash say so. Empty for the file as published.
+	Layout string `json:"layout,omitempty"`
 }
 
 // WorkerResult is what a worker writes on stdout.

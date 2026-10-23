@@ -147,6 +147,11 @@ type Plan struct {
 	Preset string  `json:"preset"`
 	Device *Device `json:"device,omitempty"`
 
+	// Layout is the tensor order of the model file the plan was made for:
+	// "nano" for a file relaid by `models relayout` (OPT-7), omitted for the
+	// file as published.
+	Layout string `json:"layout,omitempty"`
+
 	Mode   Mode   `json:"mode,omitempty"`
 	ModeID string `json:"mode_id,omitempty"`
 	// GPULayers is llama.cpp's n_gpu_layers: -1 for all, 0 for none.

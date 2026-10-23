@@ -220,6 +220,10 @@ type Plan struct {
 	CPUs string `json:"cpus,omitempty"`
 	// Cold means the model file was evicted from the page cache first.
 	Cold bool `json:"cold,omitempty"`
+	// Layout is the tensor order of the model file the run loaded: original
+	// (as published) or nano (the copy `nanollm models relayout` wrote,
+	// OPT-7). Same weights, other offsets.
+	Layout string `json:"layout,omitempty"`
 }
 
 // Metrics are medians over Reps; StdDev holds the spread of the main ones.

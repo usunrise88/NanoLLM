@@ -42,6 +42,35 @@ func TestExampleConfigLoads(t *testing.T) {
 	}
 }
 
+// OPT-7: the layout of the model file is a per-model switch, original by
+// default; the commented line of the example file is a valid one.
+func TestLayoutOverride(t *testing.T) {
+	if o := Default().Models.Override("any"); o.Layout != "" {
+		t.Errorf("default layout %q", o.Layout)
+	}
+	example, err := os.ReadFile(filepath.Join("..", "..", "configs", "nanollm.example.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := "      # layout: original"
+	if !strings.Contains(string(example), line) {
+		t.Fatal("the example config does not document layout")
+	}
+	for _, layout := range []string{"original", "nano"} {
+		c := Default()
+		doc := strings.Replace(string(example), line, "      layout: "+layout, 1)
+		if err := decode([]byte(doc), &c); err != nil {
+			t.Fatal(err)
+		}
+		if err := c.Validate(); err != nil {
+			t.Errorf("layout %s: %v", layout, err)
+		}
+		if got := c.Models.Override("gemma-4-e4b-qat").Layout; got != layout {
+			t.Errorf("layout %q decoded as %q", layout, got)
+		}
+	}
+}
+
 // The ollama dialect is opt-in: a default server speaks OpenAI and the native
 // API only, and naming ollama in api.dialects (file or environment) is valid.
 func TestOllamaDialectIsOptIn(t *testing.T) {
@@ -117,6 +146,9 @@ func TestValidateRefuses(t *testing.T) {
 		},
 		"bad flash attention": func(c *Config) {
 			c.Models.Overrides = map[string]ModelOverride{"m": {FlashAttention: "fast"}}
+		},
+		"bad layout": func(c *Config) {
+			c.Models.Overrides = map[string]ModelOverride{"m": {Layout: "sorted"}}
 		},
 		"bad stream method": func(c *Config) {
 			c.Models.Overrides = map[string]ModelOverride{"m": {Stream: Stream{Method: "readv"}}}
