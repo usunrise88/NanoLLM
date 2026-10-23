@@ -1,0 +1,157 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "dev",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a"
+    },
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Intel",
+      "model": "Intel Core i7-12700H",
+      "cores": 14,
+      "threads": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ]
+    },
+    "memory": {
+      "total_bytes": 34070962176,
+      "speed_mts": 3200
+    },
+    "gpus": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vendor": "NVIDIA",
+        "vram_bytes": 8589410304,
+        "driver_major": "581"
+      },
+      {
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vram_bytes": 8407482368
+      },
+      {
+        "name": "Intel(R) Iris(R) Xe Graphics",
+        "vram_bytes": 17035481088,
+        "unified": true
+      }
+    ],
+    "system": {
+      "vendor": "GIGABYTE",
+      "family": "AERO",
+      "product": "AERO 5 XE",
+      "form_factor": "laptop",
+      "chassis": "notebook"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11",
+      "kernel_mm": "10.26200"
+    },
+    "power": {
+      "source": "ac",
+      "profile": "Performance"
+    },
+    "disk": {
+      "type": "nvme"
+    }
+  },
+  "runs": [
+    {
+      "preset": "ram-4g",
+      "plan_hash": "d56b6b743d04409f",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 2,
+        "enforcement": "advisory",
+        "threads_batch": 2,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 2,
+        "draft_p_min": 0.5
+      },
+      "metrics": {
+        "load_ms": 2352.796,
+        "pp_tok_s": 92.40547067899726,
+        "tg_tok_s": {
+          "d0": 10.97781823123067
+        },
+        "ttft_ms": 706.2515000000001,
+        "chat_tok_s": 10.711332480515999,
+        "mtp": {
+          "acceptance": 0.7,
+          "speedup": 1.7819211962578305,
+          "tok_s": 19.086750387196425
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 2.6191319163562508,
+          "tok_s": 23.84735015460833
+        },
+        "peak_rss": 6281437184,
+        "peak_private": 3538006016,
+        "peak_commit": 4189097984,
+        "vram_dedicated": 28672,
+        "vram_shared": 278528,
+        "vram_source": "pdh",
+        "buffers": {
+          "CPU_Mapped": 2002895427,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.46288202211519025,
+          "echo_draft_tok_s": 1.3148056937075474,
+          "echo_tok_s": 0.4464932648548005,
+          "mtp_tok_s": 0.35954331958358177,
+          "pp_tok_s": 1.454213507127479,
+          "tg_tok_s.d0": 0.04667556706563509,
+          "ttft_ms": 79.39394939162554
+        }
+      },
+      "reps": 2,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "threads=2,threads_batch=2"
+    }
+  ],
+  "date": "2026-10-23",
+  "duration_s": 125.0346431
+}

@@ -1,0 +1,265 @@
+{
+  "candidate": {
+    "id": "llamacpp:vulkan0",
+    "device": {
+      "selector": "llamacpp:vulkan0",
+      "backend": "llamacpp",
+      "id": "vulkan0",
+      "kind": "vulkan",
+      "type": "gpu",
+      "name": "Intel(R) Iris(R) Xe Graphics",
+      "vendor": "Intel",
+      "memory_total": 17035481088,
+      "memory_free": 16230174720,
+      "unified": true,
+      "features": [
+        "fa-small-batch"
+      ],
+      "driver": "32.0.101.7092",
+      "driver_date": "2026-09-03"
+    },
+    "preset": "uma-15g",
+    "mode": "M1 vram-full",
+    "plan": {
+      "model": "gemma-4-e4b-qat",
+      "preset": "uma-15g",
+      "device": {
+        "selector": "llamacpp:vulkan0",
+        "backend": "vulkan",
+        "memory": 16230174720,
+        "unified": true
+      },
+      "mode": "vram-full",
+      "mode_id": "M1",
+      "gpu_layers": -1,
+      "layers_on_gpu": 42,
+      "n_ctx": 32768,
+      "slots": 1,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "n_outputs_max": 4,
+      "flash_attention": true,
+      "flash_attn_small_batch": true,
+      "kv": {
+        "type_k": "f16",
+        "type_v": "f16",
+        "swa_full": true,
+        "swa_full_reason": "the full sliding-window cache fits the budget: the prompt cache can reuse a prefix of any length",
+        "unified": false,
+        "cells_full": 32768,
+        "cells_swa": 32768,
+        "streams": 1,
+        "bytes": 1879048192
+      },
+      "load_mode": "mmap",
+      "lazy_mode": "off",
+      "repack": false,
+      "mtp": {
+        "enabled": true,
+        "reason": "the drafter (41.9 MiB) runs on llamacpp:vulkan0 with the target's output layer and reads its KV cache",
+        "draft_max": 3
+      },
+      "groups": {
+        "G0": {
+          "vram": 377487360,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G1": {
+          "vram": 1585446912,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G2": {
+          "vram": 376750080,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G3": {
+          "vram": 1857945600,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G4": {
+          "vram": 2241704,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G5": {
+          "vram": 1879048192,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G6": {
+          "vram": 6142992,
+          "ram_locked": 0,
+          "file_backed": 37748736,
+          "disk": 0
+        },
+        "G7": {
+          "vram": 708417945,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        }
+      },
+      "memory": {
+        "unified": {
+          "budget": 16106127360,
+          "used": 6994807377,
+          "budgeted": true
+        },
+        "file_backed": 37748736,
+        "overhead_ram": 201326592
+      },
+      "compute_calibrated": false,
+      "target": {
+        "n_ctx": 32768,
+        "slots": 1
+      },
+      "warnings": [
+        "compute buffers (G7) for vulkan are not calibrated yet: the CPU fit stands in",
+        "36.0 MiB stays file-backed: outside every budget, and cold pages fault in from disk"
+      ],
+      "sources": {
+        "min_n_ctx": "mode"
+      },
+      "tried": [
+        {
+          "mode": "vram-full",
+          "id": "M1",
+          "fits": true
+        }
+      ]
+    },
+    "spec": {
+      "Path": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "DrafterPath": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\mtp-gemma-4-E4B-it.gguf",
+      "Device": "llamacpp:vulkan0",
+      "GPULayers": -1,
+      "Overrides": null,
+      "LoadMode": "mmap",
+      "LazyMode": "off",
+      "Repack": false,
+      "NCtx": 32768,
+      "Slots": 1,
+      "NBatch": 2048,
+      "NUBatch": 512,
+      "NOutputsMax": 4,
+      "Threads": 0,
+      "ThreadsBatch": 0,
+      "KVTypeK": "f16",
+      "KVTypeV": "f16",
+      "FlashAttention": true,
+      "FlashAttnSmallBatch": true,
+      "BackendSampling": false,
+      "CudaNano": null,
+      "SWAFull": true,
+      "KVUnified": false,
+      "DraftMax": 3,
+      "DraftPMin": 0,
+      "NGram": 0,
+      "Stream": null
+    },
+    "class": {
+      "gpu_backend": "vulkan",
+      "gpu_memory": "shared",
+      "gpu_vendor": "intel",
+      "os": "windows"
+    },
+    "n_ctx": 32768,
+    "slots": 1,
+    "mtp": true,
+    "planned_private": 6994807377,
+    "planned_vram": 0,
+    "planned_bytes": 6994807377,
+    "estimate": {
+      "known": true,
+      "pp": 396,
+      "tg": 15.794999999999998,
+      "answer_s": 29.336786670120006,
+      "basis": "vulkan baseline (distance 0), depth factors estimated"
+    },
+    "measure": true
+  },
+  "probe": {
+    "load_ms": 5491.342,
+    "memory": {
+      "peak_private": 5905993728,
+      "peak_commit": 6177652736,
+      "vram_dedicated": 24576,
+      "vram_shared": 5615849472,
+      "vram_source": "pdh",
+      "buffers": 5361578802
+    },
+    "prefill": {
+      "tokens": 4096,
+      "pp512": 449.4642815914793,
+      "pp": 415.6323760857673
+    },
+    "calibration": {
+      "pp512": 449.4642815914793,
+      "pp4096": 415.6323760857673,
+      "tg0": 11.340301810792393,
+      "tg4096": 9.082547904385164,
+      "short_tg": 10.607786246439384,
+      "depth_pp": 0.924728378001654,
+      "depth_tg": 0.8009088343434952,
+      "variants": {
+        "mtp2/0": [
+          16.512525733657416,
+          14.760178378864305
+        ],
+        "mtp3/0": [
+          16.658178487411483,
+          17.199920629191663
+        ],
+        "off": [
+          11.340301810792393,
+          9.082547904385164
+        ]
+      }
+    },
+    "batch_ms": {
+      "1": 112.015,
+      "3": 137.115,
+      "4": 142.681
+    },
+    "gpu_begin": {
+      "temp_c": 67,
+      "clock_mhz": 210
+    },
+    "gpu_end": {
+      "temp_c": 73,
+      "clock_mhz": 210
+    },
+    "elapsed_s": 0
+  },
+  "baseline": {
+    "device": "vulkan",
+    "class": {
+      "gpu_backend": "vulkan",
+      "gpu_memory": "shared",
+      "gpu_vendor": "intel",
+      "os": "windows"
+    },
+    "pp512": 449.5,
+    "tg0": 11.3,
+    "depth_pp": 0.92,
+    "depth_tg": 0.8,
+    "mtp_gain": 1.89,
+    "source": "bench/results/\u003cmachine\u003e/optimize-stage0-\u003cdate\u003e/calibrate-\u003cdevice\u003e.json"
+  },
+  "best_variant": "mtp3/0",
+  "mechanism": {
+    "1": 112.015,
+    "3": 137.115,
+    "4": 142.681
+  }
+}
