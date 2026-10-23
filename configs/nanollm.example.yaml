@@ -107,6 +107,17 @@ bench:
   submit_url: https://nano.llmto.day
   anonymous: false        # true: a throwaway key, not withdrawable
 
+# The autotuner (docs/OPTIMIZE.md). `nanollm optimize` measures this machine for a
+# mode, saves a profile under <data_dir>/tune and writes the mode here. The limits
+# of the mode apply from the first start; the profile picks the best setup inside
+# them. A profile made for other libraries, drivers or hardware is stale: the
+# server logs it and runs by the limits until `nanollm optimize` is run again.
+tune:
+  mode: ""                # "" (off) | silent | optimal | powerful
+                          # silent: CPU only, 2 threads, low priority, the least memory that answers at 1 token/s
+                          # optimal: up to 4 GiB of memory (+200 MiB measured), half of the physical cores
+                          # powerful: all the free memory and cores
+
 ui:
   enabled: true
 

@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -82,35 +81,9 @@ func initCommand(args []string) error {
 	return nil
 }
 
-// writeValidated writes the configuration atomically, and only once it loads:
-// a file that `serve` would refuse is worse than no file, because it looks like
-// the problem has been solved.
-func writeValidated(path string, data []byte) error {
-	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, ".nanollm-*.yaml")
-	if err != nil {
-		return err
-	}
-	// Gone after the rename; removes the leftover on any failure before it.
-	defer func() { _ = os.Remove(tmp.Name()) }()
-
-	// The file holds secrets.
-	if err := tmp.Chmod(0o600); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if _, err := config.Load(tmp.Name()); err != nil {
-		return fmt.Errorf("the generated configuration does not validate: %w", err)
-	}
-	return os.Rename(tmp.Name(), path)
-}
+// writeValidated writes the configuration atomically, and only once it loads
+// (config.WriteValidated). The file holds secrets.
+func writeValidated(path string, data []byte) error { return config.WriteValidated(path, data, 0o600) }
 
 // yamlString makes a value safe inside a double-quoted YAML scalar. Windows
 // data directories are full of backslashes, which YAML would read as escapes.

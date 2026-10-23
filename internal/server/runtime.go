@@ -12,15 +12,20 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/config"
 	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/engine"
 	"github.com/usunrise88/nanollm/internal/memlock"
+	"github.com/usunrise88/nanollm/internal/placement"
 	"github.com/usunrise88/nanollm/internal/plan"
 	"github.com/usunrise88/nanollm/internal/pool"
+	"github.com/usunrise88/nanollm/internal/posture"
 	"github.com/usunrise88/nanollm/internal/registry"
+	"github.com/usunrise88/nanollm/internal/tune"
 )
 
 // Placement is how one model loads on one device: the pool key, the resolved
@@ -43,6 +48,10 @@ type PlaceRequest struct {
 	DrafterPath  string
 	Threads      int
 	ThreadsBatch int
+	// Tune is what the autotuner's mode and profile contribute (the zero value
+	// when it is off), and TuneID names it in the pool key.
+	Tune   placement.Tune
+	TuneID string
 }
 
 // Placer turns a model and a device into a placement: the planner's job.
@@ -59,6 +68,14 @@ type Runtime struct {
 
 	Pool   *pool.Pool
 	Engine *engine.Service
+
+	// tune is the autotuner's mode and profile; nil is off (SetTune).
+	tune atomic.Pointer[tune.Active]
+
+	// measuring names the measurement that runs now (a benchmark, an
+	// optimization); holds are the models it keeps requests away from.
+	measuring string
+	holds     map[string]time.Time
 
 	mu      sync.Mutex
 	devices []backend.Device // probed once; Devices refreshes
@@ -131,6 +148,74 @@ func (r *Runtime) probe(ctx context.Context) []backend.Device {
 // Close unloads every model.
 func (r *Runtime) Close() { r.Pool.Close() }
 
+// beginMeasure claims the machine for a measurement. Two at once would measure
+// each other; the second is told to wait.
+func (r *Runtime) beginMeasure(what string) (end func(), err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.measuring != "" {
+		return nil, core.Errorf(core.CodeConflict, "%s is already running", r.measuring)
+	}
+	r.measuring = what
+	return func() {
+		r.mu.Lock()
+		r.measuring = ""
+		r.mu.Unlock()
+	}, nil
+}
+
+// HoldRetry is the Retry-After a request gets while its model is held.
+const HoldRetry = 10 * time.Second
+
+// Hold keeps requests away from a model while it is measured: the measurement
+// loads its own copies and a request would load another. They get 503 with a
+// Retry-After, and the job queue waits for it. The hold lasts until release,
+// or max, whichever is first.
+func (r *Runtime) Hold(model string, max time.Duration) (release func()) {
+	until := time.Now().Add(max)
+	r.mu.Lock()
+	if r.holds == nil {
+		r.holds = map[string]time.Time{}
+	}
+	r.holds[model] = until
+	r.mu.Unlock()
+	return func() {
+		r.mu.Lock()
+		if r.holds[model].Equal(until) {
+			delete(r.holds, model)
+		}
+		r.mu.Unlock()
+	}
+}
+
+// held is the error for a request to a model that is being measured, nil
+// otherwise.
+func (r *Runtime) held(model string) error {
+	r.mu.Lock()
+	until, ok := r.holds[model]
+	r.mu.Unlock()
+	if !ok || !time.Now().Before(until) {
+		return nil
+	}
+	return core.Errorf(core.CodeModelUnavailable, "%s is being measured by the autotuner or the benchmark; try again shortly", model).
+		WithRetryAfter(min(HoldRetry, time.Until(until)))
+}
+
+// SetTune installs the autotuner's mode and profile: models placed from now on
+// run by its limits, and a profile in force chooses within them. It does not
+// touch a model already loaded; Reload does.
+func (r *Runtime) SetTune(a *tune.Active) { r.tune.Store(a) }
+
+// Tune is what SetTune installed, nil when the autotuner is off.
+func (r *Runtime) Tune() *tune.Active { return r.tune.Load() }
+
+// ProbedDevices are the devices the backends listed at start.
+func (r *Runtime) ProbedDevices() []backend.Device {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]backend.Device(nil), r.devices...)
+}
+
 func (r *Runtime) load(ctx context.Context, k pool.Key) (backend.Model, any, error) {
 	r.mu.Lock()
 	spec, ok := r.specs[k]
@@ -175,6 +260,9 @@ func (r *Runtime) load(ctx context.Context, k pool.Key) (backend.Model, any, err
 		}
 		return nil, nil, err
 	}
+	// The worker threads the load started take the process's low priority
+	// (the quiet mode); a no-op in any other.
+	_ = posture.Reapply()
 	if p, ok := info.(*plan.Plan); ok && len(p.RandomRanges) > 0 {
 		var ranges []memlock.Range
 		for _, rr := range p.RandomRanges {
@@ -276,6 +364,9 @@ func (r *Runtime) Resolve(ctx context.Context, model, device string) (engine.Tar
 	if err != nil {
 		return engine.Target{}, err
 	}
+	if err := r.held(m.ID); err != nil {
+		return engine.Target{}, err
+	}
 	pl, err := r.placement(ctx, m, device)
 	if err != nil {
 		return engine.Target{}, err
@@ -284,11 +375,20 @@ func (r *Runtime) Resolve(ctx context.Context, model, device string) (engine.Tar
 }
 
 func (r *Runtime) placement(ctx context.Context, m registry.Manifest, device string) (Placement, error) {
+	act := r.tune.Load()
+	if device == "" {
+		// The mode (the quiet one runs on the CPU) and the profile choose the
+		// device when neither the configuration nor the request does.
+		device = act.DefaultDevice(r.cfg.Devices.Default)
+	}
 	dev, err := r.pickDevice(device)
 	if err != nil {
 		return Placement{}, err
 	}
 	req := PlaceRequest{Manifest: m, Backend: dev.Backend, Device: dev, Override: r.cfg.Models.Overrides[m.ID], Threads: r.cfg.Devices.CPUThreads, ThreadsBatch: r.cfg.Devices.CPUThreadsBatch}
+	if dev.Backend != config.BackendFake {
+		req.Tune, req.TuneID = act.PlaceTune(dev.Selector()), act.ID()
+	}
 	if dev.Backend != config.BackendFake {
 		if r.store == nil {
 			return Placement{}, core.Errorf(core.CodeModelUnavailable, "no model store is configured")
@@ -358,7 +458,7 @@ func DefaultPlacer(_ context.Context, req PlaceRequest) (Placement, error) {
 func planKey(req PlaceRequest, revision, mode, preset string, nctx int) pool.Key {
 	return pool.Key{
 		Model: req.Manifest.ID, Revision: revision, Backend: req.Backend, Device: req.Device.ID,
-		Mode: mode, Preset: preset, NCtx: nctx,
+		Mode: mode, Preset: preset, NCtx: nctx, Tune: req.TuneID,
 	}
 }
 

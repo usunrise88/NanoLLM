@@ -6,6 +6,7 @@
 //	nanollm devices   list backends, devices and memory
 //	nanollm plan      print a placement plan without loading
 //	nanollm bench     prefill/decode speed per model × preset × mode
+//	nanollm optimize  pick the setup that suits the machine and a mode
 //	nanollm eval      the quality suite from SPEC §13
 //	nanollm models    catalog | list | pull | rm | inspect
 //	nanollm key       list | issue | remove
@@ -60,6 +61,8 @@ func main() {
 		err = planCommand(args, os.Stdout)
 	case "bench":
 		err = benchCommand(args)
+	case "optimize":
+		err = optimizeCommand(args)
 	case "eval":
 		err = evalCommand(args)
 	case "models":
@@ -99,6 +102,7 @@ func usage() {
   nanollm devices  [-config FILE] [-lib-dir DIR]
   nanollm plan     MODEL --preset P [--device D] [--device-memory SIZE] [--mode M] [--kv T] [--json]
   nanollm bench    [MODEL] [--suite standard|dev] [--full] [--preset P] [--submit] | submit FILE | withdraw ID
+  nanollm optimize [--mode silent|optimal|powerful] [--yes] [--dry-run] [--json] [--model ID]
   nanollm eval     [MODEL] --suite NAME|FILE [--thinking off|on|both] | rate REPORT | compare A B | suites
   nanollm models   catalog | list | pull ID... | rm ID | inspect FILE|ID [--tensors] [--json] [--drafter FILE]
   nanollm key      list | issue NAME [-admin] [-interactive] [-rps N] [-hash] | remove NAME

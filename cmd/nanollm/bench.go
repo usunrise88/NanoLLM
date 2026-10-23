@@ -20,6 +20,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/bench"
 	"github.com/usunrise88/nanollm/internal/config"
 	"github.com/usunrise88/nanollm/internal/registry"
+	"github.com/usunrise88/nanollm/internal/tune"
 )
 
 // benchCommand is the preset benchmark and the public benchmark client
@@ -141,7 +142,8 @@ func benchCommand(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	res, err := bench.Run(ctx, bench.Options{
-		Manifest: m, ModelPath: modelPath, DrafterPath: drafterPath, Backend: b, LibDir: libDir,
+		TuneProfile: tuneProfileID(ctx, cfg, m, b, libDir),
+		Manifest:    m, ModelPath: modelPath, DrafterPath: drafterPath, Backend: b, LibDir: libDir,
 		Suite: *suite, Full: *full, Presets: presets, Reps: *reps, Variants: variants, Place: place, Cold: *cold, Advisory: *advisory, Timeout: *timeout, Slow: *slow,
 		Version: version, Tag: llamacpp.PinnedTag, Commit: llamacpp.PinnedCommit,
 		Events: func(e bench.Event) {
@@ -335,4 +337,25 @@ func benchCompare(args []string) error {
 	}
 	bench.WriteComparison(os.Stdout, rows)
 	return nil
+}
+
+// tuneProfileID is the id of the autotune profile in force for the model, empty
+// when there is none (the autotuner is off, or its profile is stale): the
+// benchmark's result records it next to the plan.
+func tuneProfileID(ctx context.Context, cfg config.Config, m registry.Manifest, b backend.Backend, libDir string) string {
+	if cfg.Tune.Mode == "" {
+		return ""
+	}
+	devs, err := b.Devices(ctx)
+	if err != nil {
+		return ""
+	}
+	act, err := tune.LoadActive(ctx, tune.ActiveInput{
+		Config: cfg, Manifest: m, Devices: devs, LibDir: libDir,
+		LibsRelease: llamacpp.LibsRelease, LlamaCommit: llamacpp.PinnedCommit,
+	})
+	if err != nil || act == nil || act.Profile == nil {
+		return ""
+	}
+	return act.Profile.ID()
 }

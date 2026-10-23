@@ -36,5 +36,11 @@ models:
   #     preset: ram-6g    # a hard memory budget; `nanollm plan` shows what it buys
   #     mode: auto
 
+# The autotuner: `nanollm optimize` measures this machine for a mode and writes
+# the mode here. Silent: CPU only, 2 threads, low priority. Optimal: up to 4 GiB of
+# memory and half of the cores. Powerful: all the free memory and cores.
+# tune:
+#   mode: optimal         # silent | optimal | powerful
+
 ui:
   enabled: true
