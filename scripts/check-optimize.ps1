@@ -114,7 +114,8 @@ if (Test-Path -LiteralPath $json) {
     try {
         $p = Show-Result $json 'task'
         if ($AsCurrentUser) { Info 'plumbing only: the PDH verdict below is about the current user' }
-        if ($p.memory.source -eq 'pdh') { Pass 'the video memory of the process was read from PDH' }
+        if ($p.chosen.device.value -match '^fake') { Info 'the scripted backend: there is no video memory to read' }
+        elseif ($p.memory.source -eq 'pdh') { Pass 'the video memory of the process was read from PDH' }
         elseif ($p.chosen.device.value -match 'cpu') { Info "the CPU was chosen, so there is no video memory to read (memory source '$($p.memory.source)')" }
         else { Fail "the video memory came from '$($p.memory.source)', not PDH: the counters are not readable here" }
         if ($p.memory.measured_bytes -gt 0) { Pass "measured $([math]::Round($p.memory.measured_bytes / 1GB, 2)) GiB" } else { Fail 'nothing was measured' }
