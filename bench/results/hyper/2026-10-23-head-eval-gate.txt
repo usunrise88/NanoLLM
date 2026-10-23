@@ -1,0 +1,114 @@
+# OPT-4 capability gate, 2026-10-23, hyper (EPYC 7351P). scripts/head-eval.sh, binary dist/nanollm-next3 (libs of the next series, patches 0009 and 0010).
+# Configs ref-head (head: shortlist, node 1) and ref-head-small (head: shortlist-small, node 2); reference: eval/ref-SUITE.json (the old libraries); thinking off and on; temperature 0.
+
+########## ref-head (shortlist)
+ru-instructions          15/15 (100%)
+ru-instructions+thinking 14/15 (93%)
+=== 13:36:44 gate ru-instruct: reference (thinking both) vs ref-head
+reference: commit=14677a5a3911444e3d4c78414c9fe6a8c6ed2598 device=cpu kv=f16 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=auto preset=ram-8g repack=true tag=b11600 threads=16
+candidate: commit=4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf device=cpu kv=f16 max_tokens=1024 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=node:1 preset=ram-8g repack=true tag=b11600 threads=8
+capability                reference  candidate  verdict
+ru-instructions           15/15      15/15      same
+ru-instructions+thinking  15/15      14/15      same
+  cand pass: ru-instructions 15/15, ru-instructions+thinking 14/15
+  identical 28, different 2, only-in-one 0; time ref 572 s, cand 298 s (load differs: not a speed measurement)
+en-instructions          16/16 (100%)
+en-instructions+thinking 15/16 (94%)
+=== 13:40:20 gate en-instruct: reference (thinking both) vs ref-head
+reference: commit=14677a5a3911444e3d4c78414c9fe6a8c6ed2598 device=cpu kv=f16 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=auto preset=ram-8g repack=true tag=b11600 threads=16
+candidate: commit=4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf device=cpu kv=f16 max_tokens=1024 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=node:1 preset=ram-8g repack=true tag=b11600 threads=8
+capability                reference  candidate  verdict
+en-instructions           16/16      16/16      same
+en-instructions+thinking  15/16      15/16      same
+  cand pass: en-instructions 16/16, en-instructions+thinking 15/16
+  identical 32, different 0, only-in-one 0; time ref 384 s, cand 214 s (load differs: not a speed measurement)
+json                     5/5 (100%)
+json+thinking            5/5 (100%)
+=== 13:44:38 gate json-tools: reference (thinking both) vs ref-head
+reference: commit=14677a5a3911444e3d4c78414c9fe6a8c6ed2598 device=cpu kv=f16 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=auto preset=ram-8g repack=true tag=b11600 threads=16
+candidate: commit=4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf device=cpu kv=f16 max_tokens=1024 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=node:1 preset=ram-8g repack=true tag=b11600 threads=8
+capability      reference  candidate  verdict
+json            5/5        5/5        same
+json+thinking   5/5        5/5        same
+tools           5/5        5/5        same
+tools+thinking  5/5        5/5        same
+  cand pass: json 5/5, json+thinking 5/5, tools 5/5, tools+thinking 5/5
+  identical 18, different 2, only-in-one 0; time ref 659 s, cand 257 s (load differs: not a speed measurement)
+long-context             12/12 (100%)
+long-context+thinking    12/12 (100%)
+=== 14:59:09 gate long-context: reference (thinking both) vs ref-head
+reference: commit=14677a5a3911444e3d4c78414c9fe6a8c6ed2598 device=cpu kv=f16 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=auto preset=ram-8g repack=true tag=b11600 threads=16
+candidate: commit=4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf device=cpu kv=f16 max_tokens=1024 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=node:1 preset=ram-8g repack=true tag=b11600 threads=8
+capability             reference  candidate  verdict
+long-context           12/12      12/12      same
+long-context+thinking  12/12      12/12      same
+  cand pass: long-context 12/12, long-context+thinking 12/12
+  identical 17, different 7, only-in-one 0; time ref 4864 s, cand 4470 s (load differs: not a speed measurement)
+
+########## ref-head-small (shortlist-small)
+ru-instructions          15/15 (100%)
+ru-instructions+thinking 14/15 (93%)
+=== 13:36:34 gate ru-instruct: reference (thinking both) vs ref-head-small
+reference: commit=14677a5a3911444e3d4c78414c9fe6a8c6ed2598 device=cpu kv=f16 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=auto preset=ram-8g repack=true tag=b11600 threads=16
+candidate: commit=4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf device=cpu kv=f16 max_tokens=1024 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=node:2 preset=ram-8g repack=true tag=b11600 threads=8
+capability                reference  candidate  verdict
+ru-instructions           15/15      15/15      same
+ru-instructions+thinking  15/15      14/15      same
+  cand pass: ru-instructions 15/15, ru-instructions+thinking 14/15
+  identical 24, different 6, only-in-one 0; time ref 572 s, cand 288 s (load differs: not a speed measurement)
+en-instructions+thinking 15/16 (94%)
+en-instructions          16/16 (100%)
+=== 13:39:57 gate en-instruct: reference (thinking both) vs ref-head-small
+reference: commit=14677a5a3911444e3d4c78414c9fe6a8c6ed2598 device=cpu kv=f16 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=auto preset=ram-8g repack=true tag=b11600 threads=16
+candidate: commit=4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf device=cpu kv=f16 max_tokens=1024 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=node:2 preset=ram-8g repack=true tag=b11600 threads=8
+capability                reference  candidate  verdict
+en-instructions           16/16      16/16      same
+en-instructions+thinking  15/16      15/16      same
+  cand pass: en-instructions 16/16, en-instructions+thinking 15/16
+  identical 25, different 7, only-in-one 0; time ref 384 s, cand 201 s (load differs: not a speed measurement)
+json                     5/5 (100%)
+json+thinking            5/5 (100%)
+=== 13:44:12 gate json-tools: reference (thinking both) vs ref-head-small
+reference: commit=14677a5a3911444e3d4c78414c9fe6a8c6ed2598 device=cpu kv=f16 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=auto preset=ram-8g repack=true tag=b11600 threads=16
+candidate: commit=4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf device=cpu kv=f16 max_tokens=1024 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=node:2 preset=ram-8g repack=true tag=b11600 threads=8
+capability      reference  candidate  verdict
+json            5/5        5/5        same
+json+thinking   5/5        5/5        same
+tools           5/5        5/5        same
+tools+thinking  5/5        5/5        same
+  cand pass: json 5/5, json+thinking 5/5, tools 5/5, tools+thinking 5/5
+  identical 18, different 2, only-in-one 0; time ref 659 s, cand 254 s (load differs: not a speed measurement)
+long-context+thinking    12/12 (100%)
+long-context             12/12 (100%)
+=== 14:58:33 gate long-context: reference (thinking both) vs ref-head-small
+reference: commit=14677a5a3911444e3d4c78414c9fe6a8c6ed2598 device=cpu kv=f16 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=auto preset=ram-8g repack=true tag=b11600 threads=16
+candidate: commit=4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf device=cpu kv=f16 max_tokens=1024 mode=ram-full model_sha256=df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3 mtp=false numa=node:2 preset=ram-8g repack=true tag=b11600 threads=8
+capability             reference  candidate  verdict
+long-context           12/12      12/12      same
+long-context+thinking  12/12      12/12      same
+  cand pass: long-context 12/12, long-context+thinking 12/12
+  identical 13, different 11, only-in-one 0; time ref 4864 s, cand 4460 s (load differs: not a speed measurement)
+
+########## final answers identical to the reference ref-next2 (the same series without the head change), per suite
+# pairs: ref->ref-next2 is the noise of the libraries; ref-next2->ref-head(-small) is the head. 'answer' text only; eval-diff.py also counts the completion length.
+
+## ref -> ref-next2
+  ru-instruct   thinking off: identical 15/15, pass 15->15 | thinking on : identical 15/15, pass 15->15
+  en-instruct   thinking off: identical 16/16, pass 16->16 | thinking on : identical 16/16, pass 15->15
+  json-tools    thinking off: identical 10/10, pass 10->10 | thinking on : identical 10/10, pass 10->10
+  long-context  thinking off: identical 12/12, pass 12->12 | thinking on : identical 12/12, pass 12->12
+  TOTAL         thinking off: 53/53 | thinking on: 53/53
+
+## ref-next2 -> ref-head
+  ru-instruct   thinking off: identical 15/15, pass 15->15 | thinking on : identical 13/15, pass 15->14
+  en-instruct   thinking off: identical 16/16, pass 16->16 | thinking on : identical 16/16, pass 15->15
+  json-tools    thinking off: identical 10/10, pass 10->10 | thinking on : identical 10/10, pass 10->10
+  long-context  thinking off: identical 12/12, pass 12->12 | thinking on : identical 12/12, pass 12->12
+  TOTAL         thinking off: 53/53 | thinking on: 51/53
+
+## ref-next2 -> ref-head-small
+  ru-instruct   thinking off: identical 15/15, pass 15->15 | thinking on : identical 11/15, pass 15->14
+  en-instruct   thinking off: identical 15/16, pass 16->16 | thinking on : identical 12/16, pass 15->15
+  json-tools    thinking off: identical 10/10, pass 10->10 | thinking on : identical 10/10, pass 10->10
+  long-context  thinking off: identical 12/12, pass 12->12 | thinking on : identical 12/12, pass 12->12
+  TOTAL         thinking off: 52/53 | thinking on: 45/53

@@ -198,6 +198,9 @@ func TestPromptDiskRestoresIntoAFreeSlotOfSeveral(t *testing.T) {
 	first := newDiskLoop(t, dir, diskFP, 0, nil, backend.LoadSpec{Slots: 3})
 	a, b := longPrompt(first.m, "charlie"), longPrompt(first.m, "delta")
 	run(t, first.Loop, first.m, Request{Prompt: a, Logprobs: -1})
+	// The store takes one state besides the one it is writing and drops the next (ErrBusy); with one CPU
+	// the writer has not started when the second save comes, so the test waits for each file.
+	first.store.Flush()
 	run(t, first.Loop, first.m, Request{Prompt: b, Logprobs: -1})
 	first.Close()
 
@@ -237,6 +240,7 @@ func TestPromptDiskUsesTheLongestEntry(t *testing.T) {
 	short := longPrompt(first.m, "foxtrot")
 	long := extend(first.m, short, "the second turn")
 	run(t, first.Loop, first.m, Request{Prompt: short, Logprobs: -1})
+	first.store.Flush() // see TestPromptDiskRestoresIntoAFreeSlotOfSeveral
 	run(t, first.Loop, first.m, Request{Prompt: long, Logprobs: -1})
 	first.Close()
 	if got := nlpcFiles(t, dir); len(got) != 2 {
