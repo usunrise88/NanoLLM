@@ -129,6 +129,38 @@ func TestDraftingAndBudget(t *testing.T) {
 	}
 }
 
+// The rows spent on drafts are shared by the decoding slots: one sequence may
+// draft as far as the bound allows, and with as many sequences as rows none does.
+func TestVerifyRowsShare(t *testing.T) {
+	for _, c := range []struct{ rows, budget, n, share, extra int }{
+		{0, 100, 2, 0, 0}, // no bound: the caller does not use the share
+		{3, 100, 1, 2, 0}, // one sequence, rows for two drafts
+		{4, 100, 2, 1, 0}, // two sequences, a draft each
+		{5, 100, 2, 1, 1}, // the first of two takes the odd row
+		{4, 100, 4, 0, 0}, // as many sequences as rows: no drafts
+		{3, 100, 4, 0, 0}, // more sequences than rows: still none, never negative
+		{8, 1, 2, 0, 1},   // the batch has one row left
+	} {
+		share, extra := draftShares(c.rows, c.budget, c.n)
+		if share != c.share || extra != c.extra {
+			t.Errorf("rows %d budget %d n %d: share %d extra %d, want %d %d", c.rows, c.budget, c.n, share, extra, c.share, c.extra)
+		}
+	}
+}
+
+func TestVerifyRowsBoundsDrafting(t *testing.T) {
+	l, m := newLoop(t, fake.Options{MaxDraft: 3, Acceptance: 1}, backend.LoadSpec{DrafterPath: "d", NBatch: 8})
+	l.SetVerifyRows(1) // a row for the token itself and none for drafts
+	_, ev := run(t, l, m, Request{Prompt: prompt(m, "[[fake:long 40]]"), Logprobs: -1})
+	if ev.Stats.Drafted != 0 {
+		t.Fatalf("drafted %d with no rows to spare", ev.Stats.Drafted)
+	}
+	l.SetVerifyRows(0)
+	if _, ev = run(t, l, m, Request{Prompt: prompt(m, "[[fake:long 40]]"), Logprobs: -1}); ev.Stats.Drafted == 0 {
+		t.Fatal("no bound: drafting should be back")
+	}
+}
+
 func TestCancel(t *testing.T) {
 	l, m := newLoop(t, fake.Options{DecodeRate: 200}, backend.LoadSpec{})
 	ctx, cancel := context.WithCancel(context.Background())

@@ -25,8 +25,11 @@ var variantKeys = map[string]string{
 	"kv":            "KV cache type for K and V: f16 or q8_0",
 	"n_ctx":         "context per slot",
 	"slots":         "parallel sequences",
+	"batch":         "dev suite: also measure the throughput of 1, 2, 4… up to N sequences decoding at once, with and without MTP (raises slots to N)",
 	"draft_max":     "MTP tokens drafted per step",
 	"draft_p_min":   "MTP: stop drafting below this probability",
+	"only":          "batch: run the throughput curve of the batch key and nothing else",
+	"verify_rows":   "rows of one step spent on drafts and their checks, summed over the decoding sequences (0: no bound)",
 	"mtp":           "on or off",
 	"ngram":         "prompt-lookup drafting: the match length (2 or more), 0 is off; replaces the MTP drafter",
 	"repack":        "on or off: CPU repacked weights (use_extra_bufts)",
@@ -104,7 +107,15 @@ func checkValue(key, v string) error {
 		return nil
 	}
 	switch key {
-	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "stream_ahead", "stream_keep", "ngram":
+	case "only":
+		if v != "batch" {
+			return fmt.Errorf("%q is not batch", v)
+		}
+	case "batch":
+		if n, err := strconv.Atoi(v); err != nil || n < 2 || n > 64 {
+			return fmt.Errorf("%q is not a number of sequences from 2 to 64", v)
+		}
+	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "verify_rows", "stream_ahead", "stream_keep", "ngram":
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
 			return fmt.Errorf("%q is not a non-negative integer", v)
@@ -191,6 +202,9 @@ func (v Variant) Plan(req *plan.Request) {
 	}
 	if n, ok := v.int("slots"); ok {
 		req.Slots = n
+	}
+	if n, ok := v.int("batch"); ok {
+		req.Slots = max(req.Slots, n)
 	}
 	if n, ok := v.int("draft_max"); ok {
 		req.DraftMax = n

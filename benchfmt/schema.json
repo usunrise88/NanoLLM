@@ -256,6 +256,37 @@
         "properties": {
           "metrics": {
             "properties": {
+              "batch": {
+                "items": {
+                  "properties": {
+                    "acceptance": {
+                      "type": "number"
+                    },
+                    "agg_tok_s": {
+                      "type": "number"
+                    },
+                    "mtp_agg_tok_s": {
+                      "type": "number"
+                    },
+                    "mtp_per_seq_tok_s": {
+                      "type": "number"
+                    },
+                    "per_seq_tok_s": {
+                      "type": "number"
+                    },
+                    "seqs": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "agg_tok_s",
+                    "per_seq_tok_s",
+                    "seqs"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "buffers": {
                 "additionalProperties": {
                   "type": "integer"

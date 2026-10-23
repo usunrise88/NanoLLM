@@ -232,11 +232,14 @@ type Metrics struct {
 	MTP      *MTP    `json:"mtp,omitempty"`
 	// Echo is drafting on a task that repeats its input (dev suite): the
 	// best case of prompt lookup, next to the chat-ru worst case.
-	Echo          *MTP  `json:"echo,omitempty"`
-	PeakRSS       int64 `json:"peak_rss,omitempty"`
-	PeakVRAM      int64 `json:"peak_vram,omitempty"`
-	PeakLocked    int64 `json:"peak_locked,omitempty"`
-	PeakPageCache int64 `json:"peak_page_cache,omitempty"`
+	Echo *MTP `json:"echo,omitempty"`
+	// Batch is the throughput with several sequences decoding at once (dev
+	// suite, key batch): one point per number of sequences.
+	Batch         []BatchPoint `json:"batch,omitempty"`
+	PeakRSS       int64        `json:"peak_rss,omitempty"`
+	PeakVRAM      int64        `json:"peak_vram,omitempty"`
+	PeakLocked    int64        `json:"peak_locked,omitempty"`
+	PeakPageCache int64        `json:"peak_page_cache,omitempty"`
 	// PeakCgroup is the memory.peak of the worker's strict cgroup: resident
 	// pages plus the page cache charged to it, which is what the budget
 	// limits.
@@ -245,6 +248,20 @@ type Metrics struct {
 	// Vulkan0, …), from the load log.
 	Buffers map[string]int64   `json:"buffers,omitempty"`
 	StdDev  map[string]float64 `json:"stddev,omitempty"`
+}
+
+// BatchPoint is chat-ru decoded by Seqs sequences at once, in separate slots.
+// AggTokS is every token of every sequence over the wall time from the start
+// to the last end (prefill of the short prompts included); PerSeqTokS is the
+// median decode rate of one sequence. The MTP fields are the same with
+// drafting on, and Acceptance its draft acceptance over all sequences.
+type BatchPoint struct {
+	Seqs          int     `json:"seqs"`
+	AggTokS       float64 `json:"agg_tok_s"`
+	PerSeqTokS    float64 `json:"per_seq_tok_s"`
+	MTPAggTokS    float64 `json:"mtp_agg_tok_s,omitempty"`
+	MTPPerSeqTokS float64 `json:"mtp_per_seq_tok_s,omitempty"`
+	Acceptance    float64 `json:"acceptance,omitempty"`
 }
 
 // TG is token generation at depth 0 and at depth N (DepthN tokens of

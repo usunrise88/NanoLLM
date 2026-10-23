@@ -14,6 +14,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/usunrise88/nanollm/benchfmt"
@@ -43,6 +44,16 @@ type WorkerSpec struct {
 	Random []memlock.Range `json:"random,omitempty"`
 	// Quick skips the depth-N decode, the slowest scenario.
 	Quick bool `json:"quick"`
+	// Batch, when above 1, adds the throughput curve of 1, 2, 4… up to Batch
+	// sequences decoding at once (dev suite). The model must be loaded with
+	// at least that many slots.
+	Batch int `json:"batch,omitempty"`
+	// OnlyBatch runs the throughput curve and nothing else (a sweep of the
+	// scheduler's drafting policy needs only that).
+	OnlyBatch bool `json:"only_batch,omitempty"`
+	// VerifyRows bounds the rows spent on drafts in a step (the scheduler's
+	// SetVerifyRows); zero is no bound.
+	VerifyRows int `json:"verify_rows,omitempty"`
 	// Echo adds the echo scenario (dev suite): the model copies a given
 	// text, which is where prompt lookup drafts pay.
 	Echo bool `json:"echo,omitempty"`
@@ -127,6 +138,7 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 	res.Metrics.LoadMS = ms(time.Since(start))
 	loop := sched.New(m)
 	defer loop.Close()
+	loop.SetVerifyRows(spec.VerifyRows)
 	res, err = run(ctx, m, loop, spec, res)
 	if cg != nil {
 		// Read while the model is still loaded: the peak and the page cache
@@ -173,6 +185,15 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 		return float64(n) / d.Seconds()
 	}
 	std := map[string]float64{}
+
+	if spec.OnlyBatch && spec.Batch > 1 {
+		pts, err := batchCurve(gen, m, spec.Batch, reps, caps.MaxDraft > 0)
+		if err != nil {
+			return res, err
+		}
+		res.Metrics.Batch = pts
+		return withMemory(m, res), nil
+	}
 
 	// pp512: prefill only, the cache cleared each time.
 	var pp []float64
@@ -310,8 +331,109 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 			return res, fmt.Errorf("echo: drafting changed the output (%d tokens plain, %d drafted)", len(plainOut), len(draftOut))
 		}
 	}
+	if spec.Batch > 1 && !spec.Slow {
+		pts, err := batchCurve(gen, m, spec.Batch, reps, caps.MaxDraft > 0)
+		if err != nil {
+			return res, err
+		}
+		res.Metrics.Batch = pts
+	}
 	res.Metrics.StdDev = std
 	return withMemory(m, res), nil
+}
+
+// batchPrompts are the questions the sequences of a throughput point ask, in
+// turn. They are about as long as chat-ru, and not the same, so that the slots
+// do not walk the same path through the model. Not part of the suite hash:
+// the curve is a development measurement.
+var batchPrompts = []string{
+	chatPrompt,
+	"Расскажи кратко, как устроен компас, и приведи два примера, где им пользуются.",
+	"Объясни простыми словами, почему идёт дождь, и приведи два примера, как его предсказывают.",
+	"Опиши простыми словами, как работает холодильник, и приведи два примера, где применяют холод.",
+}
+
+// batchSizes are the points of the curve: 1, 2, 4… and top itself.
+func batchSizes(top int) []int {
+	var out []int
+	for n := 1; n < top; n *= 2 {
+		out = append(out, n)
+	}
+	return append(out, top)
+}
+
+// batchCurve measures n sequences decoding at once through the same loop, for
+// each n of batchSizes, without drafting and with it (when the model has a
+// drafter). The drafts of all sequences share the step's batch, so the point
+// shows what MTP costs the other sequences and what it still gives.
+func batchCurve(gen func([]backend.Token, int, bool, bool) (*sched.Stats, []backend.Token, error), m backend.Model, maxSeqs, reps int, drafter bool) ([]benchfmt.BatchPoint, error) {
+	var prompts [][]backend.Token
+	for _, q := range batchPrompts {
+		toks, err := m.Tokenize(chat.PromptGemma4([]core.Message{{Role: core.RoleSystem, Content: chatSystem}, {Role: core.RoleUser, Content: q}}, nil, chat.Options{AddGenerationPrompt: true}), false, true)
+		if err != nil {
+			return nil, err
+		}
+		prompts = append(prompts, toks)
+	}
+	var out []benchfmt.BatchPoint
+	for _, n := range batchSizes(maxSeqs) {
+		pt := benchfmt.BatchPoint{Seqs: n}
+		for _, noDraft := range []bool{true, false} {
+			if !noDraft && !drafter {
+				continue
+			}
+			var agg, per, acc []float64
+			for range max(reps, 1) {
+				type one struct {
+					st   *sched.Stats
+					toks int
+					err  error
+				}
+				results := make([]one, n)
+				var wg sync.WaitGroup
+				t0 := time.Now()
+				for i := range n {
+					wg.Add(1)
+					go func() {
+						defer wg.Done()
+						st, toks, err := gen(prompts[i%len(prompts)], ChatTokens, true, noDraft)
+						results[i] = one{st, len(toks), err}
+					}()
+				}
+				wg.Wait()
+				wall := time.Since(t0)
+				var total, drafted, accepted int
+				var rates []float64
+				for _, r := range results {
+					if r.err != nil {
+						return nil, fmt.Errorf("%d sequences at once: %w", n, r.err)
+					}
+					total += r.toks
+					if r.st.Decode > 0 {
+						rates = append(rates, float64(r.toks-1)/r.st.Decode.Seconds())
+					}
+					drafted += r.st.Drafted
+					accepted += r.st.Accepted
+				}
+				agg = append(agg, float64(total)/wall.Seconds())
+				med, _ := medianStd(rates)
+				per = append(per, med)
+				if drafted > 0 {
+					acc = append(acc, float64(accepted)/float64(drafted))
+				}
+			}
+			a, _ := medianStd(agg)
+			p, _ := medianStd(per)
+			if noDraft {
+				pt.AggTokS, pt.PerSeqTokS = a, p
+				continue
+			}
+			pt.MTPAggTokS, pt.MTPPerSeqTokS = a, p
+			pt.Acceptance, _ = medianStd(acc)
+		}
+		out = append(out, pt)
+	}
+	return out, nil
 }
 
 // withMemory adds the process's peaks and the weight buffers to a result.

@@ -50,9 +50,31 @@ var compareMetrics = []metricDef{
 		}
 		return r.Metrics.MTP.TokS
 	}},
+	batchMetric(2, false), batchMetric(2, true), batchMetric(4, false), batchMetric(4, true),
+	batchMetric(8, false), batchMetric(8, true),
 	{"load ms", false, "", func(r benchfmt.Run) float64 { return r.Metrics.LoadMS }},
 	{"peak rss", false, "", func(r benchfmt.Run) float64 { return float64(r.Metrics.PeakRSS) }},
 	{"peak cgroup", false, "", func(r benchfmt.Run) float64 { return float64(r.Metrics.PeakCgroup) }},
+}
+
+// batchMetric is the aggregate throughput of n sequences at once (the batch key
+// of a dev sweep), without or with MTP.
+func batchMetric(n int, mtp bool) metricDef {
+	name := fmt.Sprintf("agg tok/s x%d", n)
+	if mtp {
+		name += " mtp"
+	}
+	return metricDef{name, true, "", func(r benchfmt.Run) float64 {
+		for _, p := range r.Metrics.Batch {
+			if p.Seqs == n {
+				if mtp {
+					return p.MTPAggTokS
+				}
+				return p.AggTokS
+			}
+		}
+		return 0
+	}}
 }
 
 // Compare pairs the runs of a and b by preset and variant and judges every

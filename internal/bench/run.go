@@ -337,7 +337,9 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		spec.ThreadsBatch = pinned
 	}
 	spec = spec.WithDefaultThreads()
-	ws := WorkerSpec{Load: spec, Place: place, Slow: o.Slow, Env: v.Env(), Cold: o.Cold || budgetOf(name).RAM > 0 && !o.Advisory && userScopes()}
+	batch, _ := v.int("batch")
+	verifyRows, _ := v.int("verify_rows")
+	ws := WorkerSpec{Load: spec, Place: place, Slow: o.Slow, Batch: batch, VerifyRows: verifyRows, OnlyBatch: v["only"] == "batch", Env: v.Env(), Cold: o.Cold || budgetOf(name).RAM > 0 && !o.Advisory && userScopes()}
 	for _, lr := range p.LockRanges {
 		r := memlock.Range{Off: lr.Offset, Len: lr.Length}
 		if lr.Role == registry.RoleDrafter {
@@ -371,6 +373,9 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (WorkerResult, string, error) {
 	ws.Backend, ws.LibDir, ws.Reps, ws.Quick = o.Backend.Name(), o.LibDir, o.Reps, !o.Full
 	ws.Echo = o.Suite == SuiteDev
+	if o.Suite != SuiteDev {
+		ws.Batch = 0 // the throughput curve is a development measurement
+	}
 	enforcement := "advisory"
 	strict := runtime.GOOS == "linux" && budget.RAM > 0 && !o.Advisory && userScopes()
 	if strict {

@@ -14,8 +14,8 @@ type smbiosInfo struct {
 	// The baseboard (type 2): the name of a board whose system strings are
 	// placeholders.
 	boardVendor, boardProduct string
-	chassis                          int
-	memMTS                           int
+	chassis                   int
+	memMTS                    int
 }
 
 // parseSMBIOS reads the raw table GetSystemFirmwareTable('RSMB') returns: an
