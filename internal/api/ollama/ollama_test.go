@@ -376,7 +376,9 @@ func TestChat(t *testing.T) {
 		if l.Model != modelID || l.Message.Role != "assistant" || l.Message.Content != "hi there" || !l.Done || l.DoneReason != "stop" {
 			t.Fatalf("%+v", l)
 		}
-		if l.CreatedAt.IsZero() || l.TotalDuration == nil || *l.TotalDuration <= 0 || l.LoadDuration == nil ||
+		// A duration is present, not necessarily above zero: the instant fake
+		// finishes inside one tick of the Windows clock.
+		if l.CreatedAt.IsZero() || l.TotalDuration == nil || *l.TotalDuration < 0 || l.LoadDuration == nil ||
 			l.PromptEvalCount == nil || *l.PromptEvalCount <= 0 || l.PromptEvalDuration == nil ||
 			l.EvalCount == nil || *l.EvalCount <= 0 || l.EvalDuration == nil {
 			t.Errorf("the last line lacks its timings: %+v", l)
