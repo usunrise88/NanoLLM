@@ -69,7 +69,7 @@ type APIKey struct {
 const (
 	DialectOpenAI = "openai"
 	DialectNative = "native"
-	DialectOllama = "ollama" // v2
+	DialectOllama = "ollama" // opt-in: not in the default dialects
 )
 
 type API struct {

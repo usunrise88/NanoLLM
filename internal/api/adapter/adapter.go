@@ -60,9 +60,9 @@ func Register(name string, a Adapter) {
 }
 
 // MountAll mounts the named dialects. A name the configuration accepts but
-// this build does not carry (ollama before v2) is an error, not a silent skip:
-// a server that starts without the API it was told to serve looks healthy to
-// everything except its clients.
+// this build does not carry (one left out of a custom build) is an error, not
+// a silent skip: a server that starts without the API it was told to serve
+// looks healthy to everything except its clients.
 func MountAll(mux *http.ServeMux, names []string, deps Deps) error {
 	mu.RLock()
 	defer mu.RUnlock()
