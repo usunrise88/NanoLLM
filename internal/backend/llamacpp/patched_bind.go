@@ -22,6 +22,6 @@ func init() {
 	cxxSymbols = append(cxxSymbols,
 		cxxSymbol{"llama_model_set_output_shortlist", "_Z32llama_model_set_output_shortlistP11llama_modelPKii", "?llama_model_set_output_shortlist@@YA_NPEAUllama_model@@PEBHH@Z", &llamaModelSetOutputShortlist},
 		cxxSymbol{"llama_set_output_shortlist", "_Z26llama_set_output_shortlistP13llama_contextb", "?llama_set_output_shortlist@@YAXPEAUllama_context@@_N@Z", &llamaSetOutputShortlist},
-		cxxSymbol{"llama_model_get_tensor", "_Z21llama_model_get_tensorPK11llama_modelPKc", "?llama_model_get_tensor@@YAPEAUggml_tensor@@PEBUllama_model@@PEBD@Z", &llamaModelGetTensor},
+		cxxSymbol{"llama_model_get_tensor", "_Z22llama_model_get_tensorPK11llama_modelPKc", "?llama_model_get_tensor@@YAPEAUggml_tensor@@PEBUllama_model@@PEBD@Z", &llamaModelGetTensor},
 	)
 }

@@ -34,7 +34,9 @@ func nativeRingSetup(t *testing.T) (*llamaBackend, string, []backend.StreamRange
 	}
 	var ranges []backend.StreamRange
 	for _, tn := range inv.Tensors {
-		if tn.Layer >= 0 && tn.Group != gguf.G1 && tn.Group != gguf.G4 {
+		// The first six layers: O_DIRECT reads from the disk every time, and a hard disk
+		// reads the whole model (4 GB a token) at 100 MB/s.
+		if tn.Layer >= 0 && tn.Layer < 6 && tn.Group != gguf.G1 && tn.Group != gguf.G4 {
 			ranges = append(ranges, backend.StreamRange{Layer: tn.Layer, Offset: tn.Offset, Length: tn.Bytes})
 		}
 	}
@@ -94,7 +96,7 @@ func TestNativeLayerRing(t *testing.T) {
 			t.Fatal(err)
 		}
 		m := mm.(*model)
-		return m, decode(t, m, 0, tokenize(t, m, "The three primary colours are"), 24, greedy)
+		return m, decode(t, m, 0, tokenize(t, m, "The three primary colours are"), 8, greedy)
 	}
 	base, want := run(nil)
 	base.Close()

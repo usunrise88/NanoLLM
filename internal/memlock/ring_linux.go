@@ -218,7 +218,7 @@ func (r *Ring) read(j ringJob) {
 	for done := 0; done < need; {
 		var n int
 		n, err = unix.Pread(r.fd, dst[done:], j.place.readOff+int64(done))
-		if err == unix.EINTR {
+		if errors.Is(err, unix.EINTR) {
 			err = nil
 			continue
 		}
