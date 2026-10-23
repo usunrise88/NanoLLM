@@ -30,6 +30,9 @@ type Options struct {
 	DrafterPath string
 	Backend     backend.Backend
 	LibDir      string
+	// Relaid serves the layout=nano value of a sweep: the checked relaid copy
+	// of the model file (OPT-7). Nil, or an error, refuses those runs.
+	Relaid func() (registry.Relaid, error)
 
 	Suite string // standard | dev
 	// Full runs every applicable preset; otherwise auto and two
@@ -282,6 +285,24 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		run.Status, run.Reason = benchfmt.StatusRefused, err.Error()
 		return run, WorkerSpec{}, true
 	}
+	// OPT-7: the relaid copy is another file with other offsets, so it is
+	// planned from its own inventory and loaded from its own path.
+	modelPath, layout := o.ModelPath, registry.LayoutOriginal
+	if v["layout"] == registry.LayoutNano {
+		if o.Relaid == nil {
+			run.Status, run.Reason = benchfmt.StatusRefused, "layout=nano: no relaid file is available here"
+			return run, WorkerSpec{}, true
+		}
+		rl, err := o.Relaid()
+		if err == nil {
+			model, err = plan.ModelFrom(o.Manifest.ID, o.Manifest.WithRelaid(rl).Inventory)
+		}
+		if err != nil {
+			run.Status, run.Reason = benchfmt.StatusRefused, "layout=nano: "+err.Error()
+			return run, WorkerSpec{}, true
+		}
+		modelPath, layout = rl.Path, registry.LayoutNano
+	}
 	req := plan.Request{Model: model, Preset: preset, Proven: plan.ProvenFor(runtime.GOOS), NoMTP: o.DrafterPath == ""}
 	onGPU := (preset.Budget.VRAM > 0 || preset.Budget.Unified > 0) && gpu != nil
 	if !onGPU && cpu != nil && o.DrafterPath != "" && !v.setsSpeculation() {
@@ -310,7 +331,7 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		run.Status, run.Reason = benchfmt.StatusRefused, p.Refused
 		return run, WorkerSpec{}, true
 	}
-	spec, err := p.LoadSpec(o.ModelPath, o.DrafterPath)
+	spec, err := p.LoadSpec(modelPath, o.DrafterPath)
 	if err != nil {
 		run.Status, run.Reason = benchfmt.StatusRefused, err.Error()
 		return run, WorkerSpec{}, true
@@ -339,6 +360,9 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 	spec = spec.WithDefaultThreads()
 	batch, _ := v.int("batch")
 	ws := WorkerSpec{Load: spec, Place: place, Slow: o.Slow, Batch: batch, OnlyBatch: v["only"] == "batch", Env: v.Env(), Cold: o.Cold || budgetOf(name).RAM > 0 && !o.Advisory && userScopes()}
+	if layout == registry.LayoutNano {
+		ws.Layout = layout // the original's hash stays what it was
+	}
 	for _, lr := range p.LockRanges {
 		r := memlock.Range{Off: lr.Offset, Len: lr.Length}
 		if lr.Role == registry.RoleDrafter {
@@ -355,7 +379,7 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		Mode: string(p.Mode), Device: spec.Device, GPULayers: p.GPULayers, NCtx: p.NCtx, Slots: p.Slots,
 		KV: p.KV.TypeK, FA: p.FlashAttention, SWAFull: p.KV.SWAFull, MTP: p.MTP.Enabled, Threads: spec.Threads,
 		ThreadsBatch: spec.ThreadsBatch, NBatch: spec.NBatch, NUBatch: spec.NUBatch, KVV: spec.KVTypeV, LoadMode: string(spec.LoadMode), Lazy: string(spec.LazyMode),
-		NUMA: place.NUMA, CPUs: place.CPUs, Cold: ws.Cold,
+		NUMA: place.NUMA, CPUs: place.CPUs, Cold: ws.Cold, Layout: layout,
 	}
 	run.Plan.Repack = onOff(spec.Repack)
 	if p.MTP.Enabled {

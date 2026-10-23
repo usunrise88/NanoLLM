@@ -8,6 +8,7 @@ import (
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/plan"
+	"github.com/usunrise88/nanollm/internal/registry"
 )
 
 // Variant is one point of a development sweep: the settings it changes
@@ -45,6 +46,7 @@ var variantKeys = map[string]string{
 	"stream_method": "advise or pread: how the next layers are read (the system's readahead, or reads of the file at stream_depth)",
 	"stream_depth":  "reads in flight of stream_method=pread (0 is four)",
 	"numa":          "off, interleave or node:N",
+	"layout":        "original or nano: the tensor order of the model file (OPT-7); nano is the copy `nanollm models relayout` wrote, and the plan is made from its offsets",
 	"env.NAME":      "an environment variable for the worker (OMP_PROC_BIND, GGML_*)",
 }
 
@@ -146,6 +148,10 @@ func checkValue(key, v string) error {
 	case "mtp", "repack", "swa_full", "stream_evict":
 		if v != "on" && v != "off" {
 			return fmt.Errorf("%q is not on or off", v)
+		}
+	case "layout":
+		if v != registry.LayoutOriginal && v != registry.LayoutNano {
+			return fmt.Errorf("%q is not %s or %s", v, registry.LayoutOriginal, registry.LayoutNano)
 		}
 	case "mode":
 		if _, err := plan.ParseMode(v); err != nil {

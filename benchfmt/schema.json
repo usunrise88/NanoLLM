@@ -443,6 +443,9 @@
               "kv_v": {
                 "type": "string"
               },
+              "layout": {
+                "type": "string"
+              },
               "lazy": {
                 "type": "string"
               },
