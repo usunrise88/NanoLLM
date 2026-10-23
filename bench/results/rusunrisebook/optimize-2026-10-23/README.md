@@ -45,7 +45,8 @@ must not stream, `install.sh` as root) run the items below on the machines that 
 ordinary user (`-AsCurrentUser`; the shell script with this laptop's binary: all checks passed), not the parts that need the
 rights or the hardware.
 
-- **hyper (Linux, HDD, 4 NUMA nodes):** not available. The HDD, NUMA and haswell paths are covered by the synthetic decisions
+- **hyper (Linux, HDD, 4 NUMA nodes):** not reachable from here (the SSH keys are refused). The Linux code paths ran on WSL2 instead
+  (`../optimize-wsl2-2026-10-23/`); what stays open is a real hard disk and several NUMA nodes. The HDD, NUMA and haswell paths are covered by the synthetic decisions
   (`testdata/tune/decide/silent-hdd.txt`, the blind run's hyper case, `TestNUMAPoliciesAreCandidatesOnAMultiNodeMachine`) and by
   the numbers of the 2026-10-19/20 runs in `bench/results/hyper/`, not by a run.
 - **The installed service (LocalSystem):** PDH counters from LocalSystem and the real `install.ps1` / `install.sh` need

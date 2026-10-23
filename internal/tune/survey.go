@@ -3,6 +3,7 @@ package tune
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -80,6 +81,22 @@ type CPUInfo struct {
 	Variant   string   `json:"variant,omitempty"`
 	Features  []string `json:"features,omitempty"`
 	NUMANodes int      `json:"numa_nodes,omitempty"`
+}
+
+// VirtualDiskMiBs is the sequential rate above which a drive the OS calls
+// rotational is not one: no spinning disk (or array of a few) reads this fast.
+const VirtualDiskMiBs = 1000
+
+// trustTheSpeed corrects the kind of a drive that the OS calls rotational but
+// that reads faster than any spinning disk: a guest in a VM, WSL or a cloud
+// volume says "rotational" whatever is under it (measured on WSL2: 2.7 GB/s).
+// It returns the note to record, empty when nothing changed.
+func (d *DiskInfo) trustTheSpeed() string {
+	if d.Speed == nil || d.Kind.Type != hwinfo.DiskHDD || d.Speed.SeqMiBs < VirtualDiskMiBs {
+		return ""
+	}
+	d.Kind.Type = hwinfo.DiskSSD
+	return fmt.Sprintf("the OS calls the model's drive rotational but it reads at %.0f MiB/s: taken for a virtual or solid-state disk", d.Speed.SeqMiBs)
 }
 
 // Hybrid is a CPU with performance and efficiency cores.
@@ -325,6 +342,9 @@ func TakeSurvey(ctx context.Context, o SurveyOptions) *Survey {
 		} else if !o.SkipDisk {
 			s.Disk.Speed = &speed
 		}
+	}
+	if note := s.Disk.trustTheSpeed(); note != "" {
+		s.Notes = append(s.Notes, note)
 	}
 	s.Power = PowerInfo{Source: machine.Power.Source, Plan: machine.Power.Profile, Saver: power.Saver, Name: power.Name}
 	s.GPUs = live.GPUs

@@ -1,0 +1,244 @@
+{
+  "schema": "nanollm.tune/v1",
+  "mode": "optimal",
+  "constraints": {
+    "mode": "optimal",
+    "mem_cap": 4294967296,
+    "mem_tolerance": 209715200,
+    "threads": 5,
+    "threads_batch": 5,
+    "min_n_ctx": 4608,
+    "min_tok_s": 1,
+    "goal": "min_time"
+  },
+  "key": {
+    "mode": "optimal",
+    "model": "gemma-4-e4b-qat",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605",
+    "libs_release": "b11600-n8",
+    "llama_commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a",
+    "schema": "nanollm.tune/v1",
+    "suite": 1,
+    "device": "llamacpp:cpu 12th Gen Intel(R) Core(TM) i7-12700H 15 GiB",
+    "cpu": "Intel Core i7-12700H",
+    "cores": 10,
+    "ram_gib": 15
+  },
+  "created": "2026-10-23T18:09:02.893318702Z",
+  "duration_s": 25.857587687,
+  "conditions": {
+    "power": "ac",
+    "cpu_percent": 1.048951048951049,
+    "gpu_temp_c": 65,
+    "free_ram": 15400648704
+  },
+  "survey": {
+    "taken": "2026-10-23T18:08:37.973508291Z",
+    "elapsed_s": 1.40913887,
+    "versions": {
+      "nanollm": "v0.0.0-optcheck",
+      "libs_release": "b11600-n8",
+      "llama_tag": "b11600",
+      "llama_commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "24.04",
+      "wsl": true
+    },
+    "cpu": {
+      "model": "Intel Core i7-12700H",
+      "vendor": "Intel",
+      "arch": "amd64",
+      "physical": 10,
+      "logical": 20,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c",
+        "avx_vnni"
+      ],
+      "variant": "alderlake",
+      "features": [
+        "multirow-q4_0"
+      ],
+      "numa_nodes": 1
+    },
+    "ram": {
+      "total": 16625348608,
+      "available": 15400648704
+    },
+    "devices": [
+      {
+        "selector": "llamacpp:cpu",
+        "backend": "llamacpp",
+        "id": "cpu",
+        "kind": "cpu",
+        "type": "cpu",
+        "name": "12th Gen Intel(R) Core(TM) i7-12700H",
+        "vendor": "Intel",
+        "memory_total": 16625348608,
+        "memory_free": 16625348608,
+        "features": [
+          "multirow-q4_0"
+        ]
+      }
+    ],
+    "gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "driver": "581.57",
+        "compute_cap": "8.6",
+        "util_percent": 0,
+        "temp_c": 65,
+        "sm_clock_mhz": 210,
+        "max_sm_clock_mhz": 1785,
+        "mem_used_mib": 1994,
+        "mem_total_mib": 8192,
+        "power_w": 18.36
+      }
+    ],
+    "disk": {
+      "path": "/home/rusunrise/optcheck/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "kind": {
+        "type": "ssd"
+      },
+      "speed": {
+        "seq_mib_s": 2508.8895850458575,
+        "rand_mib_s": 136.46461622612335,
+        "rand_iops": 2183.4338596179737,
+        "read_bytes": 1216872448,
+        "direct": true
+      },
+      "system_disk": "hdd"
+    },
+    "power": {
+      "source": "ac"
+    },
+    "load": {
+      "cpu_percent": 1.048951048951049,
+      "gpu_percent": 0,
+      "gpu_temp_c": 65
+    },
+    "model": {
+      "id": "gemma-4-e4b-qat",
+      "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+      "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+      "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605",
+      "path": "/home/rusunrise/optcheck/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "drafter_path": "/home/rusunrise/optcheck/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/mtp-gemma-4-E4B-it.gguf",
+      "bytes": 4215695776
+    },
+    "notes": [
+      "the OS calls the model's drive rotational but it reads at 2509 MiB/s: taken for a virtual or solid-state disk"
+    ]
+  },
+  "candidates": [
+    {
+      "id": "llamacpp:cpu",
+      "mode": "M7 ram-ple-disk",
+      "plan_bytes": 3683404369,
+      "n_ctx": 32768,
+      "estimate_s": 138.7671162322051,
+      "measured": true,
+      "measured_bytes": 3615992128,
+      "pp": 127.81459685895966,
+      "tg": 12.552000734755765,
+      "answer_s": 55.94699023470019,
+      "load_s": 2.4574160000000003,
+      "verdict": "chosen",
+      "extrapolated": true
+    }
+  ],
+  "chosen": {
+    "device": {
+      "value": "llamacpp:cpu",
+      "source": "measured",
+      "why": "a typical answer takes 55.9 s here",
+      "alternatives": {
+        "llamacpp:cpu": 55.94699023470019
+      },
+      "confirmed": true
+    },
+    "preset": {
+      "value": "ram-11.5g",
+      "source": "mode",
+      "why": "derived from what the device has free",
+      "confirmed": true
+    },
+    "plan_mode": {
+      "value": "M7 ram-ple-disk",
+      "source": "rule",
+      "why": "the planner's first mode that fits the budget, within 4.0 GiB of memory",
+      "confirmed": true
+    },
+    "n_ctx": 32768,
+    "slots": 1,
+    "mtp": {
+      "value": {
+        "enabled": true,
+        "draft_max": 2,
+        "p_min": 0.5
+      },
+      "source": "measured",
+      "why": "1.58 times faster than without drafting",
+      "alternatives": {
+        "mtp2/0": 12.7,
+        "mtp2/0.5": 12.6,
+        "mtp3/0": 12.9,
+        "off": 8
+      },
+      "confirmed": true
+    },
+    "threads": {
+      "value": {
+        "threads": 5,
+        "threads_batch": 5
+      },
+      "source": "rule",
+      "why": "the limit of the optimal mode",
+      "alternatives": {
+        "rule": 12.6
+      },
+      "confirmed": true
+    }
+  },
+  "memory": {
+    "plan_bytes": 3683404369,
+    "private_bytes": 3615992128,
+    "vram_bytes": 0,
+    "measured_bytes": 3615992128,
+    "limit_bytes": 4294967296,
+    "tolerance_bytes": 209715200
+  },
+  "answer": {
+    "pp": 127.81459685895966,
+    "tg": 12.552000734755765,
+    "answer_s": 55.94699023470019,
+    "extrapolated": true,
+    "load_s": 2.4574160000000003
+  },
+  "problems": [
+    {
+      "code": "cuda_addon_missing",
+      "severity": "warn",
+      "message": "An NVIDIA GPU is present but the CUDA add-on is not installed: the card runs through Vulkan, slower.",
+      "advice": "Reinstall with the CUDA option (install.sh --cuda)."
+    },
+    {
+      "code": "wsl",
+      "severity": "info",
+      "message": "Running inside WSL: the GPU may be unavailable and the disk is slower."
+    }
+  ],
+  "verified": {
+    "static_tok_s": 12.6,
+    "chosen_tok_s": 12.6,
+    "gain": 1,
+    "draft_checked": true,
+    "draft_match": true
+  }
+}

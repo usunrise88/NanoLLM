@@ -115,11 +115,13 @@ func (s *Survey) Problems(c Constraints) []Problem {
 	}
 
 	if d := s.Disk; d.Path != "" {
+		// The measurement decides; the kind of the drive only where there is none
+		// (a guest in a VM calls any disk rotational).
 		slow := d.Kind.Type == "hdd"
 		mibs := 0.0
-		if d.Speed != nil {
+		if d.Speed != nil && d.Speed.SeqMiBs > 0 {
 			mibs = d.Speed.SeqMiBs
-			slow = slow || (mibs > 0 && mibs < SlowDiskMiBs)
+			slow = mibs < SlowDiskMiBs
 		}
 		if slow {
 			msg := "The model is on a slow disk"
@@ -192,7 +194,7 @@ func (s *Survey) Problems(c Constraints) []Problem {
 		add(Problem{
 			Code: CUDAAddonMissing, Severity: SevWarn,
 			Message: "An NVIDIA GPU is present but the CUDA add-on is not installed: the card runs through Vulkan, slower.",
-			Advice:  "Reinstall with the CUDA option (install.ps1 -Cuda).",
+			Advice:  "Reinstall with the CUDA option (" + cudaOption(s.OS.Name) + ").",
 		})
 	}
 
@@ -348,6 +350,14 @@ func Names(ps []Problem) string {
 		s = append(s, string(p.Code))
 	}
 	return strings.Join(s, ",")
+}
+
+// cudaOption is how the installer of the OS is asked for the CUDA add-on.
+func cudaOption(goos string) string {
+	if goos == "windows" || goos == "" {
+		return "install.ps1 -Cuda"
+	}
+	return "install.sh --cuda"
 }
 
 // gpuProblems are the findings that are about a GPU.

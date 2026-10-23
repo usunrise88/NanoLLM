@@ -206,6 +206,65 @@ func TestEnvironmentProblems(t *testing.T) {
 	}
 }
 
+// A guest in a VM (WSL2 measured: 2.7 GB/s) calls its virtual disk rotational.
+// The measurement decides whether a disk is slow, and fixes the label.
+func TestADiskIsSlowByItsSpeedNotItsFlag(t *testing.T) {
+	has := func(s *Survey, c Code) bool {
+		for _, p := range s.Problems(Constraints{}) {
+			if p.Code == c {
+				return true
+			}
+		}
+		return false
+	}
+	base := func(kind string, mibs float64) *Survey {
+		s := &Survey{CPU: CPUInfo{Arch: "amd64", Variant: "alderlake", ISA: []string{"avx2"}}, Load: LoadInfo{CPUPercent: 3, GPUPercent: -1}}
+		s.Disk = DiskInfo{Path: "m.gguf", Kind: hwinfo.DiskKind{Type: kind}}
+		if mibs > 0 {
+			s.Disk.Speed = &hwinfo.DiskSpeed{SeqMiBs: mibs}
+		}
+		return s
+	}
+	if !has(base("hdd", 124), SlowDisk) {
+		t.Error("a hard disk at 124 MiB/s is slow")
+	}
+	if has(base("hdd", 2712), SlowDisk) {
+		t.Error("a drive that reads 2712 MiB/s is not slow, whatever flag the OS sets")
+	}
+	if !has(base("hdd", 0), SlowDisk) {
+		t.Error("a hard disk with no measurement is slow until measured")
+	}
+	if !has(base("ssd", 90), SlowDisk) {
+		t.Error("an SSD that reads 90 MiB/s (a USB stick) is slow")
+	}
+	d := base("hdd", 2712).Disk
+	if note := d.trustTheSpeed(); note == "" || d.Kind.Type != hwinfo.DiskSSD {
+		t.Errorf("a rotational drive at 2712 MiB/s: kind %q, note %q", d.Kind.Type, note)
+	}
+	d = base("hdd", 180).Disk
+	if note := d.trustTheSpeed(); note != "" || d.Kind.Type != hwinfo.DiskHDD {
+		t.Errorf("a rotational drive at 180 MiB/s stays a hard disk: kind %q, note %q", d.Kind.Type, note)
+	}
+}
+
+// The advice names the installer of the machine's OS.
+func TestCUDAAdviceNamesTheInstallerOfTheOS(t *testing.T) {
+	s := &Survey{CPU: CPUInfo{Arch: "amd64"}, Load: LoadInfo{GPUPercent: -1},
+		GPUs: []hwinfo.GPULive{{Index: 0, Name: "RTX", ComputeCap: "8.6"}}}
+	for goos, want := range map[string]string{"windows": "install.ps1 -Cuda", "linux": "install.sh --cuda"} {
+		s.OS.Name = goos
+		var advice string
+		for _, p := range s.Problems(Constraints{}) {
+			if p.Code == CUDAAddonMissing {
+				advice = p.Advice
+			}
+		}
+		if !strings.Contains(advice, want) {
+			t.Errorf("%s: advice %q lacks %q", goos, advice, want)
+		}
+	}
+}
+
 func TestACleanSurveyReportsNothing(t *testing.T) {
 	s := &Survey{CPU: CPUInfo{Arch: "amd64", Variant: "alderlake", ISA: []string{"avx2", "avx_vnni"}}, Load: LoadInfo{CPUPercent: 3, GPUPercent: -1}}
 	if ps := s.Problems(Constraints{}); len(ps) != 0 {
