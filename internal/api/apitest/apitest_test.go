@@ -1,4 +1,4 @@
-// Package apitest exercises both dialects end to end over HTTP, against the
+// Package apitest exercises the dialects end to end over HTTP, against the
 // engine on the fake backend.
 package apitest
 
@@ -14,6 +14,7 @@ import (
 
 	"github.com/usunrise88/nanollm/internal/api/adapter"
 	_ "github.com/usunrise88/nanollm/internal/api/native"
+	"github.com/usunrise88/nanollm/internal/api/ollama"
 	_ "github.com/usunrise88/nanollm/internal/api/openai"
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/backend/fake"
@@ -38,7 +39,7 @@ func server(t *testing.T) *httptest.Server {
 			return engine.Target{Key: pool.Key{Model: model, Backend: "fake", Device: "cpu", NCtx: 4096}}, nil
 		})
 	mux := http.NewServeMux()
-	if err := adapter.MountAll(mux, []string{"openai", "native"}, adapter.Deps{
+	if err := adapter.MountAll(mux, []string{"openai", "native", "ollama"}, adapter.Deps{
 		Service: svc, Catalog: []registry.Manifest{{ID: "tiny"}}, ConfigSnapshot: func() any { return nil },
 	}); err != nil {
 		t.Fatal(err)
@@ -289,5 +290,73 @@ func TestOpenAISessionAndCachePrompt(t *testing.T) {
 	}
 	if n := cached(`{"model":"tiny",` + msg + `,"cache_prompt":false}`); n != 0 {
 		t.Fatalf("cache_prompt:false still reused %d tokens", n)
+	}
+}
+
+// A caller that went away is not a server fault: before the first byte every
+// route answers 499 with the code "cancelled", never a 500, so the access log
+// and anything that counts 5xx do not report a client hanging up.
+func TestClientCancelIs499(t *testing.T) {
+	srv := server(t)
+	for _, tc := range []struct{ path, body string }{
+		{"/v1/chat/completions", `{"messages":[{"role":"user","content":"x"}]}`},
+		{"/v1/chat/completions", `{"stream":true,"messages":[{"role":"user","content":"x"}]}`},
+		{"/v1/completions", `{"prompt":"x"}`},
+		{"/api/v1/chat", `{"messages":[{"role":"user","content":"x"}]}`},
+		{"/api/v1/chat", `{"stream":true,"messages":[{"role":"user","content":"x"}]}`},
+	} {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		req := httptest.NewRequestWithContext(ctx, http.MethodPost, tc.path, strings.NewReader(tc.body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		srv.Config.Handler.ServeHTTP(rec, req)
+		if rec.Code != core.StatusClientClosedRequest || !strings.Contains(rec.Body.String(), `"cancelled"`) {
+			t.Errorf("%s %s: %d %s", tc.path, tc.body, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+// The ollama dialect mounts next to the other two without taking over their
+// routes, and a request through it reaches the same engine.
+func TestOllamaBesideTheOthers(t *testing.T) {
+	srv := server(t)
+
+	r, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	banner, _ := io.ReadAll(r.Body)
+	r.Body.Close()
+	if string(banner) != "Ollama is running" {
+		t.Fatalf("root: %q", banner)
+	}
+	r, _ = http.Get(srv.URL + "/api/version")
+	var v struct{ Version string }
+	decodeJSON(t, r.Body, &v)
+	r.Body.Close()
+	if v.Version != ollama.CompatVersion {
+		t.Fatalf("version %q", v.Version)
+	}
+
+	resp := post(t, srv, "/api/chat", `{"model":"tiny","stream":false,"messages":[{"role":"user","content":"hi there [[fake:echo]]"}]}`)
+	var chat struct {
+		Model   string
+		Message struct{ Role, Content string }
+		Done    bool
+	}
+	decodeJSON(t, resp.Body, &chat)
+	if resp.StatusCode != 200 || chat.Model != "tiny" || chat.Message.Content != "hi there" || !chat.Done {
+		t.Fatalf("%d %+v", resp.StatusCode, chat)
+	}
+
+	// The others still answer where they did.
+	resp = post(t, srv, "/v1/chat/completions", `{"model":"tiny","messages":[{"role":"user","content":"x [[fake:echo]]"}]}`)
+	if resp.StatusCode != 200 {
+		t.Fatalf("openai: %d", resp.StatusCode)
+	}
+	resp = post(t, srv, "/api/v1/chat", `{"model":"tiny","messages":[{"role":"user","content":"x [[fake:echo]]"}]}`)
+	if resp.StatusCode != 200 {
+		t.Fatalf("native: %d", resp.StatusCode)
 	}
 }

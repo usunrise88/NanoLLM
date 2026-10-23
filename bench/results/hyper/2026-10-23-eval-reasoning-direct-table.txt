@@ -1,0 +1,10 @@
+run                  ru       en     all   tokens mean/med/max  reasoning mean  s/item  cut off
+off               6/24    10/24   16/48        5/5/8                    0     3.6        0
+on-cap512        17/24    22/24   39/48      415/440/520                  0    29.3        0
+on-cap2048       24/24    24/24   48/48      513/440/1427                 0    36.6        0
+on-nocap         24/24    24/24   48/48      513/440/1427                 0    36.0        0
+
+off            arith 0/8  calendar 1/8  count 6/8  knights 2/8  order 4/8  rates 3/8
+on-cap512      arith 8/8  calendar 5/8  count 6/8  knights 4/8  order 8/8  rates 8/8
+on-cap2048     arith 8/8  calendar 8/8  count 8/8  knights 8/8  order 8/8  rates 8/8
+on-nocap       arith 8/8  calendar 8/8  count 8/8  knights 8/8  order 8/8  rates 8/8

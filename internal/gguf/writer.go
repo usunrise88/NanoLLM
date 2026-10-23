@@ -49,6 +49,28 @@ func (w *Writer) Tensor(name string, typ Type, shape []int64, data []byte) *Writ
 	return w
 }
 
+// FillPattern gives every tensor that has no data a deterministic pattern of
+// its own, never all zeros, so a test can tell tensors apart after they have
+// moved and tell a tensor from the padding.
+func (w *Writer) FillPattern() *Writer {
+	for i := range w.tensors {
+		t := &w.tensors[i]
+		if t.data != nil {
+			continue
+		}
+		t.data = make([]byte, Size(t.typ, t.shape))
+		x := uint32(2166136261)
+		for _, c := range []byte(t.name) {
+			x = (x ^ uint32(c)) * 16777619
+		}
+		for j := range t.data {
+			x = x*1664525 + 1013904223
+			t.data[j] = byte(x>>24) | 1
+		}
+	}
+	return w
+}
+
 // Size is the byte size of a tensor of this type and shape; 0 for a shape or
 // type the parser would reject, so the writer can still produce such a file.
 func Size(typ Type, shape []int64) int64 {

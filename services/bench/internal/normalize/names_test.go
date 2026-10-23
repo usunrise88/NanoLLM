@@ -75,6 +75,8 @@ func TestSystem(t *testing.T) {
 		// HP's family carries a board id; the product a "Notebook PC" suffix.
 		{"HP", "103C_5336AN HP EliteBook", "HP EliteBook 840 G8 Notebook PC", 0, "HP EliteBook 840 G8"},
 		{"System manufacturer", "To be filled by O.E.M.", "System Product Name", 0, ""},
+		// A board named by the client (ASRockRack EPYCD8-2T, whose system strings are placeholders).
+		{"ASRockRack", "EPYCD8-2T", "EPYCD8-2T", 0, "ASRockRack EPYCD8-2T"},
 		// Mac: hw.model plus GPU cores.
 		{"Apple Inc.", "", "Mac14,5", 30, "MacBook Pro 14\" (2023), 30-core GPU"},
 		{"Apple Inc.", "", "Mac99,1", 0, "Apple Mac99,1"},

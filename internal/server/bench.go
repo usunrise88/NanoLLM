@@ -15,6 +15,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/config"
 	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/httpx"
+	"github.com/usunrise88/nanollm/internal/registry"
 )
 
 // The benchmark over HTTP, for the UI's Bench screen (docs/BENCHMARKS.md):
@@ -106,7 +107,8 @@ func (a *benchAPI) start(w http.ResponseWriter, req *http.Request) {
 	}
 	opts := bench.Options{
 		Manifest: m, ModelPath: modelPath, DrafterPath: drafterPath, Backend: llama, LibDir: a.info.LibDir,
-		Suite: body.Suite, Full: body.Quick != nil && !*body.Quick,
+		Relaid: func() (registry.Relaid, error) { return a.rt.store.Relaid(m) },
+		Suite:  body.Suite, Full: body.Quick != nil && !*body.Quick,
 		Version: a.info.Version, Tag: a.info.Tag, Commit: a.info.Commit,
 	}
 	presets, err := bench.ChoosePresets(req.Context(), opts)

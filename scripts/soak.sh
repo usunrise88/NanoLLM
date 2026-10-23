@@ -29,10 +29,18 @@ print(text)
 PY
 )
 
+# The queue database lives in the run's own directory, so its growth is the
+# run's and not that of every job the data directory has ever seen; the models
+# stay where they are.
+mkdir -p "$out/data"
+webhook_secret=soak-secret
+
 cat >"$out/nanollm.yaml" <<YAML
 server:
   addr: 127.0.0.1:$port
-  data_dir: $data
+  data_dir: $out/data
+registry:
+  models_dir: $data/models
 backends:
   lib_dir: $PWD/dist/linux_amd64/lib
 devices:
@@ -48,10 +56,18 @@ models:
       slots: 2
 queue:
   enabled: true
+  max_pending: 50
+  concurrency: 2
+  webhook_secret: $webhook_secret
+  retention_days: 1       # the least there is: the purge runs, nothing is old enough to go in a day
 log:
   level: info
   file: $out/server.log
 YAML
+
+# A -race build writes each report to $out/race.<pid> and goes on, so a soak
+# collects every race it meets instead of stopping at the first.
+export GORACE="${GORACE:-log_path=$out/race}"
 
 echo "soak: $hours h, node $node (cpus $cpus), logs in $out"
 export NANOLLM_PLACE="node:$node;cpus=$cpus"
@@ -66,7 +82,9 @@ pid=$(pgrep -f "serve --config $out/nanollm.yaml" | head -1)
 echo "soak: server pid $pid is ready"
 
 go run ./tools/loadgen -base "http://127.0.0.1:$port" -workers 4 -duration "${hours}h" \
-  -interval 1m -pid "$pid" -out "$out/loadgen.jsonl" || true
+  -interval 1m -pid "$pid" -out "$out/loadgen.jsonl" -bad-out "$out/bad.jsonl" \
+  -hook-listen 127.0.0.1:0 -hook-secret "$webhook_secret" -queue-db "$out/data/nanollm.db" || true
 go run ./tools/loadgen -analyze "$out/loadgen.jsonl" | tee "$out/analysis.txt" || true
 kill "$pid" 2>/dev/null || true
 grep -c "panic\|DATA RACE" "$out/server.log" "$out/serve.out" 2>/dev/null || true
+echo "race reports: $(ls "$out"/race.* 2>/dev/null | wc -l)" | tee -a "$out/analysis.txt"

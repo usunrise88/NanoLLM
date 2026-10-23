@@ -14,11 +14,13 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/usunrise88/nanollm/benchfmt"
 )
 
 // Version is the normalizer's version. Bump it with any rule change: the
 // server reindexes when the stored rows were made by an older one.
-const Version = 1
+const Version = 2
 
 // Alias kinds, as the admin alias table names them.
 const (
@@ -180,16 +182,8 @@ var vendorTable = map[string]string{
 
 var corporate = regexp.MustCompile(`(?i)[\s,]+(inc\.?|co\.,?\s*ltd\.?|ltd\.?|corporation|corp\.?|gmbh|limited|computer inc\.?)$`)
 
-// placeholders are what firmware vendors leave in unfilled SMBIOS fields.
-var placeholders = map[string]bool{
-	"": true, "to be filled by o.e.m.": true, "default string": true, "system product name": true,
-	"system version": true, "system manufacturer": true, "not applicable": true, "none": true,
-	"o.e.m.": true, "oem": true, "not specified": true, "type1productconfigid": true, "invalid": true,
-	"unknown": true, "x.x": true, "0123456789": true, "1234567890": true,
-}
-
 // Placeholder reports whether an SMBIOS string carries no information.
-func Placeholder(s string) bool { return placeholders[strings.ToLower(strings.TrimSpace(s))] }
+func Placeholder(s string) bool { return benchfmt.Placeholder(s) }
 
 // Vendor normalizes a system manufacturer.
 func Vendor(v string) string {

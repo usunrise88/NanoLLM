@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -101,7 +102,7 @@ func baseSpec(path string) backend.LoadSpec {
 	}
 	// NANOLLM_TEST_DEVICE=cuda0 (or llamacpp:cuda0, vulkan0): the same tests on a GPU, the whole model on it and its
 	// sampling in the device graph where the device lists it (NANOLLM_TEST_SAMPLING=host keeps it on the host). The
-	// goldens are the CPU's and skip themselves there.
+	// goldens recorded on another device or GPU skip themselves (goldenKernels).
 	if dev := os.Getenv("NANOLLM_TEST_DEVICE"); dev != "" && dev != "cpu" {
 		s.Device, s.Repack, s.GPULayers = dev, false, -1
 		s.BackendSampling = strings.HasPrefix(strings.TrimPrefix(dev, "llamacpp:"), "cuda") && os.Getenv("NANOLLM_TEST_SAMPLING") != "host"
@@ -247,6 +248,11 @@ func TestNativeRefusesForeignCommit(t *testing.T) {
 	t.Logf("refusal: %v", err)
 }
 
+// patchedSymbols are the staging functions of patches/next (patched_bind.go): a released
+// library has them only once the patches are in its series, so the count of bound symbols
+// leaves them out.
+var patchedSymbols = []string{"llama_model_set_output_shortlist", "llama_set_output_shortlist", "llama_model_get_tensor"}
+
 func TestNativeCPUDevice(t *testing.T) {
 	b := testBackend(t)
 	t.Logf("ggml_commit() = %q, version %s, cpu variant %q", b.lib.commit, b.Version(), b.CPUVariant())
@@ -284,8 +290,14 @@ func TestNativeCPUDevice(t *testing.T) {
 		t.Error("an unknown device selector was accepted")
 	}
 	t.Logf("staging symbols bound: %v", b.lib.cxx)
-	if len(b.lib.cxx) != len(cxxSymbols) {
-		t.Errorf("bound %d of %d staging-header functions", len(b.lib.cxx), len(cxxSymbols))
+	bound := 0
+	for name := range b.lib.cxx {
+		if !slices.Contains(patchedSymbols, name) {
+			bound++
+		}
+	}
+	if want := len(cxxSymbols) - len(patchedSymbols); bound != want {
+		t.Errorf("bound %d of %d staging-header functions", bound, want)
 	}
 }
 
@@ -687,6 +699,9 @@ type golden struct {
 	ModelSize    int64   `json:"model_size"`
 	ModelSHA256  string  `json:"model_sha256"`
 	CPUVariant   string  `json:"cpu_variant"`
+	CPUFeatures  string  `json:"cpu_features"`
+	Device       string  `json:"device"` // empty is the CPU
+	DeviceName   string  `json:"device_name"`
 	Threads      int     `json:"threads"`
 	KVType       string  `json:"kv_type"` // empty is f16
 	NCtx         int     `json:"n_ctx"`
@@ -713,29 +728,77 @@ func (g golden) kv() string {
 	return g.KVType
 }
 
-// goldenFiles lists the recorded goldens of the pinned tag: cpu-<variant>[-<kv>]
-// .json, or with mtp the cpu-mtp-… ones (tools/golden names them so). Which
-// of them apply on this machine is decided by what each records: the model
-// file, the CPU variant.
+// goldenFiles lists the recorded goldens of the pinned tag: <kind>-<who>[-<kv>]
+// .json, or with mtp the <kind>-mtp-… ones (tools/golden names them so:
+// cpu-haswell, mtl-mtp-apple-m1). Which of them apply to this run is decided
+// by what each records: the model file, the kernels (goldenKernels).
 func goldenFiles(mtp bool) []string {
-	all, _ := filepath.Glob(filepath.Join("..", "..", "..", "testdata", "golden", bindingTag, "*", "cpu-*.json"))
+	all, _ := filepath.Glob(filepath.Join("..", "..", "..", "testdata", "golden", bindingTag, "*", "*.json"))
 	var out []string
 	for _, f := range all {
-		if strings.HasPrefix(filepath.Base(f), "cpu-mtp-") == mtp {
+		_, who, _ := strings.Cut(filepath.Base(f), "-")
+		if strings.HasPrefix(who, "mtp-") == mtp {
 			out = append(out, f)
 		}
 	}
 	return out
 }
 
+// goldenKernels says why g was recorded on other kernels than this run uses,
+// or "" when it was not. On the CPU that is the ggml variant and, for a
+// library without variants (darwin), the CPU's features, which pick the
+// repacked layout; on a GPU the device kind and the device itself, since a
+// backend's kernels differ between GPUs (Metal builds them for the one it
+// runs on).
+func goldenKernels(t *testing.T, b *llamaBackend, g golden) string {
+	t.Helper()
+	if testOnCPU() {
+		switch {
+		case g.Device != "":
+			return "recorded on " + g.Device
+		case g.CPUVariant != b.CPUVariant():
+			return fmt.Sprintf("recorded on CPU variant %q, this machine uses %q", g.CPUVariant, b.CPUVariant())
+		case g.CPUVariant == "" && g.CPUFeatures != systemCPUFeatures():
+			return fmt.Sprintf("recorded on a CPU with %q, this one has %q", g.CPUFeatures, systemCPUFeatures())
+		}
+		return ""
+	}
+	id := strings.ToLower(strings.TrimPrefix(os.Getenv("NANOLLM_TEST_DEVICE"), "llamacpp:"))
+	devs, err := b.Devices(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := ""
+	for _, d := range devs {
+		if d.ID == id {
+			name = d.Name
+		}
+	}
+	if g.Device == "" {
+		return "recorded on the CPU"
+	}
+	if strings.TrimRight(g.Device, "0123456789") != strings.TrimRight(id, "0123456789") || g.DeviceName != name {
+		return fmt.Sprintf("recorded on %q (%s), this run is on %s (%s)", g.Device, g.DeviceName, id, name)
+	}
+	return ""
+}
+
+// systemCPUFeatures is the CPU part of llama_print_system_info as tools/golden
+// records it from llama-server's log: "CPU : NEON = 1 | ..." to the end.
+func systemCPUFeatures() string {
+	info := llamaPrintSystemInfo()
+	if i := strings.Index(info, "CPU : "); i >= 0 {
+		info = info[i:]
+	}
+	return strings.TrimSpace(strings.TrimRight(info, "| "))
+}
+
 // TestNativeGolden compares greedy decoding with llama-server's output of the
 // same tag (tools/golden). It applies only to the model file the golden was
-// recorded from and only on the same ggml CPU variant: other kernels round
-// differently, and greedy picks may flip.
+// recorded from and only on the same kernels: the same ggml CPU variant, or
+// the same GPU with NANOLLM_TEST_DEVICE. Other kernels round differently, and
+// greedy picks may flip.
 func TestNativeGolden(t *testing.T) {
-	if !testOnCPU() {
-		t.Skip("the goldens are the CPU's tokens (NANOLLM_TEST_DEVICE is set)")
-	}
 	files := goldenFiles(false)
 	if len(files) == 0 {
 		t.Skip("no golden files for " + bindingTag)
@@ -761,8 +824,8 @@ func TestNativeGolden(t *testing.T) {
 			t.Logf("%s: recorded for another model file", f)
 			continue
 		}
-		if g.CPUVariant != b.CPUVariant() {
-			t.Logf("%s: recorded on ggml-cpu-%s, this machine uses %s", f, g.CPUVariant, b.CPUVariant())
+		if why := goldenKernels(t, b, g); why != "" {
+			t.Logf("%s: %s", f, why)
 			continue
 		}
 		ran = true
@@ -796,7 +859,7 @@ func TestNativeGolden(t *testing.T) {
 		mm.Close()
 	}
 	if !ran {
-		t.Skip("no golden file matches this model and CPU variant")
+		t.Skip("no golden file matches this model and these kernels")
 	}
 }
 

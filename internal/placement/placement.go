@@ -147,7 +147,7 @@ func Resolve(in Input) (*Result, error) {
 		Model: model, Preset: preset, Mode: mode, KVType: ov.KVType, Proven: plan.ProvenFor(cmp.Or(in.GOOS, runtime.GOOS)),
 		NCtx: ov.NCtx.N, Slots: ov.Slots.N,
 		NoMTP: ov.Speculative.Type == config.SpecNone, DraftMax: ov.Speculative.NMax, DraftPMin: ov.Speculative.PMin,
-		NoRepack: ov.Repack == "off",
+		VerifyRows: ov.Speculative.VerifyRows, NoRepack: ov.Repack == "off",
 	}
 	// A preset in the configuration is a hard budget the user chose: the
 	// mode's limit does not apply to that model.
@@ -164,6 +164,12 @@ func Resolve(in Input) (*Result, error) {
 	// speculative.type: mtp turns it on anywhere; none turns it off.
 	if ov.Speculative.Type == "" && in.Device.Type == backend.CPU {
 		r.DefaultCPUMTP(in.Device.Has(backend.FeatureMultiRowQ4_0))
+	}
+	// The bound on the rows spent on drafts follows the kernels, not how MTP was
+	// asked for: speculative.type: mtp on a CPU with them drafts while one
+	// sequence decodes, too (speculative.verify_rows overrides).
+	if ov.Speculative.Type == config.SpecMTP && r.VerifyRows == 0 && in.Device.Type == backend.CPU && in.Device.Has(backend.FeatureMultiRowQ4_0) {
+		r.VerifyRows = 1 + cmp.Or(r.DraftMax, plan.DefaultDraftMax)
 	}
 	if ov.Speculative.Type == config.SpecNGram {
 		r.NoMTP, r.NoMTPReason = true, "prompt lookup (speculative.type: ngram) drafts instead"
@@ -194,7 +200,7 @@ func Resolve(in Input) (*Result, error) {
 		r.FlashAttnSmallBatch = in.Device.Has(backend.FeatureFlashAttnSmallBatch)
 		r.BackendSampling = in.Device.Has(backend.FeatureBackendSampling)
 		r.Device = &plan.Device{
-			Selector: in.Device.Selector(), Backend: strings.TrimRight(in.Device.ID, "0123456789"),
+			Selector: in.Device.Selector(), Backend: plan.Kind(in.Device.ID),
 			Memory: plan.DeviceMemory(in.Device), Unified: in.Device.Unified,
 		}
 	}
@@ -218,12 +224,33 @@ func Resolve(in Input) (*Result, error) {
 	case "device":
 		r.BackendSampling = true
 	}
+	// OPT-4: the output shortlist, where the device's library has it. An
+	// explicit setting the device cannot keep is not an error (the same
+	// configuration serves machines with different libraries): the plan says so.
+	var headNote string
+	if ov.Head != "" && ov.Head != registry.HeadFull {
+		switch {
+		case in.Device.Type != backend.CPU:
+			headNote = fmt.Sprintf("head: %s is a CPU option; the whole head runs on %s", ov.Head, in.Device.ID)
+		case !in.Device.Has(backend.FeatureOutputShortlist):
+			headNote = fmt.Sprintf("head: %s needs libraries with patch 0009 (device feature %s); the whole head runs", ov.Head, backend.FeatureOutputShortlist)
+		default:
+			ids, err := registry.ShortlistIDs(in.Manifest, ov.Head)
+			if err != nil {
+				return nil, err
+			}
+			r.Head, r.HeadIDs = ov.Head, ids
+		}
+	}
 	p, err := plan.Make(r)
 	if err != nil {
 		return nil, err
 	}
 	if !p.OK() {
 		return nil, fmt.Errorf("preset %s: %s", preset.Name, p.Refused)
+	}
+	if headNote != "" {
+		p.Warnings = append(p.Warnings, headNote)
 	}
 	if in.DrafterPath == "" {
 		p.MTP.Enabled = false
@@ -237,6 +264,7 @@ func Resolve(in Input) (*Result, error) {
 	}
 	if spec.Stream != nil {
 		spec.Stream.Ahead, spec.Stream.Keep, spec.Stream.Evict = ov.Stream.Ahead, ov.Stream.Keep, ov.Stream.Evict
+		spec.Stream.Method, spec.Stream.Depth = ov.Stream.Method, ov.Stream.Depth
 	}
 	switch ov.Repack {
 	case "off":

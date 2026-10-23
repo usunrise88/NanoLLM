@@ -61,6 +61,8 @@ func TestNativeLayerStreaming(t *testing.T) {
 	for name, st := range map[string]*backend.StreamSpec{
 		"ahead":       {Ranges: ranges, Ahead: 2},
 		"ahead+evict": {Ranges: ranges, Ahead: 2, Evict: true, Keep: 2},
+		"pread":       {Ranges: ranges, Ahead: 2, Method: "pread", Depth: 3},
+		"pread+evict": {Ranges: ranges, Ahead: 2, Evict: true, Keep: 2, Method: "pread"},
 		"probe":       {Ranges: ranges, Probe: true},
 	} {
 		t.Run(name, func(t *testing.T) {

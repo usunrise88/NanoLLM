@@ -1,0 +1,870 @@
+{
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "name": "reasoning-direct",
+    "sha256": "e9f8882e809eae1bf3cc9d287a02f96415df843dee6d0052e27cb229fd749a90",
+    "items": 48
+  },
+  "model": "gemma-4-e4b-qat",
+  "config": {
+    "commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a",
+    "device": "cpu",
+    "kv": "f16",
+    "max_tokens": "400",
+    "mode": "ram-full",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "mtp": "true",
+    "numa": "node:1",
+    "preset": "ram-8g",
+    "repack": "true",
+    "tag": "b11600",
+    "threads": "8"
+  },
+  "date": "2026-10-23",
+  "results": [
+    {
+      "id": "reason-direct-arith-ru-1",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 345",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 120,
+        "cached_tokens": 0,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 68035.313,
+      "ttft_ms": 2639.488
+    },
+    {
+      "id": "reason-direct-arith-ru-2",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 105",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 121,
+        "cached_tokens": 11,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 3008.528,
+      "ttft_ms": 2434.648
+    },
+    {
+      "id": "reason-direct-arith-ru-3",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 355",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 120,
+        "cached_tokens": 11,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2975.857,
+      "ttft_ms": 2402.837
+    },
+    {
+      "id": "reason-direct-arith-ru-4",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 1015",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 120,
+        "cached_tokens": 11,
+        "completion_tokens": 7,
+        "reasoning_tokens": 0
+      },
+      "ms": 2996.085,
+      "ttft_ms": 2398.345
+    },
+    {
+      "id": "reason-direct-order-ru-1",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: Глеб",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 103,
+        "cached_tokens": 4,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 2554.871,
+      "ttft_ms": 2193.632
+    },
+    {
+      "id": "reason-direct-order-ru-2",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: Аня",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 102,
+        "cached_tokens": 4,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2493.18,
+      "ttft_ms": 2176.09
+    },
+    {
+      "id": "reason-direct-order-ru-3",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: Вера",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 103,
+        "cached_tokens": 4,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2500.483,
+      "ttft_ms": 2182.859
+    },
+    {
+      "id": "reason-direct-order-ru-4",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: Дина",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 102,
+        "cached_tokens": 4,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2479.649,
+      "ttft_ms": 2162.189
+    },
+    {
+      "id": "reason-direct-calendar-ru-1",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: пятница",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 79,
+        "cached_tokens": 4,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 1989.438,
+      "ttft_ms": 1675.15
+    },
+    {
+      "id": "reason-direct-calendar-ru-2",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: среда",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 80,
+        "cached_tokens": 5,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2085.663,
+      "ttft_ms": 1676.823
+    },
+    {
+      "id": "reason-direct-calendar-ru-3",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 183",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 89,
+        "cached_tokens": 4,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2420.549,
+      "ttft_ms": 1891.304
+    },
+    {
+      "id": "reason-direct-calendar-ru-4",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 229",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 87,
+        "cached_tokens": 10,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2225.244,
+      "ttft_ms": 1723.158
+    },
+    {
+      "id": "reason-direct-rates-ru-1",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 360",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 96,
+        "cached_tokens": 4,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2500.015,
+      "ttft_ms": 2026.027
+    },
+    {
+      "id": "reason-direct-rates-ru-2",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 53.33",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 99,
+        "cached_tokens": 4,
+        "completion_tokens": 8,
+        "reasoning_tokens": 0
+      },
+      "ms": 2694.274,
+      "ttft_ms": 2100.005
+    },
+    {
+      "id": "reason-direct-rates-ru-3",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 960",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 96,
+        "cached_tokens": 4,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2501.049,
+      "ttft_ms": 2027.297
+    },
+    {
+      "id": "reason-direct-rates-ru-4",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 75",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 99,
+        "cached_tokens": 4,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 2417.208,
+      "ttft_ms": 2099.641
+    },
+    {
+      "id": "reason-direct-count-ru-1",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 66",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 80,
+        "cached_tokens": 4,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 2001.238,
+      "ttft_ms": 1685.918
+    },
+    {
+      "id": "reason-direct-count-ru-2",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 330",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 80,
+        "cached_tokens": 4,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2406.222,
+      "ttft_ms": 1685.684
+    },
+    {
+      "id": "reason-direct-count-ru-3",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 87",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 87,
+        "cached_tokens": 4,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 2257.34,
+      "ttft_ms": 1847.455
+    },
+    {
+      "id": "reason-direct-count-ru-4",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 6",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 89,
+        "cached_tokens": 6,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2169.331,
+      "ttft_ms": 1852.413
+    },
+    {
+      "id": "reason-direct-knights-ru-1",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 2",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 123,
+        "cached_tokens": 4,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2925.495,
+      "ttft_ms": 2606.067
+    },
+    {
+      "id": "reason-direct-knights-ru-2",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 2",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 119,
+        "cached_tokens": 39,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2099.259,
+      "ttft_ms": 1779.417
+    },
+    {
+      "id": "reason-direct-knights-ru-3",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 2",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 127,
+        "cached_tokens": 39,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2267.577,
+      "ttft_ms": 1946.59
+    },
+    {
+      "id": "reason-direct-knights-ru-4",
+      "lang": "ru",
+      "capability": "reasoning-direct-ru",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 2",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 127,
+        "cached_tokens": 39,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2267.282,
+      "ttft_ms": 1946.953
+    },
+    {
+      "id": "reason-direct-arith-en-1",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 275",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 94,
+        "cached_tokens": 4,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2468.579,
+      "ttft_ms": 1994.787
+    },
+    {
+      "id": "reason-direct-arith-en-2",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 540",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 95,
+        "cached_tokens": 8,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2500.63,
+      "ttft_ms": 1932.26
+    },
+    {
+      "id": "reason-direct-arith-en-3",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 540",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 96,
+        "cached_tokens": 8,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2351.709,
+      "ttft_ms": 1940.063
+    },
+    {
+      "id": "reason-direct-arith-en-4",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 560",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 95,
+        "cached_tokens": 8,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2344.952,
+      "ttft_ms": 1932.139
+    },
+    {
+      "id": "reason-direct-order-en-1",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: Dmitri",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 80,
+        "cached_tokens": 4,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1962.173,
+      "ttft_ms": 1685.529
+    },
+    {
+      "id": "reason-direct-order-en-2",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: Ann",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 80,
+        "cached_tokens": 4,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1999.253,
+      "ttft_ms": 1685.142
+    },
+    {
+      "id": "reason-direct-order-en-3",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: Greta",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 82,
+        "cached_tokens": 4,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1903.955,
+      "ttft_ms": 1744.507
+    },
+    {
+      "id": "reason-direct-order-en-4",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: Felix",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 82,
+        "cached_tokens": 10,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1758.44,
+      "ttft_ms": 1598.932
+    },
+    {
+      "id": "reason-direct-calendar-en-1",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: Sunday",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 62,
+        "cached_tokens": 4,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1604.426,
+      "ttft_ms": 1290.606
+    },
+    {
+      "id": "reason-direct-calendar-en-2",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: Wednesday",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 62,
+        "cached_tokens": 6,
+        "completion_tokens": 3,
+        "reasoning_tokens": 0
+      },
+      "ms": 1580.043,
+      "ttft_ms": 1268.104
+    },
+    {
+      "id": "reason-direct-calendar-en-3",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 225",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 79,
+        "cached_tokens": 4,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2179.344,
+      "ttft_ms": 1680.262
+    },
+    {
+      "id": "reason-direct-calendar-en-4",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 219",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 79,
+        "cached_tokens": 10,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2050.786,
+      "ttft_ms": 1549.906
+    },
+    {
+      "id": "reason-direct-rates-en-1",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 120",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 84,
+        "cached_tokens": 4,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2082.166,
+      "ttft_ms": 1765.7
+    },
+    {
+      "id": "reason-direct-rates-en-2",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 75",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 84,
+        "cached_tokens": 5,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 2124.68,
+      "ttft_ms": 1763.872
+    },
+    {
+      "id": "reason-direct-rates-en-3",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 720",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 84,
+        "cached_tokens": 5,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 2238.787,
+      "ttft_ms": 1766.933
+    },
+    {
+      "id": "reason-direct-rates-en-4",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 75",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 84,
+        "cached_tokens": 5,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 2081.541,
+      "ttft_ms": 1765.955
+    },
+    {
+      "id": "reason-direct-count-en-1",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 55",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 65,
+        "cached_tokens": 4,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 1763.308,
+      "ttft_ms": 1356.128
+    },
+    {
+      "id": "reason-direct-count-en-2",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 210",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 69,
+        "cached_tokens": 4,
+        "completion_tokens": 6,
+        "reasoning_tokens": 0
+      },
+      "ms": 1934.833,
+      "ttft_ms": 1465.005
+    },
+    {
+      "id": "reason-direct-count-en-3",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 73",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 73,
+        "cached_tokens": 4,
+        "completion_tokens": 5,
+        "reasoning_tokens": 0
+      },
+      "ms": 1960.099,
+      "ttft_ms": 1551.292
+    },
+    {
+      "id": "reason-direct-count-en-4",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 6",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 77,
+        "cached_tokens": 6,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 1909.357,
+      "ttft_ms": 1594.61
+    },
+    {
+      "id": "reason-direct-knights-en-1",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 2",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 105,
+        "cached_tokens": 4,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2545.484,
+      "ttft_ms": 2227.966
+    },
+    {
+      "id": "reason-direct-knights-en-2",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 2",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 109,
+        "cached_tokens": 32,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2049.399,
+      "ttft_ms": 1731.306
+    },
+    {
+      "id": "reason-direct-knights-en-3",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": false,
+      "answer": "ANSWER: 2",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 105,
+        "cached_tokens": 32,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 1965.278,
+      "ttft_ms": 1646.863
+    },
+    {
+      "id": "reason-direct-knights-en-4",
+      "lang": "en",
+      "capability": "reasoning-direct-en",
+      "thinking": false,
+      "pass": true,
+      "answer": "ANSWER: 2",
+      "finish": "stop",
+      "usage": {
+        "prompt_tokens": 109,
+        "cached_tokens": 32,
+        "completion_tokens": 4,
+        "reasoning_tokens": 0
+      },
+      "ms": 2050.098,
+      "ttft_ms": 1731.988
+    }
+  ],
+  "summary": {
+    "reasoning-direct-en": {
+      "n": 24,
+      "pass": 10,
+      "rate": 0.4166666666666667
+    },
+    "reasoning-direct-ru": {
+      "n": 24,
+      "pass": 6,
+      "rate": 0.25
+    }
+  },
+  "by_lang": {
+    "en": {
+      "n": 24,
+      "pass": 10,
+      "rate": 0.4166666666666667
+    },
+    "ru": {
+      "n": 24,
+      "pass": 6,
+      "rate": 0.25
+    }
+  },
+  "extra": {
+    "ttft_ms_p50": 1779.417,
+    "ttft_ms_p95": 2434.648
+  }
+}

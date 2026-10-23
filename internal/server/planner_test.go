@@ -297,6 +297,44 @@ func TestPlannerPlacerRepackKey(t *testing.T) {
 	}
 }
 
+// The output shortlist is asked for by models.<id>.head and kept only where the
+// device lists the feature; elsewhere the plan says why it runs the whole head.
+func TestPlannerPlacerHead(t *testing.T) {
+	m := defaultModel(t)
+	run := func(feat bool, head string) (*plan.Plan, Placement, error) {
+		req := cpuRequest(m)
+		req.Override.Preset = "ram-8g"
+		req.Override.Head = head
+		if feat {
+			req.Device.Features = []string{backend.FeatureOutputShortlist}
+		}
+		pl, err := PlannerPlacer(context.Background(), req)
+		if err != nil {
+			return nil, pl, err
+		}
+		return pl.Plan.(*plan.Plan), pl, nil
+	}
+	p, pl, err := run(true, "shortlist")
+	if err != nil || p.Head == nil || p.Head.Rows != 170024 || len(pl.Spec.HeadShortlist) != 170024 {
+		t.Fatalf("with the feature: %+v %v", p.Head, err)
+	}
+	if p, pl, err = run(true, "shortlist-small"); err != nil || p.Head == nil || p.Head.Rows != 96248 || len(pl.Spec.HeadShortlist) != 96248 {
+		t.Fatalf("the small list: %+v %v", p.Head, err)
+	}
+	for _, c := range []struct {
+		feat bool
+		head string
+	}{{false, "shortlist"}, {true, ""}, {true, "full"}} {
+		p, pl, err := run(c.feat, c.head)
+		if err != nil || p.Head != nil || len(pl.Spec.HeadShortlist) != 0 {
+			t.Errorf("%+v: head %+v, %d ids, %v", c, p.Head, len(pl.Spec.HeadShortlist), err)
+		}
+		if c.head == "shortlist" && !strings.Contains(strings.Join(p.Warnings, "|"), "patch 0009") {
+			t.Errorf("a device without the feature: warnings %v", p.Warnings)
+		}
+	}
+}
+
 // MTP on the CPU: on by default where the device lists the multi-row Q4_0 kernels
 // (draft_max 2, p_min 0.75), off elsewhere with the reason, and the configuration
 // wins either way.
@@ -328,6 +366,15 @@ func TestPlannerPlacerMTPDefaultOnCPU(t *testing.T) {
 	}
 	if p := run(true, config.SpecMTP, 3); !p.MTP.Enabled || p.MTP.DraftMax != 3 {
 		t.Errorf("speculative.type: mtp, n_max 3: MTP %+v", p.MTP)
+	}
+	if p := run(true, config.SpecMTP, 3); p.MTP.VerifyRows != 4 {
+		t.Errorf("speculative.type: mtp, n_max 3 with the kernels: verify_rows %d, want 4 (drafts while one sequence decodes)", p.MTP.VerifyRows)
+	}
+	if p := run(true, "", 0); p.MTP.VerifyRows != 1+CPUMTPDraftMax {
+		t.Errorf("the default: verify_rows %d, want %d", p.MTP.VerifyRows, 1+CPUMTPDraftMax)
+	}
+	if p := run(false, config.SpecMTP, 0); p.MTP.VerifyRows != 0 {
+		t.Errorf("without the kernels there is no bound: verify_rows %d", p.MTP.VerifyRows)
 	}
 	if p := run(false, config.SpecMTP, 0); !p.MTP.Enabled {
 		t.Errorf("speculative.type: mtp without the kernels: MTP %+v, want on (the configuration wins)", p.MTP)

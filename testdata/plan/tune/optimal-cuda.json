@@ -177,6 +177,8 @@
     "KVUnified": false,
     "DraftMax": 3,
     "DraftPMin": 0,
+    "HeadShortlist": null,
+    "VerifyRows": 0,
     "NGram": 0,
     "Stream": null
   }

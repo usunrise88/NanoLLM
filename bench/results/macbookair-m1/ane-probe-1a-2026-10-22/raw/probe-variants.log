@@ -1,0 +1,16 @@
+### build pal4
+{"variant": "pal4", "mlpackage_bytes": 282241860, "coremltools": "9.0"}
+### run pal4
+{"variant": "pal4", "units": "ane", "coremltools": "9.0", "load_s": 4.57, "footprint_after_load_mib": 134, "free_drop_mib": 927, "step_ms_median": 10.97, "step_ms_p90": 11.6, "footprint_after_run_mib": 134, "ops": {"MLNeuralEngineComputeDevice": 181, "none": 42}, "ane_share": 0.812}
+### build i8c
+{"variant": "i8c", "mlpackage_bytes": 564046420, "coremltools": "9.0"}
+### run i8c
+{"variant": "i8c", "units": "ane", "coremltools": "9.0", "load_s": 6.25, "footprint_after_load_mib": 135, "free_drop_mib": 1507, "step_ms_median": 13.89, "step_ms_p90": 14.82, "footprint_after_run_mib": 135, "ops": {"MLNeuralEngineComputeDevice": 181, "none": 42}, "ane_share": 0.812}
+### build q8b
+{"variant": "q8b", "mlpackage_bytes": 598921819, "coremltools": "9.0"}
+### run q8b
+{"variant": "q8b", "units": "ane", "coremltools": "9.0", "load_s": 5.89, "footprint_after_load_mib": 213, "free_drop_mib": 2006, "step_ms_median": 29.1, "step_ms_p90": 30.28, "footprint_after_run_mib": 214, "ops": {"MLCPUComputeDevice": 181, "none": 42}, "ane_share": 0.0}
+### build q4b
+{"variant": "q4b", "mlpackage_bytes": 317116981, "coremltools": "9.0"}
+### run q4b
+{"variant": "q4b", "units": "ane", "coremltools": "9.0", "load_s": 4.32, "footprint_after_load_mib": 213, "free_drop_mib": 1662, "step_ms_median": 28.73, "step_ms_p90": 29.63, "footprint_after_run_mib": 213, "ops": {"MLCPUComputeDevice": 181, "none": 42}, "ane_share": 0.0}

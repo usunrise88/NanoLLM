@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 8 -t 4 -ngl 0",
+    "name": "carrier-pal4"
+  },
+  "date": "2026-10-22",
+  "extra": {
+    "kld_max": 7.107831,
+    "kld_mean": 0.391596,
+    "kld_median": 0.182337,
+    "kld_p99": 2.542117,
+    "ppl_ratio": 1.547287,
+    "top1_pct": 77.696
+  },
+  "model": "carrier-pal4.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}

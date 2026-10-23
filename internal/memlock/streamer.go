@@ -3,10 +3,33 @@
 package memlock
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"os"
 	"sync"
 	"sync/atomic"
 )
+
+// The methods a Streamer reads ahead by (StreamOptions.Method).
+const (
+	// MethodAdvise asks the system to read: madvise WILLNEED on Linux,
+	// PrefetchVirtualMemory on Windows. The default.
+	MethodAdvise = "advise"
+	// MethodPread reads the file ranges itself, Depth reads at a time, into
+	// a scratch buffer that is thrown away; the reads fill the page cache
+	// the mapping is served from. A queue deeper than one is what an NVMe
+	// disk needs to reach its rate (OPT-9: on the NV3 of the i7 laptop depth
+	// 4 of 4 MiB read 4.2 GB/s against 1.1 for page faults and 2.5 for
+	// PrefetchVirtualMemory). A hard disk gains nothing from it.
+	MethodPread = "pread"
+)
+
+// preadChunk is the size of one read of MethodPread.
+const preadChunk = 4 << 20
+
+// defaultDepth is the reads in flight of MethodPread when the option is zero.
+const defaultDepth = 4
 
 // StreamOptions is how a Streamer feeds the layers.
 type StreamOptions struct {
@@ -19,6 +42,11 @@ type StreamOptions struct {
 	// Evict drops a layer's pages (MADV_PAGEOUT, a working-set trim) once it
 	// is computed, unless it is one of the Keep first layers.
 	Evict bool
+	// Method is how the layers are read ahead: MethodAdvise (also "") or
+	// MethodPread.
+	Method string
+	// Depth is the reads in flight of MethodPread; zero is four.
+	Depth int
 }
 
 // advice says what a Streamer asks of the system for a span.
@@ -61,6 +89,12 @@ type Streamer struct {
 	done chan struct{}
 	wg   sync.WaitGroup
 
+	// MethodPread: the file, the mappings that turn a span back into a file
+	// offset, and a scratch buffer for each of the reads in flight.
+	file *os.File
+	ms   []mapping
+	bufs [][]byte
+
 	calls, dropped, errs atomic.Int64
 	willneed, pageout    atomic.Int64 // bytes advised
 	firstErr             atomic.Value // error
@@ -99,6 +133,23 @@ func NewStreamer(path string, layers map[int][]Range, opt StreamOptions) (*Strea
 		}
 	}
 	limit := readLimit(path)
+	if opt.Method == MethodPread {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		s.file, s.ms = f, ms
+		depth := opt.Depth
+		if depth <= 0 {
+			depth = defaultDepth
+		}
+		for range depth {
+			s.bufs = append(s.bufs, make([]byte, preadChunk))
+		}
+		limit = preadChunk
+	} else if opt.Method != "" && opt.Method != MethodAdvise {
+		return nil, fmt.Errorf("memlock: unknown streaming method %q", opt.Method)
+	}
 	for l := range s.read {
 		// A layer is a dozen tensors that lie next to each other; one
 		// call per tensor is a dozen system calls where one will do. The
@@ -163,6 +214,10 @@ func (s *Streamer) handle(il int) {
 }
 
 func (s *Streamer) advise(spans []span, a advice) {
+	if a == willNeed && s.file != nil {
+		s.preadSpans(spans)
+		return
+	}
 	for _, sp := range spans {
 		s.calls.Add(1)
 		if err := adviseSpan(sp, a); err != nil {
@@ -176,6 +231,57 @@ func (s *Streamer) advise(spans []span, a advice) {
 			s.pageout.Add(int64(sp.n))
 		}
 	}
+}
+
+// preadSpans reads the spans' file ranges, len(bufs) of them at a time, and
+// returns when all are read. The data is dropped: the reads are for the page
+// cache.
+func (s *Streamer) preadSpans(spans []span) {
+	jobs := make(chan span)
+	var wg sync.WaitGroup
+	for _, buf := range s.bufs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for sp := range jobs {
+				s.calls.Add(1)
+				if err := s.preadSpan(sp, buf); err != nil {
+					s.errs.Add(1)
+					s.firstErr.CompareAndSwap(nil, fmt.Errorf("pread: %w", err))
+					continue
+				}
+				s.willneed.Add(int64(sp.n))
+			}
+		}()
+	}
+	for _, sp := range spans {
+		jobs <- sp
+	}
+	close(jobs)
+	wg.Wait()
+}
+
+// preadSpan reads one span, in pieces that fit the buffer.
+func (s *Streamer) preadSpan(sp span, buf []byte) error {
+	for _, m := range s.ms {
+		if uint64(sp.addr) < m.start || uint64(sp.addr)+uint64(sp.n) > m.end {
+			continue
+		}
+		off := m.off + int64(uint64(sp.addr)-m.start)
+		for done := int64(0); done < int64(sp.n); {
+			n := min(int64(len(buf)), int64(sp.n)-done)
+			got, err := s.file.ReadAt(buf[:n], off+done)
+			done += int64(got)
+			if errors.Is(err, io.EOF) {
+				return nil // a span rounded out to a page may run past the end of the file
+			}
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return fmt.Errorf("span %#x+%d is in no mapping", sp.addr, sp.n)
 }
 
 // StreamStats are the streamer's counters.
@@ -205,4 +311,7 @@ func (s *Streamer) Close() {
 		close(s.done)
 	}
 	s.wg.Wait()
+	if s.file != nil {
+		_ = s.file.Close()
+	}
 }

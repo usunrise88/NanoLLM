@@ -32,6 +32,7 @@ func planCommand(args []string, stdout io.Writer) error {
 	noMTP := fs.Bool("no-mtp", false, "plan without the drafter")
 	noFA := fs.Bool("no-fa", false, "plan for a device without flash attention")
 	drafter := fs.String("drafter", "", "drafter GGUF, when MODEL is a file")
+	layout := fs.String("layout", registry.LayoutOriginal, "original or nano: plan from the relaid copy of a catalog model (OPT-7; `models relayout` writes it)")
 	asJSON := fs.Bool("json", false, "print the plan as JSON")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
@@ -58,6 +59,15 @@ func planCommand(args []string, stdout io.Writer) error {
 	model, err := planModel(pos[0], *drafter)
 	if err != nil {
 		return err
+	}
+	switch *layout {
+	case registry.LayoutOriginal:
+	case registry.LayoutNano:
+		if model, err = nanoModel(pos[0], *cfgPath, model); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("plan: --layout is %s or %s, not %q", registry.LayoutOriginal, registry.LayoutNano, *layout)
 	}
 
 	req := plan.Request{
@@ -125,6 +135,12 @@ func planModel(arg, drafterPath string) (plan.Model, error) {
 			if i > 0 {
 				inv.Role = registry.RoleDrafter
 			}
+			// A relaid copy is told by its sidecar; the planner merges its
+			// stream ranges.
+			if sc, err := gguf.ReadSidecar(gguf.SidecarPath(p)); err == nil && sc.Layout == gguf.LayoutNano &&
+				sc.Verify(p) == nil && strings.HasSuffix(p, ".nano.gguf") {
+				inv.Layout = gguf.LayoutNano
+			}
 			files = append(files, inv)
 		}
 		return plan.ModelFrom(arg, files)
@@ -138,6 +154,30 @@ func planModel(arg, drafterPath string) (plan.Model, error) {
 		return plan.Model{}, fmt.Errorf("plan: %q is neither a file nor a catalog id", arg)
 	}
 	return plan.ModelFrom(m.ID, m.Inventory)
+}
+
+// nanoModel replaces the target of a catalog model's plan by the inventory of
+// its relaid copy, the way the server does when layout is nano.
+func nanoModel(arg, cfgPath string, model plan.Model) (plan.Model, error) {
+	if _, err := os.Stat(arg); err == nil {
+		if model.Target.Layout != gguf.LayoutNano {
+			return model, fmt.Errorf("plan: %s is not a relaid copy (no valid .nano.json beside it)", arg)
+		}
+		return model, nil
+	}
+	store, cat, _, err := openStore(cfgPath)
+	if err != nil {
+		return model, err
+	}
+	m, ok := registry.Find(cat, arg)
+	if !ok {
+		return model, fmt.Errorf("plan: no %q in the catalog", arg)
+	}
+	rl, err := store.Relaid(m)
+	if err != nil {
+		return model, err
+	}
+	return plan.ModelFrom(m.ID, m.WithRelaid(rl).Inventory)
 }
 
 // parseSize reads "6g", "1.5g", "512m" (binary units, as presets are) or a

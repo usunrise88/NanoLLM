@@ -8,7 +8,7 @@
 //	nanollm bench     prefill/decode speed per model × preset × mode
 //	nanollm optimize  pick the setup that suits the machine and a mode
 //	nanollm eval      the quality suite from SPEC §13
-//	nanollm models    catalog | list | pull | rm | inspect
+//	nanollm models    catalog | list | pull | rm | inspect | relayout
 //	nanollm key       list | issue | remove
 //	nanollm service   install | uninstall | start | stop | restart | status
 //	nanollm version   binary version and the pinned llama.cpp build
@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	_ "github.com/usunrise88/nanollm/internal/api/native"
+	_ "github.com/usunrise88/nanollm/internal/api/ollama"
 	_ "github.com/usunrise88/nanollm/internal/api/openai"
 	_ "github.com/usunrise88/nanollm/internal/backend/fake"
 	_ "github.com/usunrise88/nanollm/internal/backend/llamacpp"
@@ -100,11 +101,12 @@ func usage() {
   nanollm run      [MODEL] [--prompt TEXT] [--preset P] [--device D] [--think] [--system TEXT] [-n N] [--temp T]
   nanollm run      --model FILE.gguf --prompt TEXT [--drafter FILE] [--device D] [-n N] [--temp T]
   nanollm devices  [-config FILE] [-lib-dir DIR]
-  nanollm plan     MODEL --preset P [--device D] [--device-memory SIZE] [--mode M] [--kv T] [--json]
+  nanollm plan     MODEL --preset P [--device D] [--device-memory SIZE] [--mode M] [--kv T] [--layout nano] [--json]
   nanollm bench    [MODEL] [--suite standard|dev] [--full] [--preset P] [--submit] | submit FILE | withdraw ID
   nanollm optimize [--mode silent|optimal|powerful] [--yes] [--dry-run] [--json] [--model ID]
   nanollm eval     [MODEL] --suite NAME|FILE [--thinking off|on|both] | rate REPORT | compare A B | suites
   nanollm models   catalog | list | pull ID... | rm ID | inspect FILE|ID [--tensors] [--json] [--drafter FILE]
+  nanollm models   relayout ID [--align 4k] [--force] [--verify] [--dry-run]
   nanollm key      list | issue NAME [-admin] [-interactive] [-rps N] [-hash] | remove NAME
   nanollm service  install | uninstall | start | stop | restart | status | unit
                    (also nanollm --install, --uninstall, --start, --stop, --restart, --status)

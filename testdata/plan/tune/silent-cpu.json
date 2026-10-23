@@ -894,7 +894,8 @@
       "enabled": true,
       "reason": "the drafter (41.9 MiB) runs on the CPU with the target's output layer and reads its KV cache",
       "draft_max": 2,
-      "draft_p_min": 0.5
+      "draft_p_min": 0.5,
+      "verify_rows": 3
     },
     "groups": {
       "G0": {
@@ -1034,6 +1035,8 @@
     "KVUnified": false,
     "DraftMax": 2,
     "DraftPMin": 0.5,
+    "HeadShortlist": null,
+    "VerifyRows": 3,
     "NGram": 0,
     "Stream": null
   }

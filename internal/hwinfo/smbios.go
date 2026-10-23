@@ -6,13 +6,16 @@ import (
 )
 
 // smbiosInfo is what is read from the SMBIOS tables: system (type 1),
-// enclosure (type 3) and memory devices (type 17). The serial number, UUID
+// baseboard (type 2), enclosure (type 3) and memory devices (type 17). The serial number, UUID
 // and asset tags in those same structures are skipped by offset and never
 // decoded.
 type smbiosInfo struct {
 	vendor, product, version, family string
-	chassis                          int
-	memMTS                           int
+	// The baseboard (type 2): the name of a board whose system strings are
+	// placeholders.
+	boardVendor, boardProduct string
+	chassis                   int
+	memMTS                    int
 	// memModules counts the memory devices that are populated.
 	memModules int
 }
@@ -61,6 +64,10 @@ func parseSMBIOS(raw []byte) smbiosInfo {
 		case 1:
 			out.vendor, out.product, out.version = str(4), str(5), str(6)
 			out.family = str(0x1A)
+		case 2:
+			if out.boardVendor == "" && out.boardProduct == "" {
+				out.boardVendor, out.boardProduct = str(4), str(5)
+			}
 		case 3:
 			if len(formatted) > 5 && out.chassis == 0 {
 				out.chassis = int(formatted[5] & 0x7f)

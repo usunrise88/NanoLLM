@@ -116,11 +116,9 @@ func TestNativeMTPLoads(t *testing.T) {
 
 // TestNativeMTPMatchesServer compares the state machine with llama-server's
 // own MTP (tools/golden -drafter) under greedy decoding: the same tokens and
-// the same numbers of drafted and accepted tokens.
+// the same numbers of drafted and accepted tokens, on the kernels the golden
+// was recorded on (goldenKernels).
 func TestNativeMTPMatchesServer(t *testing.T) {
-	if !testOnCPU() {
-		t.Skip("the goldens are the CPU's tokens (NANOLLM_TEST_DEVICE is set)")
-	}
 	files := goldenFiles(true)
 	if len(files) == 0 {
 		t.Skip("no MTP golden files for " + bindingTag)
@@ -140,9 +138,13 @@ func TestNativeMTPMatchesServer(t *testing.T) {
 		if err := json.Unmarshal(data, &g); err != nil {
 			t.Fatal(err)
 		}
-		if g.ModelSize != fi.Size() || g.DrafterSize != di.Size() || g.CPUVariant != b.CPUVariant() ||
+		if g.ModelSize != fi.Size() || g.DrafterSize != di.Size() ||
 			g.ModelSHA256 != "" && g.ModelSHA256 != fileSHA256(t, path) || g.DrafterSHA != "" && g.DrafterSHA != fileSHA256(t, drafter) {
-			t.Logf("%s: recorded for other files or another CPU variant", f)
+			t.Logf("%s: recorded for other files", f)
+			continue
+		}
+		if why := goldenKernels(t, b, g); why != "" {
+			t.Logf("%s: %s", f, why)
 			continue
 		}
 		ran = true
@@ -172,7 +174,7 @@ func TestNativeMTPMatchesServer(t *testing.T) {
 		mm.Close()
 	}
 	if !ran {
-		t.Skip("no MTP golden matches these files and this CPU variant")
+		t.Skip("no MTP golden matches these files and these kernels")
 	}
 }
 
@@ -237,6 +239,85 @@ func TestNativeMTPEquivalenceQ8(t *testing.T) {
 	plain := load(baseSpec(path))
 	mtp := load(mtpSpec(path, drafter))
 	mtpEquivalence(t, plain, mtp)
+}
+
+// TestNativeMTPEquivalenceOneAtATime is TestNativeMTPEquivalence for a device that holds one copy of the model but not
+// two (the Metal working set of an 8 GiB Mac is 5.3 GiB and a copy of E4B takes 2.7: two at once end in "Insufficient
+// Memory" and a failed decode): the plain run is recorded and its model freed before the model with the drafter is
+// loaded, and that run is compared with the recording. The comparison is the same, token by token.
+func TestNativeMTPEquivalenceOneAtATime(t *testing.T) {
+	if os.Getenv("NANOLLM_TEST_ONE_AT_A_TIME") == "" {
+		t.Skip("set NANOLLM_TEST_ONE_AT_A_TIME=1 on a device that cannot hold two copies of the model")
+	}
+	b := testBackend(t)
+	path, drafter := testModelPath(t), testDrafterPath(t)
+	releaseSharedMTP()
+	const n = 48
+	prompts := equivalencePromptList()
+	tokens := make([][]backend.Token, len(prompts))
+	plain := make([]genOut, len(prompts))
+	var genPlain int
+	var tPlain time.Duration
+	func() {
+		mm, err := b.Load(context.Background(), baseSpec(path))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer mm.Close()
+		m := mm.(*model)
+		for i, p := range prompts {
+			tokens[i] = tokenize(t, m, chat(m, p))
+			if err := m.SetSampler(0, greedy, tokens[i]); err != nil {
+				t.Fatal(err)
+			}
+			m.ClearSeq(0)
+			plain[i] = generate(t, m, 0, tokens[i], 0, n, 2)
+			genPlain += len(plain[i].toks)
+			tPlain += plain[i].decode
+		}
+	}()
+	mm, err := b.Load(context.Background(), mtpSpec(path, drafter))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = mm.Close() })
+	mtp := mm.(*model)
+	var drafted, accepted, genMTP int
+	var tMTP time.Duration
+	for i, p := range prompts {
+		mtp.ClearSeq(0)
+		if err := mtp.SetSampler(0, greedy, tokens[i]); err != nil {
+			t.Fatal(err)
+		}
+		got := generate(t, mtp, 0, tokens[i], 0, n, -1)
+		want := plain[i]
+		drafted += got.drafted
+		accepted += got.accepted
+		genMTP += len(got.toks)
+		tMTP += got.decode
+		t.Logf("%q: %d tokens, drafted %d accepted %d in %d steps", p, len(got.toks), got.drafted, got.accepted, got.steps)
+		for j := range max(len(want.toks), len(got.toks)) {
+			if j < len(want.toks) && j < len(got.toks) && want.toks[j] == got.toks[j] {
+				continue
+			}
+			msg := fmt.Sprintf("%q: first difference at token %d", p, j)
+			if j < len(want.lps) && len(want.lps[j].Top) >= 2 {
+				top := want.lps[j].Top
+				msg += fmt.Sprintf(": plain picked %d, top-1/top-2 margin %.4f (%d vs %d)", want.toks[j], top[0].Logprob-top[1].Logprob, top[0].Token, top[1].Token)
+				if j < len(got.toks) {
+					msg += fmt.Sprintf(", MTP picked %d", got.toks[j])
+				}
+			}
+			t.Error(msg)
+			break
+		}
+	}
+	rate := func(n int, d time.Duration) float64 { return float64(n) / d.Seconds() }
+	t.Logf("acceptance %d/%d (%.0f%%); decode %.2f tok/s plain, %.2f tok/s MTP",
+		accepted, drafted, 100*float64(accepted)/math.Max(1, float64(drafted)), rate(genPlain, tPlain), rate(genMTP, tMTP))
+	if accepted == 0 && trained(mtp) {
+		t.Error("no draft token was accepted")
+	}
 }
 
 func mtpEquivalence(t *testing.T, plain, mtp *model) {

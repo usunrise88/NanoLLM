@@ -8,6 +8,7 @@ import (
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/plan"
+	"github.com/usunrise88/nanollm/internal/registry"
 )
 
 // Variant is one point of a development sweep: the settings it changes
@@ -25,11 +26,15 @@ var variantKeys = map[string]string{
 	"kv":            "KV cache type for K and V: f16 or q8_0",
 	"n_ctx":         "context per slot",
 	"slots":         "parallel sequences",
+	"batch":         "dev suite: also measure the throughput of 1, 2, 4… up to N sequences decoding at once, with and without MTP (raises slots to N)",
 	"draft_max":     "MTP tokens drafted per step",
 	"draft_p_min":   "MTP: stop drafting below this probability",
+	"only":          "batch: run the throughput curve of the batch key and nothing else",
+	"verify_rows":   "rows of one step spent on drafts and their checks, summed over the decoding sequences (0: no bound)",
 	"mtp":           "on or off",
 	"ngram":         "prompt-lookup drafting: the match length (2 or more), 0 is off; replaces the MTP drafter",
 	"repack":        "on or off: CPU repacked weights (use_extra_bufts)",
+	"head":          "full, shortlist or shortlist-small: the logits of all the tokens or of a shortlist while no request needs the rest (CPU, libraries with patch 0009; OPT-4)",
 	"mode":          "memory mode: auto, M1…M10 or a name",
 	"load":          "none, mmap, mlock, mmap+mlock or dio",
 	"lazy":          "off, auto or on",
@@ -39,7 +44,10 @@ var variantKeys = map[string]string{
 	"stream_ahead":  "layers read ahead of the compute in the file-backed modes M8, M9 (OPT-8); 0 is off",
 	"stream_keep":   "leading layers the streamer never evicts",
 	"stream_evict":  "on or off: drop a layer's pages once it is computed",
+	"stream_method": "advise, pread or direct: how the next layers are read (the system's readahead, reads of the file at stream_depth, or O_DIRECT reads into a ring of buffers)",
+	"stream_depth":  "reads in flight of stream_method=pread (0 is four)",
 	"numa":          "off, interleave or node:N",
+	"layout":        "original or nano: the tensor order of the model file (OPT-7); nano is the copy `nanollm models relayout` wrote, and the plan is made from its offsets",
 	"env.NAME":      "an environment variable for the worker (OMP_PROC_BIND, GGML_*)",
 }
 
@@ -104,7 +112,15 @@ func checkValue(key, v string) error {
 		return nil
 	}
 	switch key {
-	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "stream_ahead", "stream_keep", "ngram":
+	case "only":
+		if v != "batch" {
+			return fmt.Errorf("%q is not batch", v)
+		}
+	case "batch":
+		if n, err := strconv.Atoi(v); err != nil || n < 2 || n > 64 {
+			return fmt.Errorf("%q is not a number of sequences from 2 to 64", v)
+		}
+	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "verify_rows", "stream_ahead", "stream_keep", "stream_depth", "ngram":
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
 			return fmt.Errorf("%q is not a non-negative integer", v)
@@ -126,9 +142,23 @@ func checkValue(key, v string) error {
 		if v != "host" && v != "device" {
 			return fmt.Errorf("%q is not host or device", v)
 		}
+	case "head":
+		switch v {
+		case "full", "shortlist", "shortlist-small":
+		default:
+			return fmt.Errorf("%q is not full, shortlist or shortlist-small", v)
+		}
+	case "stream_method":
+		if v != "advise" && v != "pread" && v != "direct" {
+			return fmt.Errorf("%q is not advise, pread or direct", v)
+		}
 	case "mtp", "repack", "swa_full", "stream_evict":
 		if v != "on" && v != "off" {
 			return fmt.Errorf("%q is not on or off", v)
+		}
+	case "layout":
+		if v != registry.LayoutOriginal && v != registry.LayoutNano {
+			return fmt.Errorf("%q is not %s or %s", v, registry.LayoutOriginal, registry.LayoutNano)
 		}
 	case "mode":
 		if _, err := plan.ParseMode(v); err != nil {
@@ -192,8 +222,17 @@ func (v Variant) Plan(req *plan.Request) {
 	if n, ok := v.int("slots"); ok {
 		req.Slots = n
 	}
+	if n, ok := v.int("batch"); ok {
+		req.Slots = max(req.Slots, n)
+	}
 	if n, ok := v.int("draft_max"); ok {
 		req.DraftMax = n
+	}
+	if n, ok := v.int("verify_rows"); ok {
+		req.VerifyRows = n
+		if n == 0 {
+			req.VerifyRows = -1 // in a sweep 0 is "no bound", over the CPU default
+		}
 	}
 	if s, ok := v["draft_p_min"]; ok {
 		req.DraftPMin, _ = strconv.ParseFloat(s, 64)
@@ -276,6 +315,12 @@ func (v Variant) Load(spec *backend.LoadSpec) {
 		}
 		if n, ok := v.int("stream_keep"); ok {
 			st.Keep = n
+		}
+		if s, ok := v["stream_method"]; ok {
+			st.Method = s
+		}
+		if n, ok := v.int("stream_depth"); ok {
+			st.Depth = n
 		}
 		switch v["stream_evict"] {
 		case "on":

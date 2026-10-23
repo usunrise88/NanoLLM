@@ -69,6 +69,11 @@ type model struct {
 	// the eval callback's user_data. Both are zero without streaming.
 	stream   *memlock.Streamer
 	streamID uintptr
+	// ring is the layer ring of the "direct" method (direct.go), nil without one.
+	ring *memlock.Ring
+
+	// head is the output shortlist (head.go), nil without one.
+	head *headState
 
 	slots []slot
 }
@@ -101,6 +106,11 @@ type slot struct {
 	hist    []backend.Token
 	histBad bool
 	ng      ngram.Backoff
+
+	// outside: the slot's cache holds a token the output shortlist leaves
+	// out; wholeVocab: its sampler needs logits for any token (head.go).
+	outside    bool
+	wholeVocab bool
 }
 
 func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend.Model, error) {
@@ -140,6 +150,9 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 	if m.mdl == 0 {
 		return nil, fmt.Errorf("llamacpp: load %s failed%s", spec.Path, lastErrors(m.loadLog))
 	}
+	if len(spec.HeadShortlist) > 0 {
+		m.attachHead(spec.HeadShortlist)
+	}
 	if st := spec.Stream.WithEnv(); st.Active() {
 		m.attachStream(st, &cp)
 	}
@@ -157,12 +170,13 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 	m.swaFull = cp.SwaFull
 	m.recurrent = llamaModelIsRecurrent(m.mdl) || llamaModelIsHybrid(m.mdl)
 	m.caps = backend.Capabilities{
-		NCtx:      int(llamaNCtxSeq(m.ctx)),
-		Slots:     int(llamaNSeqMax(m.ctx)),
-		NBatch:    int(llamaNBatch(m.ctx)),
-		SWAFull:   m.swaFull,
-		SWAWindow: m.nSWA,
-		NVocab:    m.nVocab,
+		NCtx:       int(llamaNCtxSeq(m.ctx)),
+		Slots:      int(llamaNSeqMax(m.ctx)),
+		NBatch:     int(llamaNBatch(m.ctx)),
+		VerifyRows: spec.VerifyRows,
+		SWAFull:    m.swaFull,
+		SWAWindow:  m.nSWA,
+		NVocab:     m.nVocab,
 	}
 	m.nOutputsMax = int(cp.NOutputsMax)
 	if m.nOutputsMax == 0 {

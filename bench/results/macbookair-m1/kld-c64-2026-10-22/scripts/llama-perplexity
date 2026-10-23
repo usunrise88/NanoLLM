@@ -1,0 +1,3 @@
+#!/bin/sh
+# llama-perplexity of the darwin_arm64 archive with fa_small.dylib: flash attention on small batches only (patch 0007).
+DYLD_INSERT_LIBRARIES="$(dirname "$0")/fa_small.dylib" exec "$NANOLLM_ROOT"/dist/darwin_arm64/tools/llama-perplexity "$@"

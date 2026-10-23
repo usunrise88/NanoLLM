@@ -88,6 +88,7 @@ func (m *model) Step(ctx context.Context, steps []backend.SeqStep) ([]backend.Se
 		}
 	}
 	m.tuneThreads(m.batchTokens(steps, drafts))
+	m.chooseHead(steps)
 	if rc := llamaProcess(m.ctx, LlamaProcessTypeDecode, m.batch); rc != 0 {
 		return nil, m.decodeError(rc, steps)
 	}
@@ -460,6 +461,7 @@ func (m *model) RestoreSeq(seq int, state []byte) error {
 	m.slots[seq].pendingPos = -1
 	// The tokens behind a restored state are not in it.
 	m.slots[seq].hist, m.slots[seq].histBad = nil, true
+	m.slots[seq].outside = m.head != nil
 	if want := bindingCommit[:16]; string(state[8:24]) != want {
 		return fmt.Errorf("llamacpp: slot state was saved by llama.cpp %q, this is %q", state[8:24], want)
 	}

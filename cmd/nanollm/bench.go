@@ -117,8 +117,9 @@ func benchCommand(args []string) error {
 	// no weights to read and the result is marked as the fake's.
 	fakeOnly := len(cfg.Backends.Enabled) == 1 && cfg.Backends.Enabled[0] == config.BackendFake
 	modelPath, drafterPath := "fake.gguf", "fake-drafter.gguf"
+	store := newStore(cfg)
 	if !fakeOnly {
-		if modelPath, drafterPath, err = newStore(cfg).Ready(m); err != nil {
+		if modelPath, drafterPath, err = store.Ready(m); err != nil {
 			return err
 		}
 	}
@@ -144,7 +145,8 @@ func benchCommand(args []string) error {
 	res, err := bench.Run(ctx, bench.Options{
 		TuneProfile: tuneProfileID(ctx, cfg, m, b, libDir),
 		Manifest:    m, ModelPath: modelPath, DrafterPath: drafterPath, Backend: b, LibDir: libDir,
-		Suite: *suite, Full: *full, Presets: presets, Reps: *reps, Variants: variants, Place: place, Cold: *cold, Advisory: *advisory, Timeout: *timeout, Slow: *slow,
+		Relaid: func() (registry.Relaid, error) { return store.Relaid(m) },
+		Suite:  *suite, Full: *full, Presets: presets, Reps: *reps, Variants: variants, Place: place, Cold: *cold, Advisory: *advisory, Timeout: *timeout, Slow: *slow,
 		Version: version, Tag: llamacpp.PinnedTag, Commit: llamacpp.PinnedCommit,
 		Events: func(e bench.Event) {
 			switch e.Type {

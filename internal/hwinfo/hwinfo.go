@@ -43,6 +43,26 @@ func Collect(ctx context.Context, gpus []benchfmt.GPU) benchfmt.Machine {
 	return m
 }
 
+// cleanSystem drops the placeholders firmware leaves in SMBIOS ("To Be Filled
+// By O.E.M.") and, when nothing is left to name the machine by, names it by
+// its baseboard: a white-box or server board often fills only the board's
+// strings ("ASRockRack EPYCD8-2T"). It reports whether the board gave the name.
+func cleanSystem(s *benchfmt.System, boardVendor, boardName string) bool {
+	for _, p := range []*string{&s.Vendor, &s.Product, &s.Family} {
+		if benchfmt.Placeholder(*p) {
+			*p = ""
+		}
+	}
+	if s.Vendor == "" && !benchfmt.Placeholder(boardVendor) {
+		s.Vendor = strings.TrimSpace(boardVendor)
+	}
+	if s.Product == "" && s.Family == "" && !benchfmt.Placeholder(boardName) {
+		s.Product, s.Family = strings.TrimSpace(boardName), strings.TrimSpace(boardName)
+		return true
+	}
+	return false
+}
+
 var serverCPU = regexp.MustCompile(`(?i)\b(EPYC|Xeon)\b`)
 
 // FormFactorOfChassis maps an SMBIOS chassis type (DMI chassis_type) to a

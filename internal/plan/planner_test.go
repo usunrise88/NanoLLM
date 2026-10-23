@@ -507,3 +507,76 @@ func TestStreamRanges(t *testing.T) {
 		}
 	}
 }
+
+// ggml names the Apple GPU "mtl0": the plan must know it as Metal on unified
+// memory, or a Mac plans as a discrete card with a driver's overhead.
+func TestMetalDeviceKind(t *testing.T) {
+	for id, want := range map[string]string{
+		"mtl0": BackendMetal, "metal": BackendMetal, "cuda1": BackendCUDA, "vulkan0": BackendVulkan,
+	} {
+		if got := Kind(id); got != want {
+			t.Errorf("Kind(%q) = %q, want %q", id, got, want)
+		}
+	}
+	for _, sel := range []string{"llamacpp:mtl0", "mtl0", "llamacpp:metal0"} {
+		d, err := ParseDevice(sel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d.Backend != BackendMetal || !d.Unified {
+			t.Errorf("ParseDevice(%q) = %+v, want metal on unified memory", sel, d)
+		}
+	}
+	if d := SyntheticDevice(preset(t, "uma-4g")); d.Selector != "llamacpp:mtl0" || !d.Unified {
+		t.Errorf("synthetic uma device: %+v", d)
+	}
+}
+
+// TestHeadShortlist: a request for the output shortlist reaches the plan and
+// the load spec, costs the memory of its second copy of the head's rows, and
+// is dropped on a GPU plan and for a model whose head is not tied.
+func TestHeadShortlist(t *testing.T) {
+	model := e4b(t)
+	ids := make([]int32, 170024)
+	for i := range ids {
+		ids[i] = int32(i)
+	}
+	base := Request{Model: model, Preset: preset(t, "ram-8g"), NCtx: 4096, Slots: 1, NoMTP: true}
+	short := base
+	short.Head, short.HeadIDs = "shortlist", ids
+	pf, ps := mustPlan(t, base), mustPlan(t, short)
+	if pf.Head != nil {
+		t.Errorf("no head requested, plan has %+v", pf.Head)
+	}
+	want := HeadBytes(len(ids), 2560)
+	if ps.Head == nil || ps.Head.Kind != "shortlist" || ps.Head.Rows != len(ids) || ps.Head.Bytes != want {
+		t.Fatalf("head %+v, want %d rows and %d bytes", ps.Head, len(ids), want)
+	}
+	if got := sumGroups(ps).Total() - sumGroups(pf).Total(); got != want {
+		t.Errorf("the shortlist costs %d bytes in the plan, want %d", got, want)
+	}
+	spec, err := ps.LoadSpec("m.gguf", "")
+	if err != nil || len(spec.HeadShortlist) != len(ids) || spec.HeadShortlist[len(ids)-1] != ids[len(ids)-1] {
+		t.Errorf("load spec: %d ids, %v", len(spec.HeadShortlist), err)
+	}
+	spec.HeadShortlist[0] = 99
+	if ps.headIDs[0] == 99 {
+		t.Error("the load spec shares the plan's ids")
+	}
+	if spec, _ = pf.LoadSpec("m.gguf", ""); len(spec.HeadShortlist) != 0 {
+		t.Error("a plan with the whole head carries ids")
+	}
+	// "full", and a request with no ids, ask for nothing.
+	for _, r := range []Request{{Head: "full", HeadIDs: ids}, {Head: "shortlist"}} {
+		req := base
+		req.Head, req.HeadIDs = r.Head, r.HeadIDs
+		if p := mustPlan(t, req); p.Head != nil {
+			t.Errorf("%+v: head %+v", r.Head, p.Head)
+		}
+	}
+	// A GPU plan keeps the whole head.
+	gpu := Request{Model: model, Preset: preset(t, "uma-4g"), NCtx: 4096, Slots: 1, NoMTP: true, Head: "shortlist", HeadIDs: ids}
+	if p := mustPlan(t, gpu); p.Head != nil {
+		t.Errorf("a unified-memory plan has a shortlist: %+v", p.Head)
+	}
+}

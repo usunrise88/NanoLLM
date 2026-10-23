@@ -98,6 +98,7 @@ func linuxProfile(fsys fs.FS) benchfmt.Machine {
 	if looksVirtual(m.System.Vendor, product) || (m.System.Vendor == "" && flags["hypervisor"]) {
 		m.System.FormFactor = benchfmt.FormVM
 	}
+	boardNamed := cleanSystem(&m.System, read("/sys/class/dmi/id/board_vendor"), read("/sys/class/dmi/id/board_name"))
 
 	// OS.
 	osr := parseOSRelease(read("/etc/os-release"))
@@ -113,6 +114,9 @@ func linuxProfile(fsys fs.FS) benchfmt.Machine {
 	m.Power = linuxPower(fsys, read)
 	m.Disk.Type = linuxDisk(fsys, read)
 	m.Extra = linuxExtra(fsys, read)
+	if boardNamed {
+		m.Extra = append(m.Extra, benchfmt.Field{Key: "system_name_from", Value: "baseboard"})
+	}
 	return m
 }
 

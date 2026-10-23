@@ -1,0 +1,7 @@
+### pal4, one chunk, native (the harness with memory columns)
+{"units":"ane","models":1,"load_s":5.52,"iters":30,"each_ms_median":[7.81],"step_ms_median":7.81,"step_ms_p90":8.21,"step_ms_min":7.70,"footprint_mib":48,"load_took_mib":{"free":770,"wired":301,"compressed":-4,"anonymous":198,"file":279},"run_took_mib":{"free":0,"wired":10}}
+### pal6, one chunk (package 405 MB)
+{"units":"ane","models":1,"load_s":12.00,"iters":40,"each_ms_median":[9.42],"step_ms_median":9.42,"step_ms_p90":10.21,"step_ms_min":8.69,"footprint_mib":48,"load_took_mib":{"free":1932,"wired":422,"compressed":-167,"anonymous":1289,"file":410},"run_took_mib":{"free":88,"wired":11}}
+{'ops': {'MLNeuralEngineComputeDevice': 181}, 'ane_share': 1.0}
+### 7 distinct pal4 chunks (the body of the model), ane
+{"units":"ane","models":7,"load_s":47.00,"iters":40,"each_ms_median":[9.52,9.53,9.65,9.73,9.79,9.71,9.70],"step_ms_median":68.37,"step_ms_p90":83.18,"step_ms_min":64.61,"footprint_mib":170,"load_took_mib":{"free":2765,"wired":1899,"compressed":-187,"anonymous":920,"file":-18},"run_took_mib":{"free":22,"wired":10}}

@@ -118,7 +118,7 @@ test:
 test-race:
 	CGO_ENABLED=1 $(GO) test -race ./...
 
-## conformance: the OpenAI client conformance suite against the fake backend (pip install -r tests/conformance/requirements.txt)
+## conformance: the OpenAI and Ollama client conformance suites against the fake backend (pip install -r tests/conformance/requirements.txt)
 conformance: build
 	NANOLLM_BIN=$(abspath $(DIST)/nanollm) python3 -m pytest -q tests/conformance
 

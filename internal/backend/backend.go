@@ -66,6 +66,11 @@ const (
 	// REPACK_Q4_0_ROWS of the CPU backend). Without it speculative decoding
 	// on the CPU does not pay (docs/AUTOTUNE.md, the cost of a batch).
 	FeatureMultiRowQ4_0 = "multirow-q4_0"
+	// FeatureOutputShortlist means the library can compute the logits of a
+	// subset of the vocabulary and spread them over a full row
+	// (patches/llama.cpp/0009; LoadSpec.HeadShortlist, OPT-4): the head reads
+	// fewer rows of the 262144-row matrix on every token.
+	FeatureOutputShortlist = "output-shortlist"
 	// FeatureFlashAttnSmallBatch means flash attention on this GPU is slow for
 	// long batches: the matmul attention prefills faster as the context grows
 	// (Iris Xe, Vulkan, Windows driver: pp512 at 4096 tokens of context 385
@@ -156,6 +161,13 @@ type StreamSpec struct {
 	Ahead  int
 	Keep   int
 	Evict  bool
+	// Method is how the layers are read ahead: "" or "advise" (the system's
+	// readahead: madvise WILLNEED, PrefetchVirtualMemory), "pread" (reads
+	// of the file, Depth at a time, into the page cache; OPT-9) or "direct"
+	// (O_DIRECT reads into a ring of buffers the tensors are pointed at, no
+	// page cache: Linux, libraries with patches/next/0010). Depth is zero for four.
+	Method string
+	Depth  int
 	// Probe installs the layer callback and does nothing in it, to measure
 	// what the callback alone costs.
 	Probe bool
@@ -163,10 +175,10 @@ type StreamSpec struct {
 
 // Active is whether the backend has anything to do with the spec.
 func (s *StreamSpec) Active() bool {
-	return s != nil && len(s.Ranges) > 0 && (s.Ahead > 0 || s.Evict || s.Probe)
+	return s != nil && len(s.Ranges) > 0 && (s.Ahead > 0 || s.Evict || s.Probe || s.Method == "direct")
 }
 
-// WithEnv applies the NANOLLM_STREAM_AHEAD, _KEEP, _EVICT and _PROBE
+// WithEnv applies the NANOLLM_STREAM_AHEAD, _KEEP, _EVICT, _METHOD, _DEPTH and _PROBE
 // variables over the spec, for the benchmark sweeps and the autotuner: the
 // configuration of a served model sets the fields directly.
 func (s *StreamSpec) WithEnv() *StreamSpec {
@@ -185,6 +197,12 @@ func (s *StreamSpec) WithEnv() *StreamSpec {
 		o.Evict = true
 	case "0":
 		o.Evict = false
+	}
+	if v := os.Getenv("NANOLLM_STREAM_METHOD"); v != "" {
+		o.Method = v
+	}
+	if v, err := strconv.Atoi(os.Getenv("NANOLLM_STREAM_DEPTH")); err == nil && v >= 0 {
+		o.Depth = v
 	}
 	if os.Getenv("NANOLLM_STREAM_PROBE") == "1" {
 		o.Probe = true
@@ -259,6 +277,15 @@ type LoadSpec struct {
 	// step, stopping when the drafter's top probability drops below DraftPMin.
 	DraftMax  int
 	DraftPMin float64
+	// HeadShortlist are the vocabulary ids (ascending, unique, a multiple of 8
+	// of them) whose logits the output head computes while no request needs
+	// the whole vocabulary; empty keeps the whole head. The model holds a
+	// second, repacked copy of those rows (FeatureOutputShortlist).
+	HeadShortlist []int32
+	// VerifyRows bounds the rows of a step spent on drafts and their checks,
+	// summed over the decoding slots (Σ 1 + drafts); zero is no bound. The
+	// scheduler enforces it (sched.Loop.SetVerifyRows).
+	VerifyRows int
 	// NGram is the match length of prompt-lookup drafting (internal/ngram),
 	// which drafts up to DraftMax tokens from the sequence itself; zero is
 	// off. It is used when no MTP drafter is loaded.
@@ -386,7 +413,10 @@ type Capabilities struct {
 	NBatch int // tokens per Step across all slots, drafts included
 	// MaxDraft is 0 when no drafter is loaded.
 	MaxDraft int
-	SWAFull  bool
+	// VerifyRows is the spec's bound on the rows spent on drafts in a step;
+	// zero is none. The scheduler starts from it.
+	VerifyRows int
+	SWAFull    bool
 	// SWAWindow is how far back a trim may reach without a fresh prefill when
 	// SWAFull is off; 0 when the model has no sliding-window layers.
 	SWAWindow int

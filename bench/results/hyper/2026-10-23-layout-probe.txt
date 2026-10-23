@@ -1,0 +1,10 @@
+hyper-exclusive: lock taken, load 2.49, running (python3 -I scripts/layout-probe.py /tmp/claude-1000/-home-ubuntu-nanollm/9e147796-f3c6-47d8-acf0-ac73d4e23c45/scratchpad/plan-ram2g.json /home/ubuntu/nanollm-data/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf 3)
+126 stream ranges, 1772 MiB; merged: 42 ranges
+rep 0 as planned                           1772 MiB in   17.8 s =   99.7 MiB/s
+rep 0 gaps under 1 MiB read through        1772 MiB in   17.2 s =  103.1 MiB/s
+rep 1 gaps under 1 MiB read through        1772 MiB in   17.5 s =  101.5 MiB/s
+rep 1 as planned                           1772 MiB in   17.5 s =  101.0 MiB/s
+rep 2 as planned                           1772 MiB in   17.3 s =  102.4 MiB/s
+rep 2 gaps under 1 MiB read through        1772 MiB in   17.7 s =  100.2 MiB/s
+median as planned                        101.0 MiB/s
+median gaps under 1 MiB read through     101.5 MiB/s

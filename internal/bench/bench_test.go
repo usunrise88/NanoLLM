@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -103,5 +104,55 @@ func TestSpawnTimesOut(t *testing.T) {
 	}
 	if d := time.Since(start); d > 10*time.Second {
 		t.Fatalf("took %s to give up", d)
+	}
+}
+
+// The throughput curve: one point per number of sequences, each with and
+// without drafting, and the slots the points need follow from the key.
+func TestBatchCurveOnFake(t *testing.T) {
+	m, err := fake.New(fake.Options{MaxDraft: 2, Acceptance: 0.5, PrefillRate: 1e6, DecodeRate: 2e4}).Load(context.Background(), backend.LoadSpec{NCtx: 8192, NBatch: 8192, Slots: 4, DrafterPath: "d"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	loop := sched.New(m)
+	defer loop.Close()
+	res, err := run(context.Background(), m, loop, procmem.Start(), WorkerSpec{Reps: 2, Batch: 4}, WorkerResult{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seqs []int
+	for _, p := range res.Metrics.Batch {
+		seqs = append(seqs, p.Seqs)
+		if p.AggTokS <= 0 || p.PerSeqTokS <= 0 || p.MTPAggTokS <= 0 || p.MTPPerSeqTokS <= 0 || p.Acceptance <= 0 {
+			t.Errorf("point %+v", p)
+		}
+	}
+	if !slices.Equal(seqs, []int{1, 2, 4}) {
+		t.Fatalf("points %v", seqs)
+	}
+}
+
+func TestBatchSizesAndKey(t *testing.T) {
+	for top, want := range map[int][]int{2: {1, 2}, 3: {1, 2, 3}, 4: {1, 2, 4}, 6: {1, 2, 4, 6}, 8: {1, 2, 4, 8}} {
+		if got := batchSizes(top); !slices.Equal(got, want) {
+			t.Errorf("batchSizes(%d) = %v", top, got)
+		}
+	}
+	if _, err := ParseSets([]string{"batch=1"}); err == nil {
+		t.Error("batch=1 is a curve of one point: refuse it")
+	}
+	vs, err := ParseSets([]string{"batch=4"})
+	if err != nil || len(vs) != 1 {
+		t.Fatalf("%v %v", vs, err)
+	}
+	req := plan.Request{Slots: 2}
+	vs[0].Plan(&req)
+	if req.Slots != 4 {
+		t.Errorf("slots %d: the curve needs a slot for each sequence", req.Slots)
+	}
+	req = plan.Request{Slots: 8}
+	vs[0].Plan(&req)
+	if req.Slots != 8 {
+		t.Errorf("slots %d: more slots than the curve needs stay", req.Slots)
 	}
 }

@@ -6,6 +6,7 @@
 package server
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -52,6 +53,10 @@ type PlaceRequest struct {
 	// when it is off), and TuneID names it in the pool key.
 	Tune   placement.Tune
 	TuneID string
+	// Layout is the tensor order of ModelPath: "nano" when it is the relaid
+	// copy (and Manifest then carries that file's inventory), empty for the
+	// file as published.
+	Layout string
 }
 
 // Placer turns a model and a device into a placement: the planner's job.
@@ -227,7 +232,8 @@ func (r *Runtime) load(ctx context.Context, k pool.Key) (backend.Model, any, err
 	r.mu.Lock()
 	info := r.plans[k]
 	r.mu.Unlock()
-	r.log.Info("loading model", "key", k.String(), "gpu_layers", spec.GPULayers, "n_ctx", spec.NCtx, "slots", spec.Slots)
+	layout := cmp.Or(k.Layout, registry.LayoutOriginal)
+	r.log.Info("loading model", "key", k.String(), "layout", layout, "path", spec.Path, "gpu_layers", spec.GPULayers, "n_ctx", spec.NCtx, "slots", spec.Slots)
 	// Range-lock (M7, M8) pins the planned ranges before the engine maps
 	// the file, so the first inference already reads locked pages.
 	var pins []*memlock.Pin
@@ -397,6 +403,15 @@ func (r *Runtime) placement(ctx context.Context, m registry.Manifest, device str
 		if err != nil {
 			return Placement{}, core.Errorf(core.CodeModelUnavailable, "%v", err).WithCause(err)
 		}
+		// OPT-7: the relaid copy loads in place of the file, and the plan is
+		// made from its own offsets, not from the catalog's.
+		if req.Override.Layout == config.LayoutNano {
+			rl, err := r.store.Relaid(m)
+			if err != nil {
+				return Placement{}, core.Errorf(core.CodeModelUnavailable, "%v", err).WithCause(err)
+			}
+			req.ModelPath, req.Manifest, req.Layout = rl.Path, m.WithRelaid(rl), registry.LayoutNano
+		}
 	}
 	pl, err := r.place(ctx, req)
 	if err != nil {
@@ -458,7 +473,7 @@ func DefaultPlacer(_ context.Context, req PlaceRequest) (Placement, error) {
 func planKey(req PlaceRequest, revision, mode, preset string, nctx int) pool.Key {
 	return pool.Key{
 		Model: req.Manifest.ID, Revision: revision, Backend: req.Backend, Device: req.Device.ID,
-		Mode: mode, Preset: preset, NCtx: nctx, Tune: req.TuneID,
+		Mode: mode, Preset: preset, NCtx: nctx, Layout: req.Layout, Tune: req.TuneID,
 	}
 }
 

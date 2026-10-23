@@ -54,6 +54,7 @@ func evalCommand(args []string) error {
 	thinking := fs.String("thinking", "off", "off, on or both")
 	out := fs.String("out", "", "report file (default: eval-<suite>.json)")
 	maxTokens := fs.Int("max-tokens", 1024, "per item, unless the item says otherwise")
+	maxReasoning := fs.Int("max-reasoning", 0, "close a thought after this many tokens (0: no cap)")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
@@ -90,7 +91,7 @@ func evalCommand(args []string) error {
 	defer rt.Close()
 
 	rep, err := eval.Run(ctx, rt.Engine, *suite, sha, items, eval.Options{
-		Model: model, Thinking: *thinking, MaxTokens: *maxTokens,
+		Model: model, Thinking: *thinking, MaxTokens: *maxTokens, MaxReasoning: *maxReasoning,
 		Progress: func(done, total int, o eval.Outcome) {
 			mark := "?"
 			switch {
@@ -107,6 +108,10 @@ func evalCommand(args []string) error {
 		return err
 	}
 	rep.Config = runConfig(cfg, rt, model)
+	rep.Config["max_tokens"] = strconv.Itoa(*maxTokens)
+	if *maxReasoning > 0 {
+		rep.Config["max_reasoning"] = strconv.Itoa(*maxReasoning)
+	}
 	if *out == "" {
 		*out = "eval-" + sanitize(*suite) + ".json"
 	}

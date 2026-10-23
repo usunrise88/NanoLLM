@@ -2,7 +2,7 @@
   "model": "gemma-4-e4b-qat",
   "preset": "uma-4g",
   "device": {
-    "selector": "llamacpp:metal0",
+    "selector": "llamacpp:mtl0",
     "backend": "metal",
     "memory": 4294967296,
     "unified": true
@@ -33,7 +33,7 @@
   "repack": false,
   "mtp": {
     "enabled": true,
-    "reason": "the drafter (41.9 MiB) runs on llamacpp:metal0 with the target's output layer and reads its KV cache",
+    "reason": "the drafter (41.9 MiB) runs on llamacpp:mtl0 with the target's output layer and reads its KV cache",
     "draft_max": 3
   },
   "groups": {

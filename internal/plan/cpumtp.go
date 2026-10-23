@@ -35,4 +35,25 @@ func (r *Request) DefaultCPUMTP(multiRow bool) {
 	if r.DraftPMin == 0 {
 		r.DraftPMin = CPUMTPDraftPMin
 	}
+	if r.VerifyRows == 0 {
+		// Drafts only while one sequence decodes. With two or more the
+		// checks of all of them cost more than the drafts save: 0.7-0.9x of
+		// plain decoding on both profiles of the EPYC (docs/AUTOTUNE.md,
+		// "MTP и несколько последовательностей").
+		r.VerifyRows = 1 + r.DraftMax
+	}
+}
+
+// HeadBytes is what a shortlist of rows rows costs in memory: a Q4_0 row of
+// nEmbd columns is nEmbd/32 blocks of 18 bytes (registry.HeadRowBytes).
+func HeadBytes(rows, nEmbd int) int64 { return int64(rows) * int64(nEmbd/32) * 18 }
+
+// headRows is the number of rows of the shortlist the request carries, 0 for
+// the whole head or when the model's head is not a tied one (the copy is made
+// from the token embedding).
+func (pl *planner) headRows() int {
+	if pl.req.Head == "" || pl.req.Head == "full" || !pl.h.TiedOutput {
+		return 0
+	}
+	return len(pl.req.HeadIDs)
 }

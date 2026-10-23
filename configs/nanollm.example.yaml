@@ -20,7 +20,8 @@ auth:
     - {name: user,  secret: sk-nanollm-replace-me-user, rps: 10}
 
 api:
-  dialects: [openai, native]   # + ollama in v2
+  dialects: [openai, native]   # + ollama: the Ollama API (/api/chat, /api/tags, ...) for Ollama clients and Open WebUI.
+                               # Off by default. A client that hardcodes port 11434 needs server.addr set to it.
 
 backends:
   lib_dir: ./lib          # ggml backends and optional onnxruntime-genai; relative to the binary
@@ -45,8 +46,16 @@ models:
       kv_type: f16        # f16 | q8_0
       # repack: off       # auto | off | on: off keeps the weights as the file has them (generic kernels);
       #                   # on repacks even where the planner keeps them in the file (breaks that mode's memory budget)
+      # head: full        # full | shortlist | shortlist-small (OPT-4): the output head computes the logits of 65 % / 37 % of the tokens
+      #                   # while no request needs the rest (logprobs, a grammar, a prompt with a rare script); CPU, libraries with patch 0009
+      # layout: original  # original | nano (OPT-7): nano loads the copy that `nanollm models relayout ID` wrote beside
+      #                   # the model file: tensors in execution order, the pinned set and each layer's weights in one
+      #                   # range each (the plan is made from that file's own offsets); the same bytes, 0.8 MiB more
+      #                   # on disk. Refuses to load without the copy. A probe on a hard disk showed no difference
+      #                   # (docs/AUTOTUNE.md, OPT-7); meant for NVMe and other disks
       # flash_attention: auto  # auto | on | off | small: small keeps flash attention for batches of up to 8 tokens and
-      #                   # prefills through the matmul attention (auto on an Intel iGPU with Vulkan on Windows)
+      #                   # prefills through the matmul attention (auto on an Intel iGPU with Vulkan on Windows
+      #                   # and on Metal on an Apple M1)
       # sampling: auto    # auto | host | device: device samples in the GPU graph, only the token comes back
       #                   # (auto on CUDA); a grammar, penalties or logprobs sample on the host anyway
       # cuda_nano: {MMVQ_NWARPS: 12}  # switches of NanoLLM's own ggml-cuda (the NANO_* names that `nanollm devices`
@@ -58,6 +67,9 @@ models:
         type: mtp         # mtp | none | ngram (prompt lookup: no drafter model, exact output)
         n_max: 2
         p_min: 0.0
+        verify_rows: 0    # rows of a step spent on drafts and their checks over all decoding sequences;
+        #                   0 = auto (CPU with the multi-row kernels: 1 + n_max, i.e. drafts while one
+        #                   sequence decodes; no bound elsewhere), -1 = no bound
         match: 0          # ngram: trailing tokens that must repeat earlier (0 = 3)
       # OPT-8: only for plans that leave layers in the file (M8, M9 on a disk
       # that is fast enough: docs/AUTOTUNE.md). All zero leaves the loader alone.
@@ -65,6 +77,9 @@ models:
         ahead: 0          # layers asked of the kernel after the one just computed
         keep: 0           # leading layers never evicted
         evict: false      # drop a layer's pages once it is computed
+        method: advise    # advise (the system's readahead) | pread (reads of the file, `depth` at a time, into the page cache)
+                          # | direct (O_DIRECT reads into a ring of buffers the tensors are pointed at; Linux, libraries with patch 0010)
+        depth: 0          # reads in flight of pread and direct (0 = 4)
 
 pool:
   max_resident_models: 1

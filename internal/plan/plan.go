@@ -91,6 +91,18 @@ type MTP struct {
 	Reason    string  `json:"reason"`
 	DraftMax  int     `json:"draft_max,omitempty"`
 	DraftPMin float64 `json:"draft_p_min,omitempty"`
+	// VerifyRows bounds the rows of a scheduler step spent on drafts and
+	// their checks over the decoding sequences; zero is no bound.
+	VerifyRows int `json:"verify_rows,omitempty"`
+}
+
+// Head is the output shortlist (OPT-4, docs/AUTOTUNE.md): the head computes the
+// logits of Rows tokens while no request needs the whole vocabulary. The model
+// keeps a second, repacked copy of those rows (Bytes of memory).
+type Head struct {
+	Kind  string `json:"kind"`
+	Rows  int    `json:"rows"`
+	Bytes int64  `json:"bytes"`
 }
 
 // NGram is prompt-lookup drafting (OPT-5): drafts come from the sequence
@@ -139,6 +151,11 @@ type Plan struct {
 	Preset string  `json:"preset"`
 	Device *Device `json:"device,omitempty"`
 
+	// Layout is the tensor order of the model file the plan was made for:
+	// "nano" for a file relaid by `models relayout` (OPT-7), omitted for the
+	// file as published.
+	Layout string `json:"layout,omitempty"`
+
 	Mode   Mode   `json:"mode,omitempty"`
 	ModeID string `json:"mode_id,omitempty"`
 	// GPULayers is llama.cpp's n_gpu_layers: -1 for all, 0 for none.
@@ -179,6 +196,10 @@ type Plan struct {
 	MTP          MTP           `json:"mtp"`
 	// NGram is set only when the request asked for it.
 	NGram *NGram `json:"ngram,omitempty"`
+	// Head is the output shortlist the plan runs, nil for the whole head.
+	Head *Head `json:"head,omitempty"`
+	// headIDs are the ids of the shortlist, for LoadSpec; not part of the plan's JSON.
+	headIDs []int32
 
 	// Groups is bytes per placement group and target; G5 is the KV cache,
 	// G7 the compute and output buffers of both contexts.

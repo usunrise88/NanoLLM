@@ -66,6 +66,7 @@ func TestBackendLibPattern(t *testing.T) {
 	for name, want := range map[string]string{
 		"libggml-vulkan.so": "vulkan", "ggml-cuda.dll": "cuda", "libggml-rpc.so": "rpc",
 		"libggml-base.so": "base", "libggml-cpu-haswell.so": "", "libggml.so": "", "libggml-vulkan.so.0": "",
+		"libggml-metal.dylib": "metal", "libggml-metal.0.dylib": "", "libggml-metal.0.26.0.dylib": "", "libggml.dylib": "",
 	} {
 		m := backendLib.FindStringSubmatch(name)
 		got := ""
@@ -191,20 +192,32 @@ func TestCPUFeatures(t *testing.T) {
 func TestGPUFeatures(t *testing.T) {
 	const own = "CPU : SSE3 = 1 | AVX2 = 1 | REPACK = 1 | CUDA : ARCHS = 860 | USE_GRAPHS = 1 | FA_QUANTS = 1 | NANOLLM = 8 | NANO_GRAPH_SHAPES = 1 |"
 	upstream := strings.Replace(own, "NANOLLM = 8 | NANO_GRAPH_SHAPES = 1 |", "", 1)
-	if got := gpuFeatures("cuda0", own); len(got) != 2 || got[0] != backend.FeatureBackendSampling || got[1] != backend.FeatureCudaNano {
+	const rtx = "NVIDIA GeForce RTX 3070 Ti Laptop GPU"
+	if got := gpuFeatures("cuda0", rtx, own); len(got) != 2 || got[0] != backend.FeatureBackendSampling || got[1] != backend.FeatureCudaNano {
 		t.Errorf("our ggml-cuda: %v", got)
 	}
 	for _, info := range []string{upstream, "", "CUDA :"} {
-		if got := gpuFeatures("cuda0", info); len(got) != 1 || got[0] != backend.FeatureBackendSampling {
+		if got := gpuFeatures("cuda0", rtx, info); len(got) != 1 || got[0] != backend.FeatureBackendSampling {
 			t.Errorf("upstream's ggml-cuda %q: %v", info, got)
 		}
 	}
 	// another backend's entry does not make a CUDA device ours
-	if got := gpuFeatures("cuda0", "Vulkan : NANOLLM = 9 |"); len(got) != 1 {
+	if got := gpuFeatures("cuda0", rtx, "Vulkan : NANOLLM = 9 |"); len(got) != 1 {
 		t.Errorf("a NANOLLM outside the CUDA entry: %v", got)
 	}
-	if got := gpuFeatures("vulkan0", own); len(got) != 0 {
+	if got := gpuFeatures("vulkan0", rtx, own); len(got) != 0 {
 		t.Errorf("a Vulkan device: %v", got)
+	}
+	// Metal: the matmul attention for long batches where measured (M1)
+	for _, name := range []string{"Apple M1", "Apple M1 Max"} {
+		if got := gpuFeatures("mtl0", name, ""); len(got) != 1 || got[0] != backend.FeatureFlashAttnSmallBatch {
+			t.Errorf("Metal on %s: %v", name, got)
+		}
+	}
+	for _, name := range []string{"Apple M2", "Apple M4 Pro", "Apple M5"} {
+		if got := gpuFeatures("mtl0", name, ""); len(got) != 0 {
+			t.Errorf("Metal on %s (not measured): %v", name, got)
+		}
 	}
 	if n := cudaNanoLevel("CUDA : NANOLLM = 12 | NANO_X = 1 |"); n != 12 {
 		t.Errorf("level %d, want 12", n)
@@ -224,5 +237,37 @@ func TestIGPUFeatures(t *testing.T) {
 		if got := igpuFeatures(c[0], c[1], c[2]); len(got) != 0 {
 			t.Errorf("%v: %v", c, got)
 		}
+	}
+}
+
+func TestUnifiedGPU(t *testing.T) {
+	for _, c := range []struct {
+		id, goos, goarch string
+		want             bool
+	}{
+		{"mtl0", "darwin", "arm64", true},     // Apple Silicon: Metal maps the host's memory
+		{"mtl0", "darwin", "amd64", false},    // an Intel Mac may carry a discrete GPU
+		{"vulkan0", "darwin", "arm64", false}, // another backend (MoltenVK) says its own
+		{"cuda0", "linux", "amd64", false},
+		{"mtl0", "linux", "arm64", false},
+	} {
+		if got := unifiedGPU(c.id, c.goos, c.goarch); got != c.want {
+			t.Errorf("%+v: %v, want %v", c, got, c.want)
+		}
+	}
+}
+
+func TestProbeBackendsMetalRegistersAsMTL(t *testing.T) {
+	dir := t.TempDir()
+	for _, n := range []string{"libggml-metal.dylib", "libggml-metal.0.dylib", "libggml-base.dylib"} {
+		if err := os.WriteFile(filepath.Join(dir, n), []byte("not a library"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := probeBackends(dir, map[string]bool{"cpu": true, "mtl": true}); len(got) != 0 {
+		t.Errorf("Metal registered as MTL, yet warned: %v", got)
+	}
+	if got := probeBackends(dir, map[string]bool{"cpu": true}); len(got) != 1 || !strings.HasPrefix(got[0], "libggml-metal.dylib:") {
+		t.Errorf("an unregistered Metal library should warn once: %v", got)
 	}
 }

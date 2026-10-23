@@ -1,0 +1,188 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "standard",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "dev",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a"
+    },
+    "os": "darwin",
+    "arch": "arm64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Apple",
+      "model": "Apple M1",
+      "cores": 8,
+      "threads": 8,
+      "p_cores": 4,
+      "e_cores": 4,
+      "isa": [
+        "neon",
+        "dotprod"
+      ]
+    },
+    "memory": {
+      "total_bytes": 8589934592
+    },
+    "gpus": [
+      {
+        "name": "Apple M1 GPU",
+        "vendor": "Apple",
+        "cores": 7,
+        "unified": true
+      },
+      {
+        "name": "Apple M1",
+        "vram_bytes": 5726633984,
+        "unified": true
+      }
+    ],
+    "system": {
+      "vendor": "Apple",
+      "family": "MacBook Air",
+      "product": "MacBookAir10,1",
+      "form_factor": "laptop"
+    },
+    "os": {
+      "name": "macos",
+      "version": "27.0.1",
+      "kernel_mm": "27.0"
+    },
+    "power": {
+      "source": "ac"
+    },
+    "disk": {
+      "type": "ssd"
+    }
+  },
+  "runs": [
+    {
+      "preset": "uma-4g",
+      "plan_hash": "70decd03ed241e6a",
+      "plan": {
+        "mode": "vram-ple-disk",
+        "device": "llamacpp:mtl0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 4731.38,
+        "pp_tok_s": 300.64388154372466,
+        "tg_tok_s": {
+          "d0": 17.57351946523612
+        },
+        "ttft_ms": 239.127,
+        "chat_tok_s": 18.13951482841292,
+        "mtp": {
+          "acceptance": 0.453416149068323,
+          "speedup": 1.5137062970093451,
+          "tok_s": 27.457897820463028
+        },
+        "peak_rss": 1820196864,
+        "peak_vram": 3343342604,
+        "buffers": {
+          "CPU_Mapped": 2000683008,
+          "MTL0_Mapped": 2658349847
+        },
+        "stddev": {
+          "chat_tok_s": 0.40625281121234796,
+          "mtp_tok_s": 0.7408830354011012,
+          "pp_tok_s": 51.38209517783958,
+          "tg_tok_s.d0": 0.29521588173681446,
+          "ttft_ms": 336.0544595329751
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    },
+    {
+      "preset": "uma-5g",
+      "plan_hash": "6b44b5cf7f5b381f",
+      "plan": {
+        "mode": "vram-full",
+        "device": "llamacpp:mtl0",
+        "gpu_layers": -1,
+        "n_ctx": 8192,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "enforcement": "advisory",
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "off",
+        "draft_max": 3
+      },
+      "metrics": {
+        "load_ms": 2971.648,
+        "pp_tok_s": 300.6617715923634,
+        "tg_tok_s": {
+          "d0": 18.108286914974844
+        },
+        "ttft_ms": 241.346,
+        "chat_tok_s": 18.180591178014204,
+        "mtp": {
+          "acceptance": 0.453416149068323,
+          "speedup": 1.5103175542751075,
+          "tok_s": 27.45846600325401
+        },
+        "peak_rss": 3816357888,
+        "peak_vram": 3343342604,
+        "buffers": {
+          "CPU_Mapped": 2000683008,
+          "MTL0_Mapped": 2658349847
+        },
+        "stddev": {
+          "chat_tok_s": 0.03494802236476541,
+          "mtp_tok_s": 0.2779196575113297,
+          "pp_tok_s": 9.04176735145569,
+          "tg_tok_s.d0": 0.10076973344461126,
+          "ttft_ms": 1.4469009410921492
+        }
+      },
+      "reps": 3,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok"
+    }
+  ],
+  "date": "2026-10-22",
+  "duration_s": 144.844057417
+}

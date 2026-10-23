@@ -98,6 +98,12 @@ type Loop struct {
 	// aging is how long a batch request waits before it competes with the
 	// interactive ones; zero is DefaultAging.
 	aging time.Duration
+	// verifyRows bounds the rows of one step that are spent on drafts and
+	// their checks: Σ(1 + draft) over the decoding slots. Zero is no bound.
+	// Checking a draft costs about a row of the pass, and on a CPU the cost
+	// of a pass stops being flat after a few rows, so with several slots
+	// decoding the drafts of all of them can cost more than they save.
+	verifyRows atomic.Int32
 
 	slots []slot
 	clock uint64
@@ -187,9 +193,16 @@ func New(m backend.Model) *Loop {
 		wake:  make(chan struct{}, 1),
 		slots: make([]slot, caps.Slots),
 	}
+	l.verifyRows.Store(int32(max(caps.VerifyRows, 0)))
 	go l.run()
 	return l
 }
+
+// SetVerifyRows bounds the rows of a step spent on drafts and their checks
+// (Σ over the decoding slots of 1 + drafts); the slots share what is left after
+// each has its own token. Zero removes the bound: every slot may draft as far
+// as its own limit goes.
+func (l *Loop) SetVerifyRows(n int) { l.verifyRows.Store(int32(max(n, 0))) }
 
 // SetMaxPending bounds the requests that may wait for a slot (not those
 // running in one); a Submit past it fails with ErrOverloaded. Zero removes
@@ -609,6 +622,11 @@ func (l *Loop) step(active []int) {
 		budget--
 		chosen = append(chosen, seq)
 	}
+	// With a bound on the rows spent on drafts, what is left after every
+	// slot has its token is shared out evenly, so that a second sequence does
+	// not see the first draft everything.
+	rows := int(l.verifyRows.Load())
+	share := draftShares(rows, budget, len(chosen))
 	for _, seq := range chosen {
 		h := l.slots[seq].h
 		draft := 0
@@ -617,7 +635,11 @@ func (l *Loop) step(active []int) {
 			if h.req.MaxTokens > 0 {
 				left = h.req.MaxTokens - h.generated - 1
 			}
-			draft = min(l.caps.MaxDraft, budget, max(left, 0), l.caps.NCtx-len(l.slots[seq].cached)-2)
+			allowed := budget
+			if rows > 0 {
+				allowed = min(budget, share)
+			}
+			draft = min(l.caps.MaxDraft, allowed, max(left, 0), l.caps.NCtx-len(l.slots[seq].cached)-2)
 			draft = max(draft, 0)
 			budget -= draft
 		}
@@ -781,4 +803,17 @@ func lcp(a, b []backend.Token) int {
 		}
 	}
 	return n
+}
+
+// draftShares splits the rows a step may spend on drafts among n decoding
+// slots: rows is the bound on Σ(1 + draft) (zero: none), budget what the batch
+// has left after every slot's own token. Each slot may draft share rows, the
+// same for all. Rows that do not divide are left unspent: a draft for one
+// sequence and none for its neighbour measured worse than no drafting at all
+// (docs/AUTOTUNE.md, "MTP и несколько последовательностей").
+func draftShares(rows, budget, n int) int {
+	if rows <= 0 || n <= 0 {
+		return 0
+	}
+	return min(budget, max(rows-n, 0)) / n
 }

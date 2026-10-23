@@ -131,9 +131,13 @@ func (b *llamaBackend) Devices(context.Context) ([]backend.Device, error) {
 		case GgmlBackendDeviceTypeCpu:
 			d.Type = backend.CPU
 			d.Features = cpuFeatures(llamaPrintSystemInfo())
+			if b.lib.cxx["llama_model_set_output_shortlist"] && b.lib.cxx["llama_set_output_shortlist"] {
+				d.Features = append(d.Features, backend.FeatureOutputShortlist)
+			}
 		case GgmlBackendDeviceTypeGpu:
 			d.Type = backend.GPU
-			d.Features = gpuFeatures(d.ID, llamaPrintSystemInfo())
+			d.Unified = unifiedGPU(d.ID, runtime.GOOS, runtime.GOARCH)
+			d.Features = gpuFeatures(d.ID, d.Name, llamaPrintSystemInfo())
 		case GgmlBackendDeviceTypeIgpu:
 			d.Type = backend.GPU
 			d.Unified = true
@@ -214,13 +218,22 @@ func (b *llamaBackend) cpuRepackBuft() (GgmlBackendBufferType, error) {
 // decoding (bench/results/rusunrisebook/rtx-2026-10-21). The other backends
 // are not measured and keep sampling on the host. info is
 // llama_print_system_info, in which our own ggml-cuda lists NANOLLM.
-func gpuFeatures(id, info string) []string {
-	if strings.HasPrefix(id, "cuda") {
+//
+// Metal on an Apple M1 gets the matmul attention for long batches: there it
+// prefills 6-11 % faster than flash attention, which decoding keeps, and the
+// KLD against the CPU is the same (docs/AUTOTUNE.md, «Metal на M1: golden,
+// conformance, KLD на 64 чанках»). Other Apple GPUs are not measured (an M5
+// multiplies through the tensor API) and keep flash attention.
+func gpuFeatures(id, name, info string) []string {
+	switch {
+	case strings.HasPrefix(id, "cuda"):
 		out := []string{backend.FeatureBackendSampling}
 		if cudaNanoLevel(info) > 0 {
 			out = append(out, backend.FeatureCudaNano)
 		}
 		return out
+	case strings.HasPrefix(id, "mtl") && strings.HasPrefix(name, "Apple M1"):
+		return []string{backend.FeatureFlashAttnSmallBatch}
 	}
 	return nil
 }
@@ -256,6 +269,14 @@ func igpuFeatures(id, name, goos string) []string {
 		return []string{backend.FeatureFlashAttnSmallBatch}
 	}
 	return nil
+}
+
+// unifiedGPU reports whether a GPU-type device shares the host's memory. ggml
+// reports Metal as a plain GPU ("mtl0") even on Apple Silicon, where it maps
+// the host's memory, so the platform decides; a Mac with a discrete GPU is not
+// unified.
+func unifiedGPU(id, goos, goarch string) bool {
+	return goos == "darwin" && goarch == "arm64" && strings.HasPrefix(id, "mtl")
 }
 
 // cpuFeatures reads the device features out of llama_print_system_info, which

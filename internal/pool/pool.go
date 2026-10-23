@@ -27,10 +27,17 @@ type Key struct {
 	// under (mode@hash), so that a profile that changes only threads or MTP
 	// still makes a new instance when it is applied.
 	Tune string `json:"tune,omitempty"`
+	// Layout is the tensor order of the file loaded: "nano" for the relaid
+	// copy (OPT-7), empty for the file as published. The same weights in
+	// another order are another placement: other offsets, other ranges.
+	Layout string `json:"layout,omitempty"`
 }
 
 func (k Key) String() string {
 	s := fmt.Sprintf("%s@%s %s:%s %s/%s ctx=%d", k.Model, short(k.Revision), k.Backend, k.Device, k.Preset, k.Mode, k.NCtx)
+	if k.Layout != "" {
+		s += " layout=" + k.Layout
+	}
 	if k.Tune != "" {
 		s += " tune=" + k.Tune
 	}

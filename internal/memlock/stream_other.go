@@ -6,10 +6,18 @@ import "errors"
 
 // StreamOptions is how a Streamer feeds the layers.
 type StreamOptions struct {
-	Ahead int
-	Keep  int
-	Evict bool
+	Ahead  int
+	Keep   int
+	Evict  bool
+	Method string
+	Depth  int
 }
+
+// The methods a Streamer reads ahead by.
+const (
+	MethodAdvise = "advise"
+	MethodPread  = "pread"
+)
 
 // Streamer is Linux-only for now: the other systems have no madvise with
 // MADV_PAGEOUT. A platform port (PrefetchVirtualMemory, F_RDADVISE) comes

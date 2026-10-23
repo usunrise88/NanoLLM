@@ -1,0 +1,21 @@
+{
+  "config": {
+    "flags": "-fa on --chunks 8 -t 4 -ngl 0",
+    "name": "carrier-i8c"
+  },
+  "date": "2026-10-22",
+  "extra": {
+    "kld_max": 0.203871,
+    "kld_mean": 0.003559,
+    "kld_median": 0.001231,
+    "kld_p99": 0.032733,
+    "ppl_ratio": 1.015283,
+    "top1_pct": 97.451
+  },
+  "model": "carrier-i8c.gguf",
+  "schema": "nanollm.eval/v1",
+  "suite": {
+    "items": 0,
+    "name": "kld:corpus.txt"
+  }
+}

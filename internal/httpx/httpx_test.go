@@ -110,3 +110,24 @@ func TestWriteProblemSetsRetryAfter(t *testing.T) {
 		t.Fatalf("conflict is %d", rec.Code)
 	}
 }
+
+func TestNDJSONLines(t *testing.T) {
+	rec := httptest.NewRecorder()
+	st, err := NewNDJSON(rec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	if err := st.Line(map[string]any{"a": 1, "text": "two\nlines"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Line(map[string]bool{"done": true}); err != nil {
+		t.Fatal(err)
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "application/x-ndjson" {
+		t.Errorf("content type %q", ct)
+	}
+	if got, want := rec.Body.String(), "{\"a\":1,\"text\":\"two\\nlines\"}\n{\"done\":true}\n"; got != want {
+		t.Errorf("body %q, want %q", got, want)
+	}
+}

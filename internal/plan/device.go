@@ -28,8 +28,18 @@ type Device struct {
 	Unified bool `json:"unified,omitempty"`
 }
 
-// ParseDevice reads a selector ("llamacpp:vulkan0", "cuda0", "metal") into a
-// device. The backend kind is the device id without its trailing index.
+// Kind is the backend kind of a ggml device id: the id without its trailing
+// index, with ggml's name for the Apple GPU ("mtl0") folded into BackendMetal.
+func Kind(id string) string {
+	kind := strings.TrimRight(id, "0123456789")
+	if kind == "mtl" {
+		return BackendMetal
+	}
+	return kind
+}
+
+// ParseDevice reads a selector ("llamacpp:vulkan0", "cuda0", "mtl0") into a
+// device. The backend kind is the device id without its trailing index (Kind).
 func ParseDevice(selector string) (Device, error) {
 	s := strings.TrimSpace(selector)
 	if s == "" {
@@ -39,7 +49,7 @@ func ParseDevice(selector string) (Device, error) {
 		s = "llamacpp:" + s
 	}
 	_, id, _ := strings.Cut(s, ":")
-	kind := strings.TrimRight(id, "0123456789")
+	kind := Kind(id)
 	if kind == "" {
 		return Device{}, fmt.Errorf("device selector %q names no device", selector)
 	}
@@ -56,7 +66,7 @@ func ParseDevice(selector string) (Device, error) {
 func SyntheticDevice(p Preset) *Device {
 	switch {
 	case p.Budget.Unified > 0:
-		return &Device{Selector: "llamacpp:metal0", Backend: BackendMetal, Memory: p.Budget.Unified, Unified: true}
+		return &Device{Selector: "llamacpp:mtl0", Backend: BackendMetal, Memory: p.Budget.Unified, Unified: true}
 	case p.Budget.VRAM > 0:
 		return &Device{Selector: "llamacpp:cuda0", Backend: BackendCUDA, Memory: p.Budget.VRAM}
 	}

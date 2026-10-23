@@ -42,6 +42,11 @@ type Store struct {
 	sem     chan struct{}
 	mu      sync.Mutex
 	flights map[string]*flight
+
+	// relaid caches the inventory of a relaid file, so the planner does not
+	// parse a 4 GB model's header on every request.
+	relaidMu sync.Mutex
+	relaid   map[relaidKey]Relaid
 }
 
 // Install states.

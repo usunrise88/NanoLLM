@@ -86,7 +86,7 @@ type APIKey struct {
 const (
 	DialectOpenAI = "openai"
 	DialectNative = "native"
-	DialectOllama = "ollama" // v2
+	DialectOllama = "ollama" // opt-in: not in the default dialects
 )
 
 type API struct {
@@ -155,6 +155,12 @@ const (
 	KVQ8_0 = "q8_0"
 )
 
+// Tensor orders of the model file a model override accepts (OPT-7).
+const (
+	LayoutOriginal = "original"
+	LayoutNano     = "nano"
+)
+
 // ModelOverride is how one model is loaded. Every field is optional; an empty
 // one means the planner or the manifest decides.
 type ModelOverride struct {
@@ -174,6 +180,16 @@ type ModelOverride struct {
 	// to spare and for experiments, the ram-2g / 1.5g runs of docs/AUTOTUNE.md
 	// show what happens under a tight budget).
 	Repack string `yaml:"repack"`
+	// Head is "" or "full" (the output head computes the whole vocabulary) or
+	// a shortlist: "shortlist" (65 % of the rows: the tokens the corpus used
+	// plus the Latin, Cyrillic and common-symbol part of the vocabulary) or
+	// "shortlist-small" (37 %). The head computes only the listed tokens'
+	// logits while no request needs the others (logprobs, a grammar, a logit
+	// bias, a prompt with a token outside the list) and falls back to the whole
+	// head for such a batch; the model holds a second copy of the listed rows
+	// (233 MiB for "shortlist", 132 MiB for "shortlist-small"). A CPU option of libraries with patch 0009
+	// (the output-shortlist device feature); docs/AUTOTUNE.md, OPT-4.
+	Head string `yaml:"head"`
 	// FlashAttention is "" or "auto" (on; on a GPU that lists fa-small-batch,
 	// on batches of up to 8 tokens only), "on" (on for every batch), "off" (the
 	// matmul attention everywhere; a q8_0 cache needs flash attention) or
@@ -199,6 +215,13 @@ type ModelOverride struct {
 	// Stream tunes the file-backed layers of the modes that leave weights
 	// in the file (M8, M9); every field zero leaves the loader alone.
 	Stream Stream `yaml:"stream"`
+	// Layout is the tensor order of the model file that loads: "" or
+	// "original" (the file as published) or "nano" (the copy `nanollm models
+	// relayout` wrote beside it: tensors in execution order, the pinned set
+	// in one range, a layer's weights in one range; the plan is made from
+	// that file's own offsets). Nano needs the copy and refuses to load
+	// without it; the bytes of every tensor are the same.
+	Layout string `yaml:"layout"`
 }
 
 // Stream is OPT-8: the layers a plan leaves file-backed are read ahead of
@@ -210,6 +233,14 @@ type Stream struct {
 	Keep int `yaml:"keep"`
 	// Evict drops a layer's pages once it is computed.
 	Evict bool `yaml:"evict"`
+	// Method is how the layers are read ahead: advise (the system's
+	// readahead, the default), pread (reads of the file, Depth at a time,
+	// into the page cache; for an NVMe disk, which needs a queue deeper than
+	// one) or direct (O_DIRECT reads into a ring of buffers the model's
+	// tensors are pointed at: Linux, libraries with patches/next/0010).
+	Method string `yaml:"method"`
+	// Depth is the reads in flight of method pread; zero is four.
+	Depth int `yaml:"depth"`
 }
 
 // Speculative decoding types.
@@ -227,6 +258,12 @@ type Speculative struct {
 	NMax int `yaml:"n_max"`
 	// PMin is the drafter probability below which a draft stops early.
 	PMin float64 `yaml:"p_min"`
+	// VerifyRows bounds the rows of one scheduler step spent on drafts and
+	// their checks, summed over the sequences decoding at once. Zero is
+	// auto: on a CPU with the multi-row kernels 1 + n_max (drafts only while
+	// one sequence decodes: with more the checks cost more than they save),
+	// no bound elsewhere. A negative number removes the bound.
+	VerifyRows int `yaml:"verify_rows"`
 	// Match is the number of trailing tokens that must occur earlier in the
 	// sequence for type ngram to draft the tokens that followed them
 	// (default 3).

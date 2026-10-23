@@ -347,10 +347,20 @@ func (o ModelOverride) validate() error {
 	default:
 		return fmt.Errorf("kv_type must be %s or %s, got %q", KVF16, KVQ8_0, o.KVType)
 	}
+	switch o.Head {
+	case "", "full", "shortlist", "shortlist-small":
+	default:
+		return fmt.Errorf("head must be full, shortlist or shortlist-small, got %q", o.Head)
+	}
 	switch o.Repack {
 	case "", "auto", "on", "off":
 	default:
 		return fmt.Errorf("repack must be auto, on or off, got %q", o.Repack)
+	}
+	switch o.Layout {
+	case "", LayoutOriginal, LayoutNano:
+	default:
+		return fmt.Errorf("layout must be %s or %s, got %q", LayoutOriginal, LayoutNano, o.Layout)
 	}
 	switch o.FlashAttention {
 	case "", "auto", "on", "off", "small":
@@ -383,6 +393,12 @@ func (o ModelOverride) validate() error {
 	}
 	if p := o.Speculative.PMin; p < 0 || p >= 1 {
 		return fmt.Errorf("speculative.p_min must be in [0, 1), got %v", p)
+	}
+	if m := o.Stream.Method; m != "" && m != "advise" && m != "pread" && m != "direct" {
+		return fmt.Errorf("stream.method must be advise, pread or direct, got %q", m)
+	}
+	if o.Stream.Depth < 0 {
+		return fmt.Errorf("stream.depth must not be negative, got %d", o.Stream.Depth)
 	}
 	if o.Stream.Ahead < 0 || o.Stream.Keep < 0 {
 		return fmt.Errorf("stream.ahead and stream.keep must not be negative, got %d and %d", o.Stream.Ahead, o.Stream.Keep)

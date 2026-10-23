@@ -73,11 +73,15 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 	for _, tn := range t.random {
 		p.RandomRanges = append(p.RandomRanges, Range{Role: "model", Offset: tn.Offset, Length: tn.Bytes})
 	}
-	for _, tn := range t.stream {
-		p.StreamRanges = append(p.StreamRanges, StreamRange{Layer: tn.Layer, Offset: tn.Offset, Length: tn.Bytes})
-	}
+	p.StreamRanges = streamRanges(t.stream, pl.req.Model.Target)
+	p.Layout = pl.req.Model.Target.Layout
 	for _, pat := range repackPatterns(t.repacked) {
 		p.Overrides = append(p.Overrides, backend.BufferOverride{Pattern: pat, Device: backend.DeviceCPURepack})
+	}
+
+	if n := pl.headRows(); n > 0 && !t.spec.gpu {
+		p.Head = &Head{Kind: pl.req.Head, Rows: n, Bytes: HeadBytes(n, pl.h.EmbeddingLength)}
+		p.headIDs = pl.req.HeadIDs
 	}
 
 	switch {
@@ -91,7 +95,7 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 			where = pl.dev.Selector
 		}
 		p.MTP = MTP{
-			Enabled: true, DraftMax: pl.draftMax, DraftPMin: pl.req.DraftPMin,
+			Enabled: true, DraftMax: pl.draftMax, DraftPMin: pl.req.DraftPMin, VerifyRows: max(pl.req.VerifyRows, 0),
 			Reason: fmt.Sprintf("the drafter (%s) runs on %s with the target's output layer and reads its KV cache",
 				mibStr(pl.req.Model.Drafter.Total()), where),
 		}
@@ -148,6 +152,12 @@ func (pl *planner) warnings(t *trial, p *Plan) []string {
 	return w
 }
 
+// maxMergeGap is the most padding that still joins two tensors into one range.
+// The published file pads to 32 bytes and a nano file to 4 KiB by default; a
+// file relaid with a coarse alignment (2 MiB pads every norm to 2 MiB) keeps
+// its tensors apart, so a lock never pins the zeros between them.
+const maxMergeGap = 64 << 10
+
 // lockRanges merges the locked tensors of each file into ranges: tensors
 // that follow each other in the file, padding included, become one range.
 func lockRanges(locks []lockedTensor) []Range {
@@ -162,12 +172,33 @@ func lockRanges(locks []lockedTensor) []Range {
 		end := l.t.Offset + l.t.Bytes
 		if n := len(out); n > 0 && out[n-1].Role == l.role {
 			last := &out[n-1]
-			if pad(last.Offset+last.Length, l.pad) == l.t.Offset {
+			if pad(last.Offset+last.Length, l.pad) == l.t.Offset && l.t.Offset-(last.Offset+last.Length) <= maxMergeGap {
 				last.Length = end - last.Offset
 				continue
 			}
 		}
 		out = append(out, Range{Role: l.role, Offset: l.t.Offset, Length: l.t.Bytes})
+	}
+	return out
+}
+
+// streamRanges lists the file-backed ranges of the layers. In a nano file
+// (OPT-7) a layer's matrices lie one after another, and those that follow each
+// other, padding included, are one range: the layer is one read. In the
+// published file every tensor is a range of its own, as every plan before
+// OPT-7 has them.
+func streamRanges(stream []gguf.Tensor, inv gguf.Inventory) []StreamRange {
+	var out []StreamRange
+	for _, tn := range stream {
+		if n := len(out); n > 0 && inv.Layout == gguf.LayoutNano {
+			last := &out[n-1]
+			end := last.Offset + last.Length
+			if last.Layer == tn.Layer && pad(end, inv.Alignment) == tn.Offset && tn.Offset-end <= maxMergeGap {
+				last.Length = tn.Offset + tn.Bytes - last.Offset
+				continue
+			}
+		}
+		out = append(out, StreamRange{Layer: tn.Layer, Offset: tn.Offset, Length: tn.Bytes})
 	}
 	return out
 }

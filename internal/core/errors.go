@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -31,7 +32,10 @@ const (
 	// CodeConflict: the request is fine but the server's state forbids it now
 	// (an optimization is already running).
 	CodeConflict Code = "conflict"
-	CodeInternal Code = "internal"
+	// CodeCancelled: the caller went away (its context was cancelled). Not a
+	// fault of the server, so it is neither a 5xx nor an error in the logs.
+	CodeCancelled Code = "cancelled"
+	CodeInternal  Code = "internal"
 )
 
 // Error is the single error type crossing the service boundary.
@@ -84,8 +88,17 @@ func AsError(err error) *Error {
 	if errors.As(err, &e) {
 		return e
 	}
+	if errors.Is(err, context.Canceled) {
+		return Errorf(CodeCancelled, "request cancelled").WithCause(err)
+	}
 	return Errorf(CodeInternal, "internal error").WithCause(err)
 }
+
+// StatusClientClosedRequest is nginx's 499: the client closed the connection
+// before the server answered. net/http has no name for it. Nobody reads the
+// response, but the access log and anything counting 5xx see a cancellation
+// for what it is.
+const StatusClientClosedRequest = 499
 
 // HTTPStatus is the status a dialect should use unless it has a reason not to.
 func (c Code) HTTPStatus() int {
@@ -111,6 +124,8 @@ func (c Code) HTTPStatus() int {
 		return http.StatusConflict
 	case CodeNotImplemented:
 		return http.StatusNotImplemented
+	case CodeCancelled:
+		return StatusClientClosedRequest
 	default:
 		return http.StatusInternalServerError
 	}

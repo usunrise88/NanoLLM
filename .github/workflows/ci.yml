@@ -56,7 +56,7 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
-  # The official OpenAI Python client against the server on the fake backend:
+  # The official OpenAI and Ollama Python clients against the server on the fake backend:
   # streaming, tools, logprobs, error shapes. The same suite runs against a
   # real model with NANOLLM_BASE_URL set.
   conformance:

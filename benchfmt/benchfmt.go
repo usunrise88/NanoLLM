@@ -225,6 +225,10 @@ type Plan struct {
 	// are compared together with their tuning. The benchmark presets do not
 	// depend on it.
 	TuneProfile string `json:"tune_profile,omitempty"`
+	// Layout is the tensor order of the model file the run loaded: original
+	// (as published) or nano (the copy `nanollm models relayout` wrote,
+	// OPT-7). Same weights, other offsets.
+	Layout string `json:"layout,omitempty"`
 }
 
 // Metrics are medians over Reps; StdDev holds the spread of the main ones.
@@ -237,11 +241,14 @@ type Metrics struct {
 	MTP      *MTP    `json:"mtp,omitempty"`
 	// Echo is drafting on a task that repeats its input (dev suite): the
 	// best case of prompt lookup, next to the chat-ru worst case.
-	Echo          *MTP  `json:"echo,omitempty"`
-	PeakRSS       int64 `json:"peak_rss,omitempty"`
-	PeakVRAM      int64 `json:"peak_vram,omitempty"`
-	PeakLocked    int64 `json:"peak_locked,omitempty"`
-	PeakPageCache int64 `json:"peak_page_cache,omitempty"`
+	Echo *MTP `json:"echo,omitempty"`
+	// Batch is the throughput with several sequences decoding at once (dev
+	// suite, key batch): one point per number of sequences.
+	Batch         []BatchPoint `json:"batch,omitempty"`
+	PeakRSS       int64        `json:"peak_rss,omitempty"`
+	PeakVRAM      int64        `json:"peak_vram,omitempty"`
+	PeakLocked    int64        `json:"peak_locked,omitempty"`
+	PeakPageCache int64        `json:"peak_page_cache,omitempty"`
 	// PeakPrivate is the process's private resident memory at its peak,
 	// sampled every 100 ms (private working set on Windows; anonymous and
 	// shared-anonymous resident pages on Linux). Unlike PeakRSS it leaves out
@@ -267,6 +274,20 @@ type Metrics struct {
 	// Vulkan0, …), from the load log.
 	Buffers map[string]int64   `json:"buffers,omitempty"`
 	StdDev  map[string]float64 `json:"stddev,omitempty"`
+}
+
+// BatchPoint is chat-ru decoded by Seqs sequences at once, in separate slots.
+// AggTokS is every token of every sequence over the wall time from the start
+// to the last end (prefill of the short prompts included); PerSeqTokS is the
+// median decode rate of one sequence. The MTP fields are the same with
+// drafting on, and Acceptance its draft acceptance over all sequences.
+type BatchPoint struct {
+	Seqs          int     `json:"seqs"`
+	AggTokS       float64 `json:"agg_tok_s"`
+	PerSeqTokS    float64 `json:"per_seq_tok_s"`
+	MTPAggTokS    float64 `json:"mtp_agg_tok_s,omitempty"`
+	MTPPerSeqTokS float64 `json:"mtp_per_seq_tok_s,omitempty"`
+	Acceptance    float64 `json:"acceptance,omitempty"`
 }
 
 // TG is token generation at depth 0 and at depth N (DepthN tokens of

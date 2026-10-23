@@ -1,6 +1,8 @@
 package plan
 
 import (
+	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/usunrise88/nanollm/internal/gguf"
@@ -114,6 +116,11 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 		case !spec.gpu && (spec.hostAnon || spec.repack):
 			dup.RAMLocked = tn.Bytes
 		}
+		// OPT-4: the shortlist is one more copy of part of the head's rows, in
+		// anonymous memory in every CPU mode.
+		if n := pl.headRows(); n > 0 && role == "model" && !spec.gpu {
+			dup.RAMLocked += HeadBytes(n, pl.h.EmbeddingLength)
+		}
 		add(g, dup)
 	}
 
@@ -204,7 +211,10 @@ func (pl *planner) place(m Mode, n int, s shape, spec modeSpec) *trial {
 
 // lockG3 is M8's "part of G3": with the hot groups pinned, it pins FFN
 // tensors in file order while the RAM budget has room, and leaves the rest
-// file-backed. Decode then reads only the unpinned share from disk.
+// file-backed. Decode then reads only the unpinned share from disk. File order
+// is the published file's, layer by layer and by name, whatever order the
+// file in use lists them in: a relaid file (OPT-7) pins the very tensors the
+// published one does, so the two layouts differ in nothing but offsets.
 func (pl *planner) lockG3(t *trial) {
 	pl.budget(t)
 	u := t.mem.RAM
@@ -217,7 +227,11 @@ func (pl *planner) lockG3(t *trial) {
 	free := u.Budget - u.Used
 	target := pl.req.Model.Target
 	g3 := t.groups[gguf.G3]
-	for _, tn := range target.Tensors {
+	tensors := slices.Clone(target.Tensors)
+	slices.SortStableFunc(tensors, func(a, b gguf.Tensor) int {
+		return cmp.Or(cmp.Compare(a.Layer, b.Layer), cmp.Compare(a.Name, b.Name))
+	})
+	for _, tn := range tensors {
 		if tn.Group != gguf.G3 || tn.Bytes > free {
 			continue
 		}

@@ -116,8 +116,10 @@ func modelsCommand(args []string) error {
 		return modelsPull(args[1:])
 	case "rm":
 		return modelsRemove(args[1:])
+	case "relayout":
+		return relayoutCommand(args[1:], os.Stdout)
 	default:
-		return fmt.Errorf("models %s: unknown subcommand; use catalog, list, pull, rm or inspect", sub)
+		return fmt.Errorf("models %s: unknown subcommand; use catalog, list, pull, rm, inspect or relayout", sub)
 	}
 }
 
