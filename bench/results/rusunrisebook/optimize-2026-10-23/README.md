@@ -39,6 +39,12 @@ quiet (`busy_machine` fires at 20-23 % CPU from the editor and the chat client),
 
 ## Not checked here, and why
 
+`scripts/check-optimize.ps1` (elevated PowerShell: the measurement as LocalSystem through a one-shot scheduled task, and the real
+`install.ps1` into a scratch prefix) and `scripts/check-optimize.sh` (hyper: the hard disk, the NUMA nodes, the quiet mode that
+must not stream, `install.sh` as root) run the items below on the machines that have them. Their plumbing was tried here as an
+ordinary user (`-AsCurrentUser`; the shell script with this laptop's binary: all checks passed), not the parts that need the
+rights or the hardware.
+
 - **hyper (Linux, HDD, 4 NUMA nodes):** not available. The HDD, NUMA and haswell paths are covered by the synthetic decisions
   (`testdata/tune/decide/silent-hdd.txt`, the blind run's hyper case, `TestNUMAPoliciesAreCandidatesOnAMultiNodeMachine`) and by
   the numbers of the 2026-10-19/20 runs in `bench/results/hyper/`, not by a run.
