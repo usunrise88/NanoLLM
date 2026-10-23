@@ -46,6 +46,8 @@ models:
       kv_type: f16        # f16 | q8_0
       # repack: off       # auto | off | on: off keeps the weights as the file has them (generic kernels);
       #                   # on repacks even where the planner keeps them in the file (breaks that mode's memory budget)
+      # head: full        # full | shortlist | shortlist-small (OPT-4): the output head computes the logits of 65 % / 37 % of the tokens
+      #                   # while no request needs the rest (logprobs, a grammar, a prompt with a rare script); CPU, libraries with patch 0009
       # layout: original  # original | nano (OPT-7): nano loads the copy that `nanollm models relayout ID` wrote beside
       #                   # the model file: tensors in execution order, the pinned set and each layer's weights in one
       #                   # range each (the plan is made from that file's own offsets); the same bytes, 0.8 MiB more
@@ -75,8 +77,9 @@ models:
         ahead: 0          # layers asked of the kernel after the one just computed
         keep: 0           # leading layers never evicted
         evict: false      # drop a layer's pages once it is computed
-        method: advise    # advise (the system's readahead) | pread (reads of the file, `depth` at a time: NVMe)
-        depth: 0          # reads in flight of pread (0 = 4)
+        method: advise    # advise (the system's readahead) | pread (reads of the file, `depth` at a time, into the page cache)
+                          # | direct (O_DIRECT reads into a ring of buffers the tensors are pointed at; Linux, libraries with patch 0010)
+        depth: 0          # reads in flight of pread and direct (0 = 4)
 
 pool:
   max_resident_models: 1

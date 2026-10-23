@@ -1,0 +1,418 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "next3",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf"
+    },
+    "ggml_cpu_variant": "haswell",
+    "os": "linux",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "AMD",
+      "model": "AMD EPYC 7351P",
+      "cores": 16,
+      "threads": 32,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c"
+      ]
+    },
+    "memory": {
+      "total_bytes": 135036997632
+    },
+    "system": {
+      "vendor": "ASRockRack",
+      "family": "EPYCD8-2T",
+      "product": "EPYCD8-2T",
+      "form_factor": "server",
+      "chassis": "desktop"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "26.04",
+      "kernel_mm": "7.0"
+    },
+    "power": {},
+    "disk": {
+      "type": "hdd"
+    },
+    "extra": [
+      {
+        "key": "numa_nodes",
+        "value": "4"
+      },
+      {
+        "key": "governor",
+        "value": "performance"
+      },
+      {
+        "key": "boost",
+        "value": "1"
+      },
+      {
+        "key": "thp",
+        "value": "madvise"
+      },
+      {
+        "key": "numa_balancing",
+        "value": "1"
+      },
+      {
+        "key": "loadavg_1m",
+        "value": "5.80"
+      },
+      {
+        "key": "system_name_from",
+        "value": "baseboard"
+      },
+      {
+        "key": "model_disk",
+        "value": "md3"
+      },
+      {
+        "key": "model_disk_rotational",
+        "value": "1"
+      },
+      {
+        "key": "model_read_ahead_kb",
+        "value": "8192"
+      },
+      {
+        "key": "model_max_sectors_kb",
+        "value": "4096"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "preset": "ram-2g",
+      "plan_hash": "1f43532194813ef6",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "original"
+      },
+      "metrics": {
+        "load_ms": 20459.79,
+        "pp_tok_s": 32.82989338171007,
+        "tg_tok_s": {
+          "d0": 0.05554750498888829
+        },
+        "peak_rss": 2773868544,
+        "peak_locked": 424312832,
+        "peak_page_cache": 1334206464,
+        "peak_cgroup": 2348818432,
+        "buffers": {
+          "CPU_Mapped": 3115025629,
+          "CPU_REPACK": 1128771092
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "stream_ahead=2,stream_method=advise"
+    },
+    {
+      "preset": "ram-2g",
+      "plan_hash": "a035b696ca7ef1dc",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "original"
+      },
+      "metrics": {
+        "load_ms": 21548.151,
+        "pp_tok_s": 22.431814273193037,
+        "tg_tok_s": {
+          "d0": 0.06247556902776966
+        },
+        "peak_rss": 2770001920,
+        "peak_locked": 424312832,
+        "peak_page_cache": 1331564544,
+        "peak_cgroup": 2348818432,
+        "buffers": {
+          "CPU_Mapped": 3115025629,
+          "CPU_REPACK": 1128771092
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "stream_ahead=2,stream_method=pread"
+    },
+    {
+      "preset": "ram-2g",
+      "plan_hash": "b04c3a8b50016dfa",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "original"
+      },
+      "metrics": {
+        "load_ms": 20868.901,
+        "pp_tok_s": 51.42635177596996,
+        "tg_tok_s": {
+          "d0": 0.09934669351975821
+        },
+        "peak_rss": 2787831808,
+        "peak_locked": 424312832,
+        "peak_page_cache": 1330536448,
+        "peak_cgroup": 2348814336,
+        "buffers": {
+          "CPU_Mapped": 3115025629,
+          "CPU_REPACK": 1128771092
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "stream_ahead=2,stream_method=direct"
+    },
+    {
+      "preset": "ram-1g",
+      "plan_hash": "722d35303a2db8d9",
+      "plan": {
+        "mode": "mmap",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "original"
+      },
+      "metrics": {
+        "load_ms": 35164.048,
+        "pp_tok_s": 14.275754255679223,
+        "tg_tok_s": {
+          "d0": 0.037768801315151423
+        },
+        "peak_rss": 1281302528,
+        "peak_locked": 2932736,
+        "peak_page_cache": 1156964352,
+        "peak_cgroup": 1275072512,
+        "buffers": {
+          "CPU_Mapped": 4243796760
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "stream_ahead=2,stream_method=advise"
+    },
+    {
+      "preset": "ram-1g",
+      "plan_hash": "2888addf4d6b98cc",
+      "plan": {
+        "mode": "mmap",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "original"
+      },
+      "metrics": {
+        "load_ms": 34717.065,
+        "pp_tok_s": 13.952638731430271,
+        "tg_tok_s": {
+          "d0": 0.04314243018126209
+        },
+        "peak_rss": 1284034560,
+        "peak_locked": 2932736,
+        "peak_page_cache": 1144242176,
+        "peak_cgroup": 1275076608,
+        "buffers": {
+          "CPU_Mapped": 4243796760
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "stream_ahead=2,stream_method=pread"
+    },
+    {
+      "preset": "ram-1g",
+      "plan_hash": "b14d32a3658b29bc",
+      "plan": {
+        "mode": "mmap",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "original"
+      },
+      "metrics": {
+        "load_ms": 34305.134,
+        "pp_tok_s": 25.48511247709968,
+        "tg_tok_s": {
+          "d0": 0.08318617393580939
+        },
+        "peak_rss": 1285824512,
+        "peak_locked": 2932736,
+        "peak_page_cache": 1138110464,
+        "peak_cgroup": 1275072512,
+        "buffers": {
+          "CPU_Mapped": 4243796760
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "stream_ahead=2,stream_method=direct"
+    }
+  ],
+  "date": "2026-10-23",
+  "duration_s": 1587.696922
+}

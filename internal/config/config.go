@@ -170,7 +170,7 @@ type ModelOverride struct {
 	// logits while no request needs the others (logprobs, a grammar, a logit
 	// bias, a prompt with a token outside the list) and falls back to the whole
 	// head for such a batch; the model holds a second copy of the listed rows
-	// (245 MiB for "shortlist"). A CPU option of libraries with patch 0009
+	// (233 MiB for "shortlist", 132 MiB for "shortlist-small"). A CPU option of libraries with patch 0009
 	// (the output-shortlist device feature); docs/AUTOTUNE.md, OPT-4.
 	Head string `yaml:"head"`
 	// FlashAttention is "" or "auto" (on; on a GPU that lists fa-small-batch,
