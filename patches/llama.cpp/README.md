@@ -49,11 +49,23 @@ The series, in order:
   It touches only `ggml-cuda` and the tests, so it works beside the `ggml-base` of any series; `libs-build.yml` builds it
   for two toolkits (CUDA 12.4 and 13.4) as `nanollm-libs-windows_amd64_cuda` and `..._cuda13`, and
   `scripts/build-libs-windows.ps1 -Cuda` builds it locally. Results: docs/AUTOTUNE.md, "Своя ggml-cuda.dll".
+- 0009 llama: an output shortlist (OPT-4). `llama_model_set_output_shortlist(model, ids, n)` gives a model with a tied Q4_0
+  head a second, smaller copy of the matrix with the rows of the listed tokens (the same buffer type as the head, so repacked
+  on the CPU), and `llama_set_output_shortlist(ctx, on)` ends a context's graph in it: the head reads `n` rows instead of the
+  whole vocabulary, and `llama_decode` writes `-INFINITY` for the other tokens, so samplers, grammars and logit readers see a
+  full row. The flag is part of the graph-reuse check. The logits of the listed tokens are bit-identical to the full head's
+  (`native_head_test.go`); decode +4.8 % / +5.5 % with 65 % of the rows and +11.7 % / +10.4 % with 37 % (Zen 1, strong / weak
+  profile). NanoLLM chooses the head per batch and falls back to the full one when a request could need another token
+  (docs/AUTOTUNE.md, "OPT-4"). The functions are bound optionally: a library without them runs with the full head.
+- 0010 llama: `llama_model_get_tensor(model, name)`, a model's tensor by its name (the `ggml_tensor *`, or null). NanoLLM
+  points the data pointer of a layer's tensors at a ring of buffers filled with `O_DIRECT` reads (`stream.method: direct`,
+  OPT-9; `internal/memlock/ring_linux.go`); it changes no computation. Bound optionally.
 
 0002 to 0005 change the CPU backend, so the targets marked `cpu` in
 `libs-build.yml` ship the CPU variants too (see there and `scripts/fetch-libs.sh`), 0006 changes the
 Vulkan backend, which the `vulkan` targets ship (windows_amd64 for now), and 0008 changes only the CUDA backend, which the
 `cuda` targets ship (windows_amd64_cuda and _cuda13; Linux keeps upstream's for now).
+0009 and 0010 change libllama only (the model, the graph, `llama_decode`).
 Without patches the build is upstream's.
 
 ## Patches under test: `patches/next`
@@ -67,7 +79,7 @@ that commit and `NANOLLM_DEV_SERIES=<commit>`:
 
     go build -ldflags "-X github.com/usunrise88/nanollm/internal/backend/llamacpp.PinnedCommit=<commit>" ./cmd/nanollm
 
-`next/` is empty now.
+`next/` is empty now (0009 and 0010 joined the series for `b11600-n9`).
 
 When the owner agrees to a libs release, the patches move from `next/` into
 this directory, the new commit goes into `scripts/llama.cpp.commit`, the

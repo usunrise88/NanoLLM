@@ -21,7 +21,7 @@ func nativeRingSetup(t *testing.T) (*llamaBackend, string, []backend.StreamRange
 	}
 	b := testBackend(t)
 	if !b.lib.cxx["llama_model_get_tensor"] {
-		t.Skip("the libraries have no llama_model_get_tensor (patches/next/0010)")
+		t.Skip("the libraries have no llama_model_get_tensor (patches/llama.cpp/0010)")
 	}
 	path := testModelPath(t)
 	f, err := gguf.Open(path)
@@ -59,12 +59,12 @@ func TestNativeTensorLayout(t *testing.T) {
 	m := mm.(*model)
 	defer m.Close()
 	p := llamaModelGetTensor(m.mdl, "blk.3.ffn_up.weight")
-	if p == nil {
+	if p == 0 {
 		t.Fatal("no tensor blk.3.ffn_up.weight")
 	}
 	var name []byte
 	for i := 0; ; i++ {
-		c := *(*byte)(unsafe.Add(p, tensorNameOffset+i))
+		c := *(*byte)(unsafe.Add(tensorPtr(p), tensorNameOffset+i))
 		if c == 0 || i > 63 {
 			break
 		}
@@ -73,10 +73,10 @@ func TestNativeTensorLayout(t *testing.T) {
 	if string(name) != "blk.3.ffn_up.weight" {
 		t.Errorf("the name at offset %d is %q", tensorNameOffset, name)
 	}
-	if data := *(*uintptr)(unsafe.Add(p, tensorDataOffset)); data == 0 {
+	if data := *(*uintptr)(unsafe.Add(tensorPtr(p), tensorDataOffset)); data == 0 {
 		t.Error("a mapped tensor has no data pointer at the offset the ring writes")
 	}
-	if llamaModelGetTensor(m.mdl, "no.such.tensor") != nil {
+	if llamaModelGetTensor(m.mdl, "no.such.tensor") != 0 {
 		t.Error("a tensor that does not exist was found")
 	}
 }

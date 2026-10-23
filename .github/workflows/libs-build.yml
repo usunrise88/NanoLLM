@@ -16,6 +16,8 @@ name: libs-build
 #
 # Published as a release of this repository, llama-<tag>-n<N> (scripts/libs.release),
 # one nanollm-libs-<target>.tar.gz per target.
+# The release is created with --latest=false: "Latest" is the newest NanoLLM release (vX.Y.Z), because the installers'
+# one-liners resolve releases/latest.
 
 on:
   workflow_dispatch:
@@ -219,6 +221,6 @@ jobs:
         run: |
           rel=$(tr -d '[:space:]' < scripts/libs.release)
           (cd assets && sha256sum nanollm-libs-*.tar.gz | tee ../libs-own.sha256)
-          gh release view "$rel" >/dev/null 2>&1 || gh release create "$rel" --title "$rel" \
+          gh release view "$rel" >/dev/null 2>&1 || gh release create "$rel" --title "$rel" --latest=false \
             --notes "NanoLLM's libllama and libggml-base (and the CPU variants of the targets that build them): llama.cpp $(cat scripts/llama.cpp.tag) plus patches/llama.cpp. Put their sha256 (libs-own.sha256) in scripts/libs.sha256."
           gh release upload "$rel" assets/nanollm-libs-*.tar.gz libs-own.sha256 --clobber

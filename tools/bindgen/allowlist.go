@@ -200,4 +200,7 @@ var allowCxx = []string{
 	"llama_get_ctx_other",
 	"llama_model_n_devices",
 	"llama_model_get_device",
+	"llama_model_set_output_shortlist",
+	"llama_set_output_shortlist",
+	"llama_model_get_tensor",
 }
