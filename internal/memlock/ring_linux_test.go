@@ -52,7 +52,13 @@ func walk(t *testing.T, r *Ring, ts []RingTensor, data []byte, addr []uintptr, n
 				if tn.Layer != il || addr[i] == 0 {
 					continue
 				}
-				got := unsafe.Slice((*byte)(unsafe.Pointer(addr[i])), tn.Length) //nolint:govet // addr is a pointer into the ring's mapping, kept alive by r
+				got, err := r.Data(il, i)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if uintptr(unsafe.Pointer(&got[0])) != addr[i] {
+					t.Fatalf("token %d, layer %d, tensor %d: the tensor points at %#x, the ring's buffer is at %p", tok, il, i, addr[i], &got[0])
+				}
 				if !bytes.Equal(got, data[tn.Offset:tn.Offset+tn.Length]) {
 					t.Fatalf("token %d, layer %d, tensor %d: the bytes differ from the file's", tok, il, i)
 				}
@@ -82,9 +88,9 @@ func newRingForTest(t *testing.T, n int, opt RingOptions) (*Ring, []RingTensor, 
 // reused five times per token) and with one buffer per layer.
 func TestRingServesTheLayersInOrder(t *testing.T) {
 	for name, opt := range map[string]RingOptions{
-		"a small ring": {Ahead: 1, Depth: 3},
-		"deeper":       {Ahead: 3, Depth: 4},
-		"all resident": {Ahead: 20, Depth: 2},
+		"a small ring":  {Ahead: 1, Depth: 3},
+		"deeper":        {Ahead: 3, Depth: 4},
+		"all resident":  {Ahead: 20, Depth: 2},
 		"no read-ahead": {Ahead: 0, Depth: 1},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -98,8 +104,10 @@ func TestRingServesTheLayersInOrder(t *testing.T) {
 			if name == "all resident" && st.Reads != int64(len(ts)) {
 				t.Errorf("with a buffer per layer each tensor is read once, not %d times for %d tensors", st.Reads, len(ts))
 			}
-			if name == "a small ring" && st.Reads != int64(3*len(ts)) {
-				t.Errorf("reads %d, want %d: every tensor once per token", st.Reads, 3*len(ts))
+			// Every tensor once per token, and the read-ahead into the token that follows the last: the first
+			// layer of the next token is read when the last layer of this one is done.
+			if name == "a small ring" && (st.Reads < int64(3*len(ts)) || st.Reads > int64(3*len(ts)+2*3)) {
+				t.Errorf("reads %d, want %d to %d", st.Reads, 3*len(ts), 3*len(ts)+2*3)
 			}
 		})
 	}
@@ -116,8 +124,10 @@ func TestRingKeepsTheLeadingLayers(t *testing.T) {
 			t.Errorf("tensor %d of layer %d was retargeted", i, tn.Layer)
 		}
 	}
-	if st := r.Stats(); st.Reads != int64(2*4*3) {
-		t.Errorf("reads %d, want %d (four managed layers, three tensors, two tokens)", st.Reads, 2*4*3)
+	// Four managed layers over three buffers: layers 2 and 5 share one and are read again for the second
+	// token, layers 3 and 4 still sit in theirs, with the same bytes, and are not.
+	if st := r.Stats(); st.Reads != int64((4+2)*3) {
+		t.Errorf("reads %d, want %d", st.Reads, (4+2)*3)
 	}
 }
 
@@ -168,10 +178,10 @@ func TestRingRefusesWhatItCannotServe(t *testing.T) {
 		ts  []RingTensor
 		opt RingOptions
 	}{
-		"no retarget":       {layersOf(2), RingOptions{Layers: 2}},
+		"no retarget":            {layersOf(2), RingOptions{Layers: 2}},
 		"a layer past the model": {[]RingTensor{{Layer: 5, Offset: 0, Length: 10}}, RingOptions{Layers: 2, Retarget: retarget}},
-		"an empty tensor":   {[]RingTensor{{Layer: 0, Offset: 0, Length: 0}}, RingOptions{Layers: 2, Retarget: retarget}},
-		"everything kept":   {layersOf(2), RingOptions{Layers: 2, Keep: 2, Retarget: retarget}},
+		"an empty tensor":        {[]RingTensor{{Layer: 0, Offset: 0, Length: 0}}, RingOptions{Layers: 2, Retarget: retarget}},
+		"everything kept":        {layersOf(2), RingOptions{Layers: 2, Keep: 2, Retarget: retarget}},
 	} {
 		if r, err := NewRing(path, c.ts, c.opt); err == nil {
 			r.Close()

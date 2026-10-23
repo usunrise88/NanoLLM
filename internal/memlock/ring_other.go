@@ -35,8 +35,8 @@ func NewRing(string, []RingTensor, RingOptions) (*Ring, error) {
 	return nil, errors.New("memlock: the layer ring (direct reads) is not supported on this platform")
 }
 
-func (r *Ring) Warm()           {}
-func (r *Ring) Layer(int)       {}
-func (r *Ring) Layers() int     { return 0 }
+func (r *Ring) Warm()            {}
+func (r *Ring) Layer(int)        {}
+func (r *Ring) Layers() int      { return 0 }
 func (r *Ring) Stats() RingStats { return RingStats{} }
-func (r *Ring) Close()          {}
+func (r *Ring) Close()           {}
