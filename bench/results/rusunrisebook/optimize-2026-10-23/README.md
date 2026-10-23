@@ -52,9 +52,15 @@ rights or the hardware.
 - **The installed service (LocalSystem):** PDH counters from LocalSystem and the real `install.ps1` need administrator rights.
   The service path was exercised with `nanollm serve` as the user. The real `install.sh` as a systemd service ran as root on WSL2 and
   passed (`../optimize-wsl2-2026-10-23/installer/`).
-- **Battery, power saver, a slow disk, a VM or WSL, session 0:** this machine is on AC with both drives NVMe; these problems are
-  reproduced by the unit tests on synthetic surveys (`TestProblemsOfASurvey`, `TestEnvironmentProblems`,
-  `TestNoGPULibraryProblems`), not by hand.
+- **Power saver, by hand:** the active plan was switched to this laptop's "Power saver" for a few seconds (`powercfg /setactive`, the
+  owner's OK) and back. The first dry run did **not** report `power_saver` (`power-saver-before-fix.txt`): the PC maker's copy of
+  the plan has a GUID of its own (790a37fd-..., not Windows' a1841308-...), and only the standard GUID was recognised. The plan is
+  now also recognised by the name Windows gives the standard plan (`PowerReadFriendlyName`, localized), and the same switch gives
+  `power_saver`, while the Performance plan gives none (`power-saver-after-fix.txt`). The plan was restored.
+- **Battery, a VM, session 0:** this machine is on AC and runs in a user session. A VM or WSL was seen on WSL2
+  (`../optimize-wsl2-2026-10-23/`: the `wsl` finding); battery and session 0 are reproduced by the unit tests on synthetic
+  surveys (`TestProblemsOfASurvey`, `TestEnvironmentProblems`, `TestNoGPULibraryProblems`) and by `check-optimize.ps1` (the
+  LocalSystem task runs in session 0), not by hand.
 
 ## What the check changed in the code
 

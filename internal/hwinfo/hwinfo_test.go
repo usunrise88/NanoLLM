@@ -310,3 +310,22 @@ func TestFirstThreads(t *testing.T) {
 		t.Errorf("first threads %v, want 0-3", got)
 	}
 }
+
+func TestSameSaverName(t *testing.T) {
+	for _, tc := range []struct {
+		plan, standard string
+		want           bool
+	}{
+		{"Power saver", "Power saver", true},
+		{" power SAVER ", "Power saver", true},
+		{"Energiesparmodus", "Energiesparmodus", true},
+		{"Balanced", "Power saver", false},
+		{"Performance", "Power saver", false},
+		{"", "Power saver", false},
+		{"", "", false},
+	} {
+		if got := sameSaverName(tc.plan, tc.standard); got != tc.want {
+			t.Errorf("%q against %q: %v, want %v", tc.plan, tc.standard, got, tc.want)
+		}
+	}
+}
