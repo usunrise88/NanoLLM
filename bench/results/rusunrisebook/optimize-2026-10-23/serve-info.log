@@ -1,0 +1,15 @@
+{"time":"2026-10-23T18:21:41.8515308+02:00","level":"INFO","msg":"starting nanollm","version":"dev","llama_cpp":"b11600","addr":"127.0.0.1:8091","dialects":["openai","native"],"backends":["llamacpp"]}
+{"time":"2026-10-23T18:21:42.1290013+02:00","level":"INFO","msg":"backend opened","backend":"llamacpp","version":"b11600 (c96d19c52)","lib_dir":"D:\\n8rc\\app\\lib"}
+{"time":"2026-10-23T18:21:42.370869+02:00","level":"INFO","msg":"tune: mode in force","mode":"optimal","cpu_only":false,"mem_cap_mib":4096,"threads":7,"profile":"optimal@3a37aae0","measured":"2026-10-23T16:21:16Z"}
+{"time":"2026-10-23T18:21:42.3713888+02:00","level":"INFO","msg":"loading model","key":"gemma-4-e4b-qat@8c5a9e4f llamacpp:cuda0 vram-6.5g/vram-ple-disk ctx=16384 tune=optimal@3a37aae0","gpu_layers":-1,"n_ctx":16384,"slots":1}
+{"time":"2026-10-23T18:21:45.191586+02:00","level":"INFO","msg":"model loaded","model":"gemma-4-e4b-qat"}
+{"time":"2026-10-23T18:21:46.9063491+02:00","level":"INFO","msg":"request","method":"GET","path":"/healthz","status":200,"ms":0}
+{"time":"2026-10-23T18:21:46.9501798+02:00","level":"INFO","msg":"request","method":"GET","path":"/api/v1/optimize","status":200,"ms":0}
+{"time":"2026-10-23T18:21:52.92184+02:00","level":"INFO","msg":"request","method":"GET","path":"/healthz","status":200,"ms":0}
+{"time":"2026-10-23T18:21:52.9224155+02:00","level":"INFO","msg":"request","method":"POST","path":"/api/v1/optimize","status":202,"ms":0}
+{"time":"2026-10-23T18:21:56.981372+02:00","level":"INFO","msg":"request","method":"POST","path":"/v1/chat/completions","status":503,"ms":0}
+{"time":"2026-10-23T18:22:04.6665418+02:00","level":"INFO","msg":"request","method":"GET","path":"/api/v1/optimize/be0ef8d9079b5713/events","status":200,"ms":11743}
+{"time":"2026-10-23T18:22:04.6675038+02:00","level":"INFO","msg":"request","method":"GET","path":"/api/v1/optimize/be0ef8d9079b5713","status":200,"ms":0}
+{"time":"2026-10-23T18:22:04.8164436+02:00","level":"INFO","msg":"loading model","key":"gemma-4-e4b-qat@8c5a9e4f llamacpp:cuda0 vram-6.5g/vram-ple-disk ctx=16384 tune=optimal@ee0845d5","gpu_layers":-1,"n_ctx":16384,"slots":1}
+{"time":"2026-10-23T18:22:08.3774092+02:00","level":"INFO","msg":"request","method":"POST","path":"/api/v1/optimize/be0ef8d9079b5713/apply","status":200,"ms":3705}
+{"time":"2026-10-23T18:23:02.1039257+02:00","level":"INFO","msg":"request","method":"GET","path":"/api/v1/optimize","status":200,"ms":0}

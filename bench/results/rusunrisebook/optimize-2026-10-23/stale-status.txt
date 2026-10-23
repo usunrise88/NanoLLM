@@ -1,0 +1,20 @@
+# profile made under libs n7-1 and driver 575.10 (edited by hand), server runs libs dev, driver 581.57
+mode optimal, the profile is stale (libraries n7-1 → dev; driver 575.10 → 581.57). Recheck: nanollm optimize --mode optimal
+{
+  "mode": "optimal",
+  "stale": true,
+  "missing": false,
+  "changes": [
+    {
+      "field": "libraries",
+      "old": "n7-1",
+      "new": "dev"
+    },
+    {
+      "field": "driver",
+      "old": "575.10",
+      "new": "581.57"
+    }
+  ],
+  "suggest": "optimal"
+}

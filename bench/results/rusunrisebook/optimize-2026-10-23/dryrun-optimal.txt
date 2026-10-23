@@ -1,0 +1,17 @@
+NanoLLM optimize: optimal (up to 4.0 GiB of memory, 7 threads)
+
+  machine   Intel Core i7-12700H 6P+8E, 14 cores (20 threads), 31.7 GiB RAM (12.0 GiB free)
+            llamacpp:cuda0 NVIDIA GeForce RTX 3070 Ti Laptop GPU (own memory, 6.9 GiB free, driver 581.57)
+            llamacpp:vulkan0 NVIDIA GeForce RTX 3070 Ti Laptop GPU (own memory, 6.9 GiB free, driver 581.57)
+            llamacpp:vulkan1 Intel(R) Iris(R) Xe Graphics (shared memory, 15.1 GiB free, driver 32.0.101.7092)
+  model     gemma-4-e4b-qat on nvme 3479 MB/s
+  survey    1.4 s
+
+  candidate         mode              context  memory   answer   verdict
+  llamacpp:cuda0    M3 vram-ple-disk  16384    3.9 GiB  ~2.3 s   measure
+  llamacpp:vulkan1  M3 vram-ple-disk  16384    3.7 GiB  ~27.5 s  out: estimated 27 s for a typical answer against 2 s for the best
+  llamacpp:cpu      M7 ram-ple-disk   32768    3.4 GiB  ~36.9 s  out: estimated 37 s for a typical answer against 2 s for the best
+  llamacpp:vulkan0  M3 vram-ple-disk  16384    4.0 GiB  -        out: the same card runs through llamacpp:cuda0
+
+  ! vram_busy              Other programs hold 2.1 GiB of the 8.0 GiB of video memory on NVIDIA GeForce RTX 3070 Ti Laptop GPU: the GPU budget is smaller. Close the programs that use the GPU (browser, games, streaming) and repeat the check.
+  ! busy_machine           The machine is busy (CPU 23%, GPU 0%): the measurement may come out too low. Close other programs and repeat the check.
