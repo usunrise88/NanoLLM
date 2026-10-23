@@ -1,0 +1,48 @@
+From 4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf Mon Sep 17 00:00:00 2001
+From: NanoLLM <nanollm@localhost>
+Date: Fri, 23 Oct 2026 13:00:00 +0000
+Subject: [PATCH] llama: llama_model_get_tensor, a model's tensor by its name
+ (staging header)
+
+The layer ring of NanoLLM reads the weights of the layers it streams with O_DIRECT into buffers of its own and
+points the tensors' data at them for the time a graph runs; it needs the tensors. llama_model::get_tensor
+exists, this makes it reachable.
+---
+ src/llama-ext.h     | 5 +++++
+ src/llama-model.cpp | 4 ++++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/src/llama-ext.h b/src/llama-ext.h
+index 18998d0..deb98ab 100644
+--- a/src/llama-ext.h
++++ b/src/llama-ext.h
+@@ -98,6 +98,11 @@ LLAMA_API std::vector<ggml_backend_buffer_t> llama_memory_get_buffers(const llam
+ // Useful for testing purposes.
+ LLAMA_API void llama_model_set_attn_rot(struct llama_model * model, bool value);
+ 
++// A tensor of the model by its name in the GGUF file ("blk.3.ffn_up.weight"), or NULL. It is the model's own
++// tensor, not a copy: a caller that streams weights (NanoLLM's layer ring) points its data at a buffer it has
++// filled with the same bytes for the time a graph runs, and points it back afterwards.
++LLAMA_API struct ggml_tensor * llama_model_get_tensor(const struct llama_model * model, const char * name);
++
+ // Output shortlist: the logits of a subset of the vocabulary only.
+ //
+ // The head of a tied model reads the whole token embedding matrix on every token (360 MiB of the 2.6 GiB
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index 1291f53..c502506 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -3856,6 +3856,10 @@ void llama_model_set_attn_rot(struct llama_model * model, bool value) {
+     model->attn_rot = value;
+ }
+ 
++struct ggml_tensor * llama_model_get_tensor(const struct llama_model * model, const char * name) {
++    return const_cast<ggml_tensor *>(model->get_tensor(name));
++}
++
+ bool llama_model_set_output_shortlist(struct llama_model * model, const int32_t * ids, int32_t n_ids) {
+     try {
+         return model->set_output_shortlist(ids, n_ids);
+-- 
+2.53.0
+

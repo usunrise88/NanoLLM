@@ -43,7 +43,7 @@ var variantKeys = map[string]string{
 	"stream_ahead":  "layers read ahead of the compute in the file-backed modes M8, M9 (OPT-8); 0 is off",
 	"stream_keep":   "leading layers the streamer never evicts",
 	"stream_evict":  "on or off: drop a layer's pages once it is computed",
-	"stream_method": "advise or pread: how the next layers are read (the system's readahead, or reads of the file at stream_depth)",
+	"stream_method": "advise, pread or direct: how the next layers are read (the system's readahead, reads of the file at stream_depth, or O_DIRECT reads into a ring of buffers)",
 	"stream_depth":  "reads in flight of stream_method=pread (0 is four)",
 	"numa":          "off, interleave or node:N",
 	"env.NAME":      "an environment variable for the worker (OMP_PROC_BIND, GGML_*)",
@@ -147,8 +147,8 @@ func checkValue(key, v string) error {
 			return fmt.Errorf("%q is not full, shortlist or shortlist-small", v)
 		}
 	case "stream_method":
-		if v != "advise" && v != "pread" {
-			return fmt.Errorf("%q is not advise or pread", v)
+		if v != "advise" && v != "pread" && v != "direct" {
+			return fmt.Errorf("%q is not advise, pread or direct", v)
 		}
 	case "mtp", "repack", "swa_full", "stream_evict":
 		if v != "on" && v != "off" {

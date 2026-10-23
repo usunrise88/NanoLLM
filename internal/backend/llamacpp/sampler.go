@@ -145,7 +145,7 @@ func (m *model) SetSampler(seq int, spec backend.SamplerSpec, history []backend.
 	m.freeSampler(seq)
 	sl := &m.slots[seq]
 	sl.chain, sl.penalties, sl.spec = chain, penalties, spec
-	sl.wholeVocab = wholeVocabulary(spec)
+	sl.wholeVocab = m.wholeVocabulary(spec)
 	m.noteHistory(sl, history)
 	// The whole chain goes into the graph or none of it: an attached chain
 	// skips its device part on the host, so it cannot fall back later. A

@@ -204,8 +204,10 @@ type Stream struct {
 	// Evict drops a layer's pages once it is computed.
 	Evict bool `yaml:"evict"`
 	// Method is how the layers are read ahead: advise (the system's
-	// readahead, the default) or pread (reads of the file, Depth at a time;
-	// for an NVMe disk, which needs a queue deeper than one).
+	// readahead, the default), pread (reads of the file, Depth at a time,
+	// into the page cache; for an NVMe disk, which needs a queue deeper than
+	// one) or direct (O_DIRECT reads into a ring of buffers the model's
+	// tensors are pointed at: Linux, libraries with patches/next/0010).
 	Method string `yaml:"method"`
 	// Depth is the reads in flight of method pread; zero is four.
 	Depth int `yaml:"depth"`

@@ -67,7 +67,7 @@ func (m *model) attachHead(ids []int32) {
 //   - a slot reports logprobs, or reads raw logits (the alternatives of a
 //     position can be any token);
 //   - a slot's sampler can move the choice outside the list: a grammar, or a
-//     logit bias (a +100 on a token that is not listed would do nothing);
+//     logit bias that raises a token the list leaves out;
 //   - a slot's context holds a token outside the list: such a prompt is in a
 //     language or a script the list did not cover, and its answer probably is
 //     too.
@@ -126,9 +126,24 @@ func (m *model) noteHistory(sl *slot, toks []backend.Token) {
 	}
 }
 
-// wholeVocabulary says a sampler spec needs logits for any token.
-func wholeVocabulary(spec backend.SamplerSpec) bool {
-	return spec.RawLogits || spec.Grammar != "" || len(spec.LogitBias) > 0
+// wholeVocabulary says a sampler spec needs logits for any token: the caller
+// reads raw logits, there is a grammar (it may force any token), or a logit
+// bias raises a token the list leaves out. A bias that only lowers tokens (the
+// benchmark bans the end-of-generation tokens) keeps them at -inf or lower
+// either way.
+func (m *model) wholeVocabulary(spec backend.SamplerSpec) bool {
+	if spec.RawLogits || spec.Grammar != "" {
+		return true
+	}
+	if m.head == nil {
+		return false
+	}
+	for t, v := range spec.LogitBias {
+		if v > 0 && (t < 0 || int(t) >= len(m.head.inList) || !m.head.inList[t]) {
+			return true
+		}
+	}
+	return false
 }
 
 // HeadStats is what the head has done so far; the zero value without a shortlist.

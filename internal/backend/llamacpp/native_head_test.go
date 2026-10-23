@@ -4,6 +4,8 @@ package llamacpp
 
 import (
 	"context"
+	"math"
+	"os"
 	"slices"
 	"testing"
 
@@ -149,5 +151,120 @@ func TestNativeOutputShortlistGrammar(t *testing.T) {
 	decode(t, m, 0, tokenize(t, m, "Write a word in braces: "), 6, sp)
 	if st := m.HeadStats(); st.Full == 0 || st.Short != 0 {
 		t.Errorf("a grammar should use the whole head: %+v", st)
+	}
+}
+
+// logitsOf decodes toks in slot 0 with every position an output and returns
+// the rows, on the shortlist or on the whole head.
+func logitsOf(t *testing.T, m *model, toks []backend.Token, shortlist bool) [][]float32 {
+	t.Helper()
+	m.ClearSeq(0)
+	llamaSetOutputShortlist(m.ctx, shortlist)
+	defer llamaSetOutputShortlist(m.ctx, false)
+	llamaBatchExtClear(m.batch)
+	idxs := make([]int32, len(toks))
+	for i, tok := range toks {
+		idx := llamaBatchExtAddToken(m.batch, 0, int32(tok))
+		p := int32(i)
+		if !llamaBatchExtSetPos(m.batch, idx, &p) {
+			t.Fatalf("position %d rejected", i)
+		}
+		llamaBatchExtSetOutputLogits(m.batch, idx, true)
+		idxs[i] = idx
+	}
+	if rc := llamaProcess(m.ctx, LlamaProcessTypeDecode, m.batch); rc != 0 {
+		t.Fatalf("decode failed: %d", rc)
+	}
+	rows := make([][]float32, len(toks))
+	for i, idx := range idxs {
+		row, err := m.logitsRow(idx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows[i] = slices.Clone(row)
+	}
+	return rows
+}
+
+// The logits of the listed tokens are the whole head's, to the last bit (the
+// copy of the rows goes through the same repacked kernels), every other token
+// is -inf, and the argmax agrees wherever the whole head's is in the list.
+func TestNativeOutputShortlistLogits(t *testing.T) {
+	if !testOnCPU() {
+		t.Skip("the shortlist is a CPU head")
+	}
+	b := testBackend(t)
+	if !b.lib.cxx["llama_model_set_output_shortlist"] || !b.lib.cxx["llama_set_output_shortlist"] {
+		t.Skip("the libraries have no output shortlist (patches/llama.cpp/0009)")
+	}
+	sl, err := registry.LoadShortlist("gemma-4-e4b-qat", registry.HeadShortlist, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := baseSpec(testModelPath(t))
+	s.Slots = 1
+	s.HeadShortlist = sl.IDs
+	mm, err := b.Load(context.Background(), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := mm.(*model)
+	defer m.Close()
+	if m.head == nil {
+		t.Fatalf("the shortlist did not attach: %v", m.loadLog[max(0, len(m.loadLog)-2):])
+	}
+	text := "The history of the printing press begins long before Gutenberg. История книгопечатания началась задолго до Гутенберга: " +
+		"в Китае печатали с деревянных досок, в Корее переставляли металлические литеры. func main() { fmt.Println(\"hello\") } " +
+		"Привет, мир! Das ist ein Satz auf Deutsch, et voilà une phrase en français."
+	if raw, err := os.ReadFile("../../../.cache/kld/corpus.txt"); err == nil && len(raw) > 4000 {
+		text = string(raw[1000:4000]) // a few hundred tokens of the corpus of the KLD gate, when it is built
+	}
+	toks := tokenize(t, m, text)
+	if len(toks) > 400 {
+		toks = toks[:400]
+	}
+	whole := logitsOf(t, m, toks, false)
+	short := logitsOf(t, m, toks, true)
+	agree, inList := 0, 0
+	maxDiff := 0.0
+	for i := range toks {
+		sa := 0
+		for id := range whole[i] {
+			if !m.head.inList[id] {
+				if !math.IsInf(float64(short[i][id]), -1) {
+					t.Fatalf("position %d: token %d is not listed but has the logit %v", i, id, short[i][id])
+				}
+				continue
+			}
+			if d := math.Abs(float64(whole[i][id] - short[i][id])); d > maxDiff {
+				maxDiff = d
+			}
+			if short[i][id] > short[i][sa] {
+				sa = id
+			}
+		}
+		// the whole head's argmax over all the tokens
+		best := 0
+		for id := range whole[i] {
+			if whole[i][id] > whole[i][best] {
+				best = id
+			}
+		}
+		if m.head.inList[best] {
+			inList++
+			if sa != best {
+				t.Errorf("position %d: the argmax %d is listed but the shortlist picks %d", i, best, sa)
+			}
+		}
+		if sa == best {
+			agree++
+		}
+	}
+	t.Logf("%d positions: argmax agrees at %d, the whole head's argmax is listed at %d; largest difference of a listed logit %g", len(toks), agree, inList, maxDiff)
+	if maxDiff > 1e-4 {
+		t.Errorf("listed logits differ from the whole head's by %g", maxDiff)
+	}
+	if agree < len(toks)*99/100 {
+		t.Errorf("only %d of %d positions agree", agree, len(toks))
 	}
 }

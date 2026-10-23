@@ -104,6 +104,21 @@ func (m *model) attachStream(spec *backend.StreamSpec, cp *LlamaContextParams) {
 	note := func(format string, a ...any) {
 		m.loadLog = append(m.loadLog, "nanollm: layer streaming "+fmt.Sprintf(format, a...))
 	}
+	if spec.Method == "direct" {
+		ring, err := m.attachRing(spec)
+		if err != nil {
+			note("is off: direct reads: %v", err)
+			return
+		}
+		id := streamNext.Add(1)
+		streams.Store(id, layerSink(ring))
+		cp.CbEval = streamCallbackPtr()
+		cp.CbEvalUserData = id
+		m.streamID, m.ring = id, ring
+		ring.Warm()
+		note("is on: direct reads into a ring of %d buffers, %d layers, ahead %d, depth %d, keep %d", ring.Stats().Slots, ring.Layers(), spec.Ahead, cmp.Or(spec.Depth, 4), spec.Keep)
+		return
+	}
 	var s *memlock.Streamer
 	if spec.Ahead > 0 || spec.Evict {
 		layers := map[int][]memlock.Range{}
@@ -146,7 +161,10 @@ func (m *model) detachStream() {
 	if m.stream != nil {
 		m.stream.Close()
 	}
-	m.streamID, m.stream = 0, nil
+	if m.ring != nil {
+		m.ring.Close()
+	}
+	m.streamID, m.stream, m.ring = 0, nil, nil
 }
 
 // StreamStats is what the layer streamer has asked of the kernel so far; the
@@ -154,8 +172,23 @@ func (m *model) detachStream() {
 func (m *model) StreamStats() memlock.StreamStats {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if m.ring != nil {
+		st := m.ring.Stats()
+		return memlock.StreamStats{Calls: st.Reads, WillNeed: st.Bytes, FirstError: st.Err}
+	}
 	if m.stream == nil {
 		return memlock.StreamStats{}
 	}
 	return m.stream.Stats()
+}
+
+// RingStats is what the layer ring has done (the "direct" method); the zero
+// value without one.
+func (m *model) RingStats() memlock.RingStats {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.ring == nil {
+		return memlock.RingStats{}
+	}
+	return m.ring.Stats()
 }

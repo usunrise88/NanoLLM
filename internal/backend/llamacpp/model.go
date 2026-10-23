@@ -64,6 +64,8 @@ type model struct {
 	// the eval callback's user_data. Both are zero without streaming.
 	stream   *memlock.Streamer
 	streamID uintptr
+	// ring is the layer ring of the "direct" method (direct.go), nil without one.
+	ring *memlock.Ring
 
 	// head is the output shortlist (head.go), nil without one.
 	head *headState

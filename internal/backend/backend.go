@@ -161,8 +161,10 @@ type StreamSpec struct {
 	Keep   int
 	Evict  bool
 	// Method is how the layers are read ahead: "" or "advise" (the system's
-	// readahead: madvise WILLNEED, PrefetchVirtualMemory) or "pread" (reads
-	// of the file, Depth at a time; OPT-9). Depth is zero for four.
+	// readahead: madvise WILLNEED, PrefetchVirtualMemory), "pread" (reads
+	// of the file, Depth at a time, into the page cache; OPT-9) or "direct"
+	// (O_DIRECT reads into a ring of buffers the tensors are pointed at, no
+	// page cache: Linux, libraries with patches/next/0010). Depth is zero for four.
 	Method string
 	Depth  int
 	// Probe installs the layer callback and does nothing in it, to measure
@@ -172,7 +174,7 @@ type StreamSpec struct {
 
 // Active is whether the backend has anything to do with the spec.
 func (s *StreamSpec) Active() bool {
-	return s != nil && len(s.Ranges) > 0 && (s.Ahead > 0 || s.Evict || s.Probe)
+	return s != nil && len(s.Ranges) > 0 && (s.Ahead > 0 || s.Evict || s.Probe || s.Method == "direct")
 }
 
 // WithEnv applies the NANOLLM_STREAM_AHEAD, _KEEP, _EVICT, _METHOD, _DEPTH and _PROBE
