@@ -22,6 +22,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/chat"
 	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/memlock"
+	"github.com/usunrise88/nanollm/internal/procmem"
 	"github.com/usunrise88/nanollm/internal/sched"
 )
 
@@ -105,6 +106,8 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 	if spec.Strict {
 		cg = watchCgroup()
 	}
+	mem := procmem.Start()
+	defer mem.Stop()
 	start := time.Now()
 	for path, ranges := range map[string][]memlock.Range{spec.Load.Path: spec.Locks, spec.Load.DrafterPath: spec.DrafterLocks} {
 		if len(ranges) == 0 || path == "" {
@@ -127,7 +130,7 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 	res.Metrics.LoadMS = ms(time.Since(start))
 	loop := sched.New(m)
 	defer loop.Close()
-	res, err = run(ctx, m, loop, spec, res)
+	res, err = run(ctx, m, loop, mem, spec, res)
 	if cg != nil {
 		// Read while the model is still loaded: the peak and the page cache
 		// at that point are the run's.
@@ -138,7 +141,7 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 
 // run measures the scenarios through the scheduling loop the server uses, so
 // the numbers include what serving costs and nothing that it does not.
-func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec, res WorkerResult) (WorkerResult, error) {
+func run(ctx context.Context, m backend.Model, loop *sched.Loop, mem *procmem.Meter, spec WorkerSpec, res WorkerResult) (WorkerResult, error) {
 	reps := max(spec.Reps, 1)
 	caps := m.Capabilities()
 	greedy := backend.SamplerSpec{Temperature: 0, TopK: 1, TopP: 1, RepeatPenalty: 1, Seed: Seed, LogitBias: banEOG(m, caps.NVocab)}
@@ -202,7 +205,7 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 	res.Metrics.TGTokS.D0, std["tg_tok_s.d0"] = medianStd(tg0)
 	if spec.Slow {
 		res.Metrics.StdDev = std
-		return withMemory(m, res), nil
+		return withMemory(m, mem, res), nil
 	}
 
 	// tg128 at depth N: the context already holds N tokens. The prefix is
@@ -311,12 +314,16 @@ func run(ctx context.Context, m backend.Model, loop *sched.Loop, spec WorkerSpec
 		}
 	}
 	res.Metrics.StdDev = std
-	return withMemory(m, res), nil
+	return withMemory(m, mem, res), nil
 }
 
 // withMemory adds the process's peaks and the weight buffers to a result.
-func withMemory(m backend.Model, res WorkerResult) WorkerResult {
+func withMemory(m backend.Model, mem *procmem.Meter, res WorkerResult) WorkerResult {
 	res.Metrics.PeakRSS, res.Metrics.PeakLocked = peakMemory()
+	res.Metrics.PeakPrivate, res.Metrics.PeakCommit = mem.Peak(), procmem.PeakCommit()
+	if v, err := procmem.ProcessVRAM(os.Getpid()); err == nil {
+		res.Metrics.VRAMDedicated, res.Metrics.VRAMShared, res.Metrics.VRAMSource = v.Dedicated, v.Shared, v.Source
+	}
 	for _, d := range m.MemoryReport().Devices {
 		if d.Device != "cpu" && !strings.HasSuffix(d.Device, ":cpu") {
 			res.Metrics.PeakVRAM += d.Weights + d.KV + d.Compute

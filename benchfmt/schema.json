@@ -307,10 +307,16 @@
               "peak_cgroup": {
                 "type": "integer"
               },
+              "peak_commit": {
+                "type": "integer"
+              },
               "peak_locked": {
                 "type": "integer"
               },
               "peak_page_cache": {
+                "type": "integer"
+              },
+              "peak_private": {
                 "type": "integer"
               },
               "peak_rss": {
@@ -344,6 +350,15 @@
               },
               "ttft_ms": {
                 "type": "number"
+              },
+              "vram_dedicated": {
+                "type": "integer"
+              },
+              "vram_shared": {
+                "type": "integer"
+              },
+              "vram_source": {
+                "type": "string"
               }
             },
             "required": [
@@ -450,6 +465,9 @@
               },
               "threads_batch": {
                 "type": "integer"
+              },
+              "tune_profile": {
+                "type": "string"
               }
             },
             "required": [

@@ -13,6 +13,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/backend/fake"
 	"github.com/usunrise88/nanollm/internal/plan"
+	"github.com/usunrise88/nanollm/internal/procmem"
 	"github.com/usunrise88/nanollm/internal/sched"
 )
 
@@ -25,7 +26,7 @@ func TestScenariosOnFake(t *testing.T) {
 	}
 	loop := sched.New(m)
 	defer loop.Close()
-	res, err := run(context.Background(), m, loop, WorkerSpec{Reps: 2}, WorkerResult{})
+	res, err := run(context.Background(), m, loop, procmem.Start(), WorkerSpec{Reps: 2}, WorkerResult{})
 	if err != nil {
 		t.Fatal(err)
 	}
