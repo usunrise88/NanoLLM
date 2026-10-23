@@ -65,6 +65,10 @@ log:
   file: $out/server.log
 YAML
 
+# A -race build writes each report to $out/race.<pid> and goes on, so a soak
+# collects every race it meets instead of stopping at the first.
+export GORACE="${GORACE:-log_path=$out/race}"
+
 echo "soak: $hours h, node $node (cpus $cpus), logs in $out"
 export NANOLLM_PLACE="node:$node;cpus=$cpus"
 systemd-run --user --scope --quiet -p MemoryMax=12G -p MemorySwapMax=0 -- \
@@ -83,3 +87,4 @@ go run ./tools/loadgen -base "http://127.0.0.1:$port" -workers 4 -duration "${ho
 go run ./tools/loadgen -analyze "$out/loadgen.jsonl" | tee "$out/analysis.txt" || true
 kill "$pid" 2>/dev/null || true
 grep -c "panic\|DATA RACE" "$out/server.log" "$out/serve.out" 2>/dev/null || true
+echo "race reports: $(ls "$out"/race.* 2>/dev/null | wc -l)" | tee -a "$out/analysis.txt"

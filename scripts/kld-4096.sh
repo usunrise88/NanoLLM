@@ -18,6 +18,7 @@ cd "$(dirname "$0")/.."
 
 CHUNKS=${1:-16}
 CTX=4096
+T=${KLD_THREADS:-16}   # the logits do not depend on it (threads4 against 16 is the noise); KLD_PIN=cpulist pins the runs
 DATA=${NANOLLM_DATA:-$HOME/nanollm-data}
 MODEL=${NANOLLM_KLD_MODEL:-$(ls "$DATA"/models/gemma-4-e4b-qat/*/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf | head -1)}
 CORPUS=.cache/kld/corpus.txt
@@ -30,11 +31,11 @@ OPT=$(mktemp -d)/optimize
 go build -o "$OPT" ./tools/optimize
 mkdir -p "$OUT" "$DATA/kld"
 
-scoped() { systemd-run --user --scope --quiet -p MemoryHigh=16G -p MemoryMax=28G -p MemorySwapMax=0 nice -n 10 "$@"; }
+scoped() { systemd-run --user --scope --quiet -p MemoryHigh=16G -p MemoryMax=28G -p MemorySwapMax=0 nice -n 10 ${KLD_PIN:+taskset -c "$KLD_PIN"} "$@"; }
 
 if [[ ! -f "$BASE" ]]; then
 	echo "=== reference"
-	scoped "$OPT" base -tools "$UP" -model "$MODEL" -corpus "$CORPUS" -logits "$BASE" -ctx "$CTX" -- -t 16 -fa on --chunks "$CHUNKS"
+	scoped "$OPT" base -tools "$UP" -model "$MODEL" -corpus "$CORPUS" -logits "$BASE" -ctx "$CTX" -- -t "$T" -fa on --chunks "$CHUNKS"
 fi
 
 cand() { # cand NAME TOOLS FLAGS...
@@ -47,10 +48,10 @@ cand() { # cand NAME TOOLS FLAGS...
 }
 
 # Pairs that must agree: noise.
-cand self-t16 "$UP" -t 16
+cand self-t$T "$UP" -t "$T"
 cand threads4 "$UP" -t 4
-cand variant-x64 "$X64" -t 16
+cand variant-x64 "$X64" -t "$T"
 # Candidates of the stage: what we want to know the cost of.
-cand no-repack "$UP" -t 16 --no-repack
-cand kv-q8_0 "$UP" -t 16 -ctk q8_0 -ctv q8_0
+cand no-repack "$UP" -t "$T" --no-repack
+cand kv-q8_0 "$UP" -t "$T" -ctk q8_0 -ctv q8_0
 echo "=== done"
