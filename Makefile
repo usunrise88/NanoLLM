@@ -10,10 +10,12 @@ NPM         ?= npm
 VERSION     ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LLAMA_TAG   := $(shell tr -d '[:space:]' < scripts/llama.cpp.tag)
 LLAMA_COMMIT := $(shell tr -d '[:space:]' < scripts/llama.cpp.commit)
+LIBS_RELEASE := $(shell tr -d '[:space:]' < scripts/libs.release)
 LLAMACPP    := github.com/usunrise88/nanollm/internal/backend/llamacpp
 LDFLAGS     := -X main.version=$(VERSION) \
                -X $(LLAMACPP).PinnedTag=$(LLAMA_TAG) \
-               -X $(LLAMACPP).PinnedCommit=$(LLAMA_COMMIT)
+               -X $(LLAMACPP).PinnedCommit=$(LLAMA_COMMIT) \
+               -X $(LLAMACPP).LibsRelease=$(LIBS_RELEASE)
 DIST        := dist
 UI_DIST     := internal/ui/dist
 export CGO_ENABLED := 0
