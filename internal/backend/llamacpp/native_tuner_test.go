@@ -19,14 +19,14 @@ import (
 )
 
 // tunerPrompts is how many of the equivalence prompts a run generates for: the
-// macOS runner decodes the tiny model at 1-3 tok/s and the native suite has the
-// 30 minutes of its timeout, so the short form is the default and
-// NANOLLM_TEST_LONG=1 asks for the full one.
+// macOS runner decodes the tiny model at 1-3 tok/s (the full form took ten
+// minutes there and the suite timed out at its 30), so the short form is the
+// default and NANOLLM_TEST_LONG=1 asks for the full one.
 func tunerPrompts() int {
 	if os.Getenv("NANOLLM_TEST_LONG") != "" {
 		return 3
 	}
-	return 2
+	return 1
 }
 
 // tunerRun generates n tokens for each of the first prompts and returns the
@@ -56,7 +56,7 @@ func tunerRun(t *testing.T, m *model, n int) ([][]backend.Token, float64) {
 // SetDraft above the loaded limit is refused.
 func TestNativeTunerEquivalence(t *testing.T) {
 	long := os.Getenv("NANOLLM_TEST_LONG") != ""
-	n := 24
+	n := 16
 	if long {
 		n = 64
 	}
