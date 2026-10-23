@@ -1,0 +1,4 @@
+mode powerful
+  llamacpp:cpu               chosen                   answer   56.8 s  decode   10.3  held  6000 MiB  off
+chosen llamacpp:cpu
+problems draft_mismatch/warn

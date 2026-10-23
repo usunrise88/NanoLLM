@@ -58,6 +58,13 @@ type Stats struct {
 	Completion   int
 	Drafted      int
 	Accepted     int
+	// DraftTried[j] counts the steps that proposed a draft token at position
+	// j+1 after accepting the j before it, and AcceptedRuns[j] those where it
+	// was accepted: AcceptedRuns[j] / DraftTried[j] is the acceptance of draft
+	// position j+1 given the earlier ones, the input of the speculation gain
+	// (internal/tune, E(k)).
+	DraftTried   []int
+	AcceptedRuns []int
 	Queued       time.Duration // submit to slot assignment
 	Prefill      time.Duration // assignment to first token
 	Decode       time.Duration // first token to the end
@@ -109,7 +116,24 @@ type Loop struct {
 	// disk is the prompt cache on disk (SetPromptStore); nil is off.
 	disk      atomic.Pointer[promptDisk]
 	diskStats promptDiskCounters
+
+	// calls are the functions Do queued for the loop's goroutine (under mu).
+	calls []*call
 }
+
+// call is a function queued by Do. state moves from callQueued to callRunning
+// when the loop starts it, or to callAbandoned when the caller gave up first.
+type call struct {
+	fn    func(backend.Model) error
+	state atomic.Int32
+	done  chan error
+}
+
+const (
+	callQueued int32 = iota
+	callRunning
+	callAbandoned
+)
 
 // LoopStats is the loop's state at an instant, for the operator.
 type LoopStats struct {
@@ -324,6 +348,55 @@ func (l *Loop) Busy() int {
 	return n + int(l.busy.Load())
 }
 
+// Do runs fn on the loop's goroutine, the one that calls the model's Step,
+// once no slot is running: the settings a model lets the autotuner change while
+// it is loaded (backend.Tuner) and the timings it takes (backend.BatchTimer)
+// belong to that goroutine and its OpenMP team. It returns what fn returns,
+// ErrClosed when the loop stops first, or ctx's error when the caller gives up
+// before fn has started. The drafting limit is read again afterwards.
+func (l *Loop) Do(ctx context.Context, fn func(backend.Model) error) error {
+	c := &call{fn: fn, done: make(chan error, 1)}
+	l.mu.Lock()
+	if l.closed {
+		l.mu.Unlock()
+		return ErrClosed
+	}
+	l.calls = append(l.calls, c)
+	l.mu.Unlock()
+	select {
+	case l.wake <- struct{}{}:
+	default:
+	}
+	select {
+	case err := <-c.done:
+		return err
+	case <-ctx.Done():
+		if c.state.CompareAndSwap(callQueued, callAbandoned) {
+			return ctx.Err()
+		}
+		// It is already running: the loop owns the model until it returns.
+		return <-c.done
+	}
+}
+
+// runCalls runs the queued functions; it reports whether there were any.
+func (l *Loop) runCalls() bool {
+	l.mu.Lock()
+	calls := l.calls
+	l.calls = nil
+	l.mu.Unlock()
+	for _, c := range calls {
+		if !c.state.CompareAndSwap(callQueued, callRunning) {
+			continue
+		}
+		c.done <- c.fn(l.model)
+		// Only the drafting limit can change: the shape of the context is fixed
+		// and Submit reads the rest from other goroutines.
+		l.caps.MaxDraft = l.model.Capabilities().MaxDraft
+	}
+	return len(calls) > 0
+}
+
 func (l *Loop) run() {
 	defer close(l.done)
 	defer l.closePromptStore()
@@ -339,6 +412,9 @@ func (l *Loop) run() {
 		l.admit()
 		active := l.active()
 		if len(active) == 0 {
+			if l.runCalls() {
+				continue
+			}
 			select {
 			case <-l.wake:
 				continue
@@ -361,9 +437,16 @@ func (l *Loop) shutdown() {
 	l.mu.Lock()
 	pending := l.pending
 	l.pending = nil
+	calls := l.calls
+	l.calls = nil
 	l.mu.Unlock()
 	for _, h := range pending {
 		h.push(Event{Done: true, Err: ErrClosed})
+	}
+	for _, c := range calls {
+		if c.state.CompareAndSwap(callQueued, callAbandoned) {
+			c.done <- ErrClosed
+		}
 	}
 	for i := range l.slots {
 		if h := l.slots[i].h; h != nil {
@@ -635,6 +718,16 @@ func (l *Loop) deliver(seq int, out backend.SeqOut) {
 	}
 	h.stats.Drafted += out.Drafted
 	h.stats.Accepted += out.Accepted
+	for j := 0; j < out.Drafted && j <= out.Accepted; j++ {
+		for len(h.stats.DraftTried) <= j {
+			h.stats.DraftTried = append(h.stats.DraftTried, 0)
+			h.stats.AcceptedRuns = append(h.stats.AcceptedRuns, 0)
+		}
+		h.stats.DraftTried[j]++
+		if j < out.Accepted {
+			h.stats.AcceptedRuns[j]++
+		}
+	}
 
 	// All but the last returned token are in the cache now.
 	s.cached = append(s.cached, out.Tokens[:len(out.Tokens)-1]...)

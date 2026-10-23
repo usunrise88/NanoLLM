@@ -1,0 +1,40 @@
+gemma-4-e4b-qat under vram-6.5g on llamacpp:cuda0 (cuda)
+
+mode         M3 vram-ple-disk
+context      16384 tokens × 1 slots (target 16384 × 2)
+load         mmap, lazy on, repack false, gpu_layers -1
+batch        n_batch 2048, n_ubatch 512, n_outputs_max 4, flash attention true
+KV           f16/f16, 16384 full + 1024 SWA cells × 1 streams, 296.00 MiB, swa_full false
+             the full sliding-window cache needs 600.0 MiB more than the budget leaves: the prompt cache reuses a prefix only within the last 512 tokens, and a slot without one prefills again
+MTP          on, up to 3 drafts: the drafter (41.9 MiB) runs on llamacpp:cuda0 with the target's output layer and reads its KV cache
+
+  group         vram   ram_locked  file_backed
+  G0      360.00 MiB            -   360.00 MiB
+  G1               -            -  1512.00 MiB
+  G2      359.30 MiB            -            -
+  G3     1771.88 MiB            -            -
+  G4        2.14 MiB            -            -
+  G5      296.00 MiB            -            -
+  G6       41.86 MiB            -    36.00 MiB
+  G7      161.60 MiB    31.00 MiB            -
+
+  vram        3312.77 MiB of 6656.00 MiB
+  ram         223.00 MiB, not budgeted
+  limit       3983.77 MiB of 4196.00 MiB
+  file-backed 1908.00 MiB (reported, not budgeted)
+
+tried
+  M1   short by memory limit 1488.77 MiB
+  M2   skipped: under a memory limit M3 takes the same weights with less host memory, at the same speed
+  M3   fits
+
+note: a VRAM-only preset does not budget host RAM: this plan takes 223.0 MiB of it, measured, not bounded
+
+note: compute buffers (G7) for cuda are not calibrated yet: the CPU fit stands in
+
+note: 1908.0 MiB stays file-backed: outside every budget, and cold pages fault in from disk
+
+note: context is 16384×1, short of the preset's target 16384×2
+
+sources (config beats profile, which beats mode, which beats rule)
+  draft_max        profile

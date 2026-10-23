@@ -54,6 +54,11 @@ type model struct {
 	// tuneThreads moves between the decode and the prefill team.
 	batchThreads int32
 
+	// draftCeiling is the most draft tokens per step the context has output
+	// rows for: the DraftMax it was created with (backend.Tuner.SetDraft may
+	// lower the limit, never raise it).
+	draftCeiling int
+
 	// dft is the MTP drafter, nil without one.
 	dft *drafter
 	// ngN is the match length of prompt-lookup drafting (internal/ngram), 0
@@ -195,6 +200,7 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 		m.ngN = spec.NGram
 		m.caps.MaxDraft = min(spec.DraftMax, max(m.nOutputsMax/max(spec.Slots, 1)-1, 0))
 	}
+	m.draftCeiling = m.caps.MaxDraft
 	m.meta = m.readMetadata()
 	m.memory = memoryFromLog(m.loadLog, b)
 	return m, nil

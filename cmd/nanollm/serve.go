@@ -24,9 +24,11 @@ import (
 	"github.com/usunrise88/nanollm/internal/core"
 	"github.com/usunrise88/nanollm/internal/httpx"
 	"github.com/usunrise88/nanollm/internal/hwinfo"
+	"github.com/usunrise88/nanollm/internal/posture"
 	"github.com/usunrise88/nanollm/internal/queue"
 	"github.com/usunrise88/nanollm/internal/registry"
 	"github.com/usunrise88/nanollm/internal/server"
+	"github.com/usunrise88/nanollm/internal/tune"
 	"github.com/usunrise88/nanollm/internal/ui"
 )
 
@@ -91,6 +93,13 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 	slog.SetDefault(log)
 	log.Info("starting nanollm", "version", version, "llama_cpp", llamacpp.PinnedTag,
 		"addr", cfg.Server.Addr, "dialects", cfg.API.Dialects, "backends", cfg.Backends.Enabled)
+	// The quiet mode runs below normal priority, set before the backends start
+	// their threads so that they inherit it.
+	if cfg.Tune.Mode == config.TuneSilent {
+		if err := posture.Apply(true); err != nil {
+			log.Warn("tune: cannot lower the priority", "err", err)
+		}
+	}
 
 	backends := openBackends(cfg, log)
 	defer func() {
@@ -111,6 +120,7 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 		Config: cfg, Catalog: catalog, Store: newStore(cfg), Backends: backends, Log: log,
 	})
 	defer rt.Close()
+	rt.SetTune(loadTune(ctx, cfg, catalog, rt, log))
 	go rt.Preload(ctx)
 
 	mux := http.NewServeMux()
@@ -167,6 +177,10 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 	rt.MountStats(mux)
 	if libDir, err := backend.ResolveLibDir(cfg.Backends.LibDir); err == nil {
 		rt.MountBench(mux, server.BenchInfo{LibDir: libDir, Version: version, Tag: llamacpp.PinnedTag, Commit: llamacpp.PinnedCommit})
+		rt.MountOptimize(mux, server.OptimizeInfo{
+			LibDir: libDir, Version: version, LibsRelease: llamacpp.LibsRelease, LlamaTag: llamacpp.PinnedTag,
+			LlamaCommit: llamacpp.PinnedCommit, ConfigPath: *cfgPath,
+		})
 	}
 
 	public := []string{"/healthz", "/readyz"}
@@ -332,4 +346,45 @@ func newLogger(c config.Log, w io.Writer) *slog.Logger {
 		return slog.New(slog.NewTextHandler(w, opts))
 	}
 	return slog.New(slog.NewJSONHandler(w, opts))
+}
+
+// loadTune reads the autotuner's mode and profile for the default model and
+// says in the log what holds: the profile in force, or why it is not (a stale
+// profile, a mode with no profile). The server never measures by itself
+// (docs/OPTIMIZE.md, §3.7). A configuration without tune.mode gives nil.
+func loadTune(ctx context.Context, cfg config.Config, catalog []registry.Manifest, rt *server.Runtime, log *slog.Logger) *tune.Active {
+	if cfg.Tune.Mode == "" {
+		return nil
+	}
+	m, ok := registry.Find(catalog, cfg.Models.Default)
+	if !ok {
+		log.Warn("tune: the default model is not in the catalog; the autotuner is off", "model", cfg.Models.Default)
+		return nil
+	}
+	libDir, _ := backend.ResolveLibDir(cfg.Backends.LibDir)
+	act, err := tune.LoadActive(ctx, tune.ActiveInput{
+		Config: cfg, Manifest: m, Devices: rt.ProbedDevices(), LibDir: libDir,
+		LibsRelease: llamacpp.LibsRelease, LlamaCommit: llamacpp.PinnedCommit,
+	})
+	if act == nil {
+		if err != nil {
+			log.Warn("tune: the autotuner is off", "err", err)
+		}
+		return nil
+	}
+	if err != nil {
+		log.Warn("tune: the profile cannot be used", "err", err)
+	}
+	for _, p := range act.Problems {
+		log.Warn("tune: "+string(p.Code), "problem", p.Message)
+	}
+	if msg := act.Message(); msg != "" {
+		log.Warn("tune: " + msg)
+	}
+	attrs := []any{"mode", act.Mode, "cpu_only", act.Constraints.CPUOnly, "mem_cap_mib", act.Constraints.MemCap >> 20, "threads", act.Constraints.Threads}
+	if act.Profile != nil {
+		attrs = append(attrs, "profile", act.Profile.ID(), "measured", act.Profile.Created.Format(time.RFC3339))
+	}
+	log.Info("tune: mode in force", attrs...)
+	return act
 }

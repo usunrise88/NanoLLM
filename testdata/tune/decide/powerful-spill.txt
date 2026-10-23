@@ -1,0 +1,5 @@
+mode powerful
+  llamacpp:cuda0             out                      answer   20.0 s  decode   65.0  held  4115 MiB  off  (the driver moved part of the model to system memory)
+  llamacpp:cpu               chosen                   answer   43.4 s  decode   19.1  held  3374 MiB  mtp2/0.5
+chosen llamacpp:cpu
+problems vram_spill/warn

@@ -27,7 +27,8 @@ and [docs/AUTOTUNE.md](docs/AUTOTUNE.md) (every optimization variant with its re
 | Engine | purego binding to `libllama` (no cgo) from our build of the pinned llama.cpp `b11600` with a series of eight patches (`patches/llama.cpp`): Q4_0 repack kernels for AVX2 and AVX-VNNI, a CUDA backend tuned to the model, Vulkan on Intel iGPUs. Gemma 4 E4B QAT (Q4_0) with its MTP drafter, greedy output identical to `llama-server`. Verified on CPU (EPYC and a laptop), Metal (M1), CUDA and Vulkan (RTX, Iris Xe: measured, golden not yet recorded) |
 | Placement | `nanollm plan` places the model from its measured tensor inventory for every preset (`vram-*`, `uma-*`, `ram-*`): VRAM, locked RAM, file-backed; range-lock keeps the locked part resident |
 | Server | OpenAI-compatible `/v1/chat/completions` (streaming, tools, `response_format`, logprobs), the native API and an Ollama-compatible one (`api.dialects: [openai, native, ollama]`, opt-in); continuous batching, prompt cache, model pool, API keys and rate limits; SQLite job queue with SSE progress and signed webhooks; a 24 h soak on the real model passed |
-| CLI | `init` (config, keys, model download with resume), `serve`, `run` (REPL or `--prompt`), `models` (catalog, pull, inspect), `plan`, `devices`, `key`, `service`, `bench`, `eval` |
+| CLI | `init` (config, keys, model download with resume), `serve`, `run` (REPL or `--prompt`), `models` (catalog, pull, inspect), `plan`, `devices`, `key`, `service`, `bench`, `eval`, `optimize` |
+| Autotune | `nanollm optimize` surveys the machine, measures for one of three modes (`silent`, `optimal`, `powerful`) in about a minute, reports problems (slow disk, old driver, battery, a missing CUDA add-on) and writes a profile the server runs by; no administrator rights; [docs/OPTIMIZE.md](docs/OPTIMIZE.md) |
 | Web UI | Chat, Jobs, Models, Devices, Settings, Bench; English and Russian |
 | Benchmark | `nanollm bench` runs presets one process each and submits results only on explicit consent; the service in `services/bench` runs at [nano.llmto.day](https://nano.llmto.day/benchmarks) |
 | Evaluation | `nanollm eval` suites (Russian and English instructions, JSON and tools, long context, reasoning, 50 prompts for blind rating), KLD tooling against the reference configuration |
@@ -119,6 +120,18 @@ curl localhost:8080/healthz
 Without a config file `nanollm serve` listens on `127.0.0.1:8080` with
 authentication off; open mode is refused on any non-loopback address.
 `configs/nanollm.example.yaml` documents every setting.
+
+```sh
+nanollm optimize                     # pick a mode (silent, optimal, powerful); measures and asks before it applies
+nanollm optimize --dry-run           # what the machine is and what each setup would cost; measures nothing
+nanollm optimize --mode optimal --yes
+```
+
+With a service running, the measurement happens inside it (the model is
+unavailable for the minute it takes); the installers offer it after an install
+and a recheck after an upgrade that made the profile stale (`--mode` /
+`-Mode`, `--no-optimize` / `-NoOptimize`). A config older than this feature
+rejects the `tune:` key, so upgrade the binary before adding it.
 
 ## Layout
 

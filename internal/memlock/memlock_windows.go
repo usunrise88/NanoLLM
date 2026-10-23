@@ -60,7 +60,10 @@ func (p *Pin) lock() error {
 		// (64 KiB), not just of the page size.
 		const gran = 64 << 10
 		start := r.Off / gran * gran
-		size := r.Off + r.Len - start
+		// A range is page-aligned and so may end up to a page past the end of the
+		// file; a read-only view cannot extend beyond the file (MapViewOfFile
+		// answers "Access is denied"), and its last page is mapped whole anyway.
+		size := min(r.Off+r.Len, p.size) - start
 		addr, err := windows.MapViewOfFile(h, windows.FILE_MAP_READ, uint32(start>>32), uint32(start), uintptr(size))
 		if err != nil {
 			return fmt.Errorf("memlock: view %d bytes at %d: %w", size, start, err)

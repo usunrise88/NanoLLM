@@ -24,6 +24,9 @@ import (
 //	GET  /api/v1/bench/{id}/events                 SSE: progress, result, done, error
 //	POST /api/v1/bench/{id}/submit {consent_version, anonymous} → {id, url}
 //
+// benchHold is the longest the benchmark keeps requests away from its model.
+const benchHold = 45 * time.Minute
+
 // One run at a time: workers load their own copies of the model, so the
 // model's resident instances are unloaded first, and two runs would measure
 // each other.
@@ -37,38 +40,17 @@ type BenchInfo struct {
 }
 
 type benchRun struct {
-	id     string
-	mu     sync.Mutex
-	events []benchEvent
-	notify chan struct{}
-	done   bool
+	id string
+	*eventLog
 	result *benchfmt.Result
-}
-
-type benchEvent struct {
-	name    string
-	payload any
-}
-
-func (b *benchRun) push(name string, payload any) {
-	b.mu.Lock()
-	b.events = append(b.events, benchEvent{name, payload})
-	if name == "done" || name == "error" {
-		b.done = true
-	}
-	old := b.notify
-	b.notify = make(chan struct{})
-	b.mu.Unlock()
-	close(old)
 }
 
 type benchAPI struct {
 	rt   *Runtime
 	info BenchInfo
 
-	mu      sync.Mutex
-	runs    map[string]*benchRun
-	running bool
+	mu   sync.Mutex
+	runs map[string]*benchRun
 }
 
 // MountBench adds the benchmark routes, behind the admin check.
@@ -136,20 +118,24 @@ func (a *benchAPI) start(w http.ResponseWriter, req *http.Request) {
 	}
 	opts.Presets = presets
 
-	a.mu.Lock()
-	if a.running {
-		a.mu.Unlock()
-		httpx.WriteProblem(w, core.Errorf(core.CodeQueueFull, "a benchmark is already running"))
+	// One measurement at a time on the machine: a benchmark and an optimization
+	// would measure each other.
+	end, err := a.rt.beginMeasure("a benchmark")
+	if err != nil {
+		httpx.WriteProblem(w, err)
 		return
 	}
-	a.running = true
 	var b [8]byte
 	_, _ = rand.Read(b[:])
-	run := &benchRun{id: hex.EncodeToString(b[:]), notify: make(chan struct{})}
+	run := &benchRun{id: hex.EncodeToString(b[:]), eventLog: newEventLog()}
+	a.mu.Lock()
 	a.runs[run.id] = run
 	a.mu.Unlock()
 
-	// The workers need the memory the resident model holds.
+	// The workers need the memory the resident model holds, and a request that
+	// came in meanwhile would load it again: the model is held back, and the
+	// requests are told when to try again.
+	release := a.rt.Hold(m.ID, benchHold)
 	for _, k := range a.rt.keys(m.ID) {
 		_ = a.rt.Pool.Unload(k)
 	}
@@ -165,11 +151,8 @@ func (a *benchAPI) start(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	go func() {
-		defer func() {
-			a.mu.Lock()
-			a.running = false
-			a.mu.Unlock()
-		}()
+		defer end()
+		defer release()
 		res, err := bench.Run(context.Background(), opts)
 		if err != nil {
 			run.push("error", httpx.ProblemOf(core.Errorf(core.CodeInternal, "%v", err)))
@@ -201,37 +184,7 @@ func (a *benchAPI) events(w http.ResponseWriter, req *http.Request) {
 	if run == nil {
 		return
 	}
-	st, err := httpx.NewStream(w)
-	if err != nil {
-		httpx.WriteProblem(w, err)
-		return
-	}
-	defer st.Close()
-	sent := 0
-	for {
-		run.mu.Lock()
-		pending := run.events[sent:]
-		done, wait := run.done, run.notify
-		run.mu.Unlock()
-		for _, e := range pending {
-			if st.Send("", e.name, e.payload) != nil {
-				return
-			}
-			sent++
-		}
-		if done {
-			return
-		}
-		select {
-		case <-wait:
-		case <-st.Heartbeat():
-			if st.Comment("keep-alive") != nil {
-				return
-			}
-		case <-req.Context().Done():
-			return
-		}
-	}
+	run.stream(w, req)
 }
 
 func (a *benchAPI) submit(w http.ResponseWriter, req *http.Request) {

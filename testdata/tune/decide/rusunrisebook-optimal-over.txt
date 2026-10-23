@@ -1,0 +1,5 @@
+mode optimal
+  llamacpp:cuda0             over the memory limit    answer    2.3 s  decode  179.8  held  4420 MiB  mtp3/0  (held 4.3 GiB, the limit is 4.0 GiB plus 0.2 GiB)
+  llamacpp:cpu               chosen                   answer   43.4 s  decode   19.1  held  3374 MiB  mtp2/0.5
+chosen llamacpp:cpu
+problems 

@@ -1,0 +1,62 @@
+==> checksum ok: nanollm-v0.0.0-optcheck-linux-amd64.tar.gz
+==> creating the system account nanollm
+==> unpacking nanollm-v0.0.0-optcheck-linux-amd64.tar.gz into /opt/nanollm-check
+==> writing the configuration with two fresh API keys
+==> fetching the default model (gigabytes; --no-download skips it)
+
+gemma-4-e4b-qat: complete in /var/lib/nanollm-check/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265
+==> registering the nanollm-check service
+service     nanollm-check (NanoLLM local LLM server)
+unit        /etc/systemd/system/nanollm-check.service
+command     /opt/nanollm-check/nanollm serve -config /var/lib/nanollm-check/nanollm.yaml
+account     nanollm
+data        /var/lib/nanollm-check
+start       at boot
+state       active
+
+The server is starting; it answers /readyz once the default model is loaded.
+  /opt/nanollm-check/nanollm service status
+  journalctl -u nanollm-check -f
+==> nanollm-check answers on http://127.0.0.1:18092
+==> measuring this machine for the optimal mode (about a minute; the model is unavailable meanwhile)
+Measuring inside the running service (about 45 s)...
+[  1 s] loading llamacpp:cpu
+[ 32 s] llamacpp:cpu: prefill 104 tok/s, decode 12.0 tok/s, 64.2 s for a typical answer, 3.4 GiB held
+[ 32 s] chosen: llamacpp:cpu
+NanoLLM optimize: optimal (up to 4.0 GiB of memory, 5 threads), 32 s
+
+  chosen   llamacpp:cpu 12th Gen Intel(R) Core(TM) i7-12700H, M7 ram-ple-disk, 32768 tokens of context, MTP 2
+           typical answer 64.2 s (carried over from a shorter prompt): a 4096-token prompt at 104 tok/s, 300 tokens at 12.0 tok/s
+  memory   3.4 GiB planned, 3.4 GiB measured (limit 4.0 GiB + 0.2 GiB)
+  against  1.21 times the speed of the setup that runs without a profile (12.0 against 9.9 tok/s)
+
+  candidate     memory   prefill  decode  answer  verdict
+  llamacpp:cpu  3.4 GiB  104      12.0    64.2 s  chosen
+
+  device    [measured] a typical answer takes 64.2 s here
+  drafting  [measured] 1.87 times faster than without drafting; the setting of class bench/results/rusunrisebook/stage0-2026-10-21/README.md
+  threads   [rule] the limit of the optimal mode
+
+  i wsl                    Running inside WSL: the GPU may be unavailable and the disk is slower.
+
+Profile optimal@d78a524c applied. The model was reloaded by it.
+
+NanoLLM v0.0.0-optcheck is installed.
+
+  service   nanollm-check        /opt/nanollm-check/nanollm service status
+  binary    /opt/nanollm-check/nanollm
+  config    /var/lib/nanollm-check/nanollm.yaml
+  data      /var/lib/nanollm-check
+  log       journalctl -u nanollm-check -n 50
+  cuda      not installed (--cuda adds it on an NVIDIA machine)
+  url       http://127.0.0.1:18092    (http://127.0.0.1:18092/ui/ in a browser)
+
+  admin key  sk-nanollm-<redacted>
+  user key   sk-nanollm-<redacted>
+
+  curl -sS http://127.0.0.1:18092/v1/chat/completions -H "Authorization: Bearer <the user key>" \
+    -H 'Content-Type: application/json' \
+    -d '{"model": "gemma-4-e4b-qat", "messages": [{"role": "user", "content": "Hi"}]}'
+
+  update     curl -fsSL https://github.com/usunrise88/NanoLLM/releases/latest/download/install.sh | bash
+  uninstall  curl -fsSL https://github.com/usunrise88/NanoLLM/releases/latest/download/install.sh | bash -s -- --uninstall

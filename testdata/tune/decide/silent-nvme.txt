@@ -1,0 +1,5 @@
+mode silent
+  llamacpp:cpu/ram-1g        chosen                   answer  389.1 s  decode    1.5  held   611 MiB  off
+  llamacpp:cpu/ram-4g        slower                   answer   72.8 s  decode   11.0  held  3374 MiB  off  (holds 3.3 GiB against 0.6 GiB)
+chosen llamacpp:cpu/ram-1g
+problems 

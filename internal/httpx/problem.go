@@ -4,7 +4,9 @@ package httpx
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
+	"strconv"
 
 	"github.com/usunrise88/nanollm/internal/core"
 )
@@ -24,6 +26,7 @@ type Problem struct {
 // domain errors are reported as internal without their text.
 func WriteProblem(w http.ResponseWriter, err error) {
 	p := ProblemOf(err)
+	SetRetryAfter(w, err)
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(p.Status)
 	_ = json.NewEncoder(w).Encode(p)
@@ -56,4 +59,11 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 // knows whether to wait or to look for a mistake.
 func NotYet(what, milestone string) error {
 	return core.Errorf(core.CodeNotImplemented, "%s lands in %s", what, milestone)
+}
+
+// SetRetryAfter sets the Retry-After header when err says when to try again.
+func SetRetryAfter(w http.ResponseWriter, err error) {
+	if d := core.AsError(err).RetryAfter; d > 0 {
+		w.Header().Set("Retry-After", strconv.Itoa(max(1, int(math.Ceil(d.Seconds())))))
+	}
 }

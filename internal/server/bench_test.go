@@ -77,7 +77,7 @@ func benchRoutes(rt *Runtime) (*http.ServeMux, *benchAPI) {
 }
 
 func newRun(api *benchAPI, id string) *benchRun {
-	run := &benchRun{id: id, notify: make(chan struct{})}
+	run := &benchRun{id: id, eventLog: newEventLog()}
 	api.mu.Lock()
 	api.runs[id] = run
 	api.mu.Unlock()

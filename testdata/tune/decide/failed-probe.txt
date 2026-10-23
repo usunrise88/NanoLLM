@@ -1,0 +1,5 @@
+mode powerful
+  llamacpp:cuda0             failed                    (worker: exit status 2)
+  llamacpp:cpu               chosen                   answer   56.8 s  decode   10.3  held  3374 MiB  off
+chosen llamacpp:cpu
+problems 

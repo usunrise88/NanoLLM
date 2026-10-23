@@ -220,6 +220,11 @@ type Plan struct {
 	CPUs string `json:"cpus,omitempty"`
 	// Cold means the model file was evicted from the page cache first.
 	Cold bool `json:"cold,omitempty"`
+	// TuneProfile is the hash of the autotune profile the server ran under
+	// when the plan was made (docs/OPTIMIZE.md, §3.7), so results of machines
+	// are compared together with their tuning. The benchmark presets do not
+	// depend on it.
+	TuneProfile string `json:"tune_profile,omitempty"`
 	// Layout is the tensor order of the model file the run loaded: original
 	// (as published) or nano (the copy `nanollm models relayout` wrote,
 	// OPT-7). Same weights, other offsets.
@@ -244,6 +249,23 @@ type Metrics struct {
 	PeakVRAM      int64        `json:"peak_vram,omitempty"`
 	PeakLocked    int64        `json:"peak_locked,omitempty"`
 	PeakPageCache int64        `json:"peak_page_cache,omitempty"`
+	// PeakPrivate is the process's private resident memory at its peak,
+	// sampled every 100 ms (private working set on Windows; anonymous and
+	// shared-anonymous resident pages on Linux). Unlike PeakRSS it leaves out
+	// the pages of the mapped model file, and it is what the autotuner's memory
+	// limit counts together with the video memory (docs/OPTIMIZE.md, §2.1).
+	// PeakCommit is the highest commit charge (Windows PeakPagefileUsage; Linux
+	// VmPeak), which on a discrete GPU also holds the video memory.
+	PeakPrivate int64 `json:"peak_private,omitempty"`
+	PeakCommit  int64 `json:"peak_commit,omitempty"`
+	// VRAMDedicated and VRAMShared are the GPU memory the process held at the
+	// end of the run, in dedicated video memory and in the system memory the
+	// driver lends to the GPU; VRAMSource says where the numbers come from
+	// (pdh, nvidia-smi, or buffers for the engine's own sum). Shared above
+	// what the plan pinned on the host means the driver spilled the model.
+	VRAMDedicated int64  `json:"vram_dedicated,omitempty"`
+	VRAMShared    int64  `json:"vram_shared,omitempty"`
+	VRAMSource    string `json:"vram_source,omitempty"`
 	// PeakCgroup is the memory.peak of the worker's strict cgroup: resident
 	// pages plus the page cache charged to it, which is what the budget
 	// limits.

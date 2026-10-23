@@ -796,6 +796,7 @@ func envelope(err error) errorEnvelope {
 
 func writeError(w http.ResponseWriter, err error) {
 	e := core.AsError(err)
+	httpx.SetRetryAfter(w, err)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(e.Code.HTTPStatus())
 	_ = json.NewEncoder(w).Encode(envelope(err))

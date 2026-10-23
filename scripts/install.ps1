@@ -44,6 +44,9 @@ param(
     [switch] $NoCuda      = [bool]($env:NANOLLM_CUDA     -eq '0'),
     [switch] $NoStart     = [bool]($env:NANOLLM_START    -eq '0'),
     [switch] $NoPath      = [bool]($env:NANOLLM_PATH     -eq '0'),
+    [string] $Mode        = $env:NANOLLM_MODE,
+    [switch] $NoOptimize  = [bool]($env:NANOLLM_OPTIMIZE -eq '0'),
+    [switch] $NonInteractive = [bool]($env:NANOLLM_NONINTERACTIVE -eq '1'),
     [switch] $Uninstall,
     [switch] $Purge,
     [switch] $Help
@@ -85,6 +88,9 @@ Install NanoLLM as a Windows service.
   -NoCuda             remove them again
   -NoStart            register the service but leave it stopped
   -NoPath             do not add the installation to the machine PATH
+  -Mode MODE          silent, optimal or powerful: measure this machine for it after the install
+                      (the default on a new install is optimal; see: nanollm optimize)
+  -NoOptimize         do not measure; run `nanollm optimize` later
   -Archive PATH       install this archive instead of downloading one (tests, offline)
   -CudaArchive PATH   the CUDA add-on to go with -Archive
   -Uninstall          stop and remove the service and the installation
@@ -94,7 +100,7 @@ Each has an environment variable, for the piped form where parameters cannot
 be passed: NANOLLM_VERSION, NANOLLM_PREFIX, NANOLLM_DATA_DIR, NANOLLM_ADDR,
 NANOLLM_SERVICE, NANOLLM_UI=0, NANOLLM_DOWNLOAD=0, NANOLLM_CUDA=1 (or 0),
 NANOLLM_START=0, NANOLLM_PATH=0, NANOLLM_ARCHIVE, NANOLLM_CUDA_ARCHIVE,
-NANOLLM_UNINSTALL=1, NANOLLM_PURGE=1.
+NANOLLM_MODE, NANOLLM_OPTIMIZE=0, NANOLLM_UNINSTALL=1, NANOLLM_PURGE=1.
 "@
 }
 
@@ -121,11 +127,15 @@ function Invoke-Elevated {
            '-ServiceName', "`"$ServiceName`"", '-Repo', "`"$Repo`"")
     if ($AddrGiven)   { $a += @('-Addr', "`"$Addr`"") }
     if ($Version)     { $a += @('-Version', "`"$Version`"") }
+    if ($Mode)        { $a += @('-Mode', "`"$Mode`"") }
     if ($Archive)     { $a += @('-Archive', "`"$Archive`"") }
     if ($CudaArchive) { $a += @('-CudaArchive', "`"$CudaArchive`"") }
-    foreach ($s in 'NoUI', 'NoDownload', 'Cuda', 'NoCuda', 'NoStart', 'NoPath', 'Uninstall', 'Purge') {
+    foreach ($s in 'NoUI', 'NoDownload', 'Cuda', 'NoCuda', 'NoStart', 'NoPath', 'NoOptimize', 'Uninstall', 'Purge') {
         if ((Get-Variable -Name $s -ValueOnly)) { $a += "-$s" }
     }
+    # A piped run has no console to ask in: the window it reopens in has one,
+    # and must not use it for questions the person never saw coming.
+    if ($NonInteractive -or -not $PSCommandPath) { $a += '-NonInteractive' }
     Say "asking for administrative rights"
     try {
         Start-Process -FilePath (Get-Process -Id $PID).Path -Verb RunAs -ArgumentList $a
@@ -353,6 +363,97 @@ function Wait-ForHealth {
     return $false
 }
 
+# Test-Interactive says whether a person can be asked: a console on input and
+# output, and not a piped run (-NonInteractive).
+function Test-Interactive {
+    if ($NonInteractive) { return $false }
+    try { return [Environment]::UserInteractive -and -not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected }
+    catch { return $false }
+}
+
+# Get-TuneStatus asks the running service what the autotuner holds: the mode,
+# the profile in force, whether it is stale. $null when it cannot be asked.
+function Get-TuneStatus {
+    try {
+        $out = Invoke-Native $Exe @('optimize', '--status', '--json', '-config', $Config) -Quiet
+        return (($out -join "`n") | ConvertFrom-Json)
+    } catch { return $null }
+}
+
+# Read-TuneMode shows the three modes and asks which one; Enter is optimal.
+function Read-TuneMode {
+    Note ""
+    Note "How should NanoLLM use this machine?"
+    Note "  1. silent    the least load: CPU only, 2 threads, low priority; the slowest answers"
+    Note "  2. optimal   up to 4 GiB of memory and half of the cores; the fastest answer within that"
+    Note "  3. powerful  all the free memory and cores"
+    $answer = Read-Host "Mode [2]"
+    switch ($answer.Trim().ToLower()) {
+        { $_ -in '', '2', 'optimal' }  { return 'optimal' }
+        { $_ -in '1', 'silent' }       { return 'silent' }
+        { $_ -in '3', 'powerful' }     { return 'powerful' }
+    }
+    Warn "'$answer' is not a mode; using optimal"
+    return 'optimal'
+}
+
+# Invoke-Optimize measures this machine for a mode, through the running service
+# (the measurement happens inside it), and applies the result. A new install
+# measures for the mode asked for, or optimal; an upgrade offers a recheck when
+# the libraries or the driver made the profile stale (docs/OPTIMIZE.md, 4.3).
+# Whatever goes wrong is a warning with the command to repeat: the service
+# works on the limits of the mode and the static rules without a profile.
+function Invoke-Optimize {
+    param([bool] $NewInstall)
+    if ($NoOptimize) {
+        Note "  Not measured (-NoOptimize); to tune this machine: nanollm optimize"
+        return
+    }
+    $interactive = Test-Interactive
+    $status = Get-TuneStatus
+    $mode = $Mode
+    if ($status -and $status.mode) {
+        # A mode is set: an upgrade, or a configuration that was kept.
+        if (-not $mode -and $status.profile -and -not $status.stale -and -not $status.missing) {
+            Say "the $($status.mode) profile is current"
+            return
+        }
+        if (-not $mode) {
+            $why = if ($status.changes) { ($status.changes | ForEach-Object { "$($_.field) $($_.old) -> $($_.new)" }) -join '; ' } else { 'there is no profile for this machine' }
+            if ($interactive) {
+                Say "the $($status.mode) profile needs a recheck: $why"
+                $a = Read-Host "Measure again in the $($status.mode) mode? [Y/n]"
+                if ($a -match '^\s*n') { Note "  Later: nanollm optimize --mode $($status.mode)"; return }
+                $mode = $status.mode
+            } else {
+                Warn "the $($status.mode) profile needs a recheck ($why). Run: nanollm optimize --mode $($status.mode) --yes"
+                return
+            }
+        }
+    } elseif (-not $mode) {
+        if ($interactive) {
+            $mode = Read-TuneMode
+        } elseif ($NewInstall) {
+            $mode = 'optimal'
+        } else {
+            # An upgrade of an installation that never chose a mode: its behaviour
+            # is not changed behind the person's back.
+            Note "  This installation has no autotuner mode yet. To tune this machine: nanollm optimize"
+            return
+        }
+    }
+    if ($mode -notin 'silent', 'optimal', 'powerful') {
+        Warn "'$mode' is not a mode (silent, optimal, powerful); not measured"
+        return
+    }
+    Say "measuring this machine for the $mode mode (about a minute; the model is unavailable meanwhile)"
+    try {
+        Invoke-Native $Exe @('optimize', '-config', $Config, '--mode', $mode, '--yes') | Out-Null
+    } catch {
+        Warn "the measurement failed ($($_.Exception.Message)). The service runs by the limits of the mode; to try again: nanollm optimize --mode $mode --yes"
+    }
+}
+
 function Install-NanoLLM {
     # PROCESSOR_ARCHITECTURE describes the PowerShell host, not the machine: a
     # 32-bit host on 64-bit Windows says x86 and puts the truth in the other.
@@ -464,6 +565,7 @@ function Install-NanoLLM {
     if (-not (Test-Loopback)) { Open-Firewall }
     $healthy = $true
     if (-not $NoStart) { $healthy = Wait-ForHealth }
+    if ($healthy -and -not $NoStart -and -not $NoDownload) { Invoke-Optimize -NewInstall ([bool]$keys.Count) }
 
     $url = Get-ProbeUrl
     Note ""
