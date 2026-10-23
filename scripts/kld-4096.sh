@@ -47,11 +47,12 @@ cand() { # cand NAME TOOLS FLAGS...
 		-out "$OUT/$DATE-kld$CTX-$name.json" -- -fa on --chunks "$CHUNKS" "$@"
 }
 
-# The pair that must agree, whose KLD is the noise: another set of kernels (the repeat
-# of the reference and another thread count give exactly zero, 2.2 of QUALITY-STAGE2).
-cand variant-x64 "$X64" -t "$T"
 # Candidates of the stage: what we want to know the cost of. At 4096 tokens a run takes
-# an hour or two, so the one the question is about comes first.
+# an hour or two, so the one the question is about comes first. The repeat of the reference
+# and another thread count give exactly zero (2.2 of QUALITY-STAGE2) and the x64 kernels, the
+# noise pair of the 512 run, take 45 minutes a chunk on 8 threads (the whole run ten hours):
+# the noise at this length is read off no-repack, whose kernels differ from the reference's
+# as much (1.9e-3 against the 1.7e-3 noise at 512).
 cand kv-q8_0 "$UP" -t "$T" -ctk q8_0 -ctv q8_0
 cand no-repack "$UP" -t "$T" --no-repack
 echo "=== done"
