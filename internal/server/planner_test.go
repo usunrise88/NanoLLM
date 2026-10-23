@@ -329,6 +329,15 @@ func TestPlannerPlacerMTPDefaultOnCPU(t *testing.T) {
 	if p := run(true, config.SpecMTP, 3); !p.MTP.Enabled || p.MTP.DraftMax != 3 {
 		t.Errorf("speculative.type: mtp, n_max 3: MTP %+v", p.MTP)
 	}
+	if p := run(true, config.SpecMTP, 3); p.MTP.VerifyRows != 4 {
+		t.Errorf("speculative.type: mtp, n_max 3 with the kernels: verify_rows %d, want 4 (drafts while one sequence decodes)", p.MTP.VerifyRows)
+	}
+	if p := run(true, "", 0); p.MTP.VerifyRows != 1+CPUMTPDraftMax {
+		t.Errorf("the default: verify_rows %d, want %d", p.MTP.VerifyRows, 1+CPUMTPDraftMax)
+	}
+	if p := run(false, config.SpecMTP, 0); p.MTP.VerifyRows != 0 {
+		t.Errorf("without the kernels there is no bound: verify_rows %d", p.MTP.VerifyRows)
+	}
 	if p := run(false, config.SpecMTP, 0); !p.MTP.Enabled {
 		t.Errorf("speculative.type: mtp without the kernels: MTP %+v, want on (the configuration wins)", p.MTP)
 	}

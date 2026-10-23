@@ -64,6 +64,12 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	if ov.Speculative.Type == "" && req.Device.Type == backend.CPU {
 		r.DefaultCPUMTP(req.Device.Has(backend.FeatureMultiRowQ4_0))
 	}
+	// The bound on the rows spent on drafts follows the kernels, not how MTP was
+	// asked for: speculative.type: mtp on a CPU with them drafts while one
+	// sequence decodes, too (speculative.verify_rows overrides).
+	if ov.Speculative.Type == config.SpecMTP && r.VerifyRows == 0 && req.Device.Type == backend.CPU && req.Device.Has(backend.FeatureMultiRowQ4_0) {
+		r.VerifyRows = 1 + cmp.Or(r.DraftMax, plan.DefaultDraftMax)
+	}
 	if ov.Speculative.Type == config.SpecNGram {
 		r.NoMTP, r.NoMTPReason = true, "prompt lookup (speculative.type: ngram) drafts instead"
 		r.NGram = cmp.Or(ov.Speculative.Match, ngram.DefaultN)
