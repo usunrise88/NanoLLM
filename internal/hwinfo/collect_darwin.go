@@ -104,3 +104,8 @@ func macPower(ctx context.Context) string {
 	}
 	return ""
 }
+
+func cpuNameRaw() string {
+	s, _ := unix.Sysctl("machdep.cpu.brand_string")
+	return s
+}

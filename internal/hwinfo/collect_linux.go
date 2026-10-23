@@ -45,3 +45,16 @@ func wslHost(ctx context.Context, m *benchfmt.Machine) {
 		m.System.Chassis = ChassisName(t)
 	}
 }
+
+func cpuNameRaw() string {
+	b, err := os.ReadFile("/proc/cpuinfo")
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if k, v, ok := strings.Cut(line, ":"); ok && strings.TrimSpace(k) == "model name" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
