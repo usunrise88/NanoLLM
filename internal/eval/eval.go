@@ -192,7 +192,10 @@ type Options struct {
 	// outcomes); an item's own Thinking wins.
 	Thinking  string // off | on | both
 	MaxTokens int
-	Seed      int64
+	// MaxReasoning closes a thought after this many tokens, so the answer
+	// follows (0: no cap). It only matters where thinking is on.
+	MaxReasoning int
+	Seed         int64
 	// Progress is called after each item.
 	Progress func(done, total int, o Outcome)
 }
@@ -237,7 +240,7 @@ func Run(ctx context.Context, svc core.Service, suiteName, suiteSHA string, item
 			}
 			th := thinking
 			req := core.ChatRequest{
-				Messages: it.Messages, Tools: it.Tools, EnableThinking: &th,
+				Messages: it.Messages, Tools: it.Tools, EnableThinking: &th, MaxReasoningTokens: opts.MaxReasoning,
 				Generation: core.Generation{
 					Model: opts.Model, MaxTokens: max(it.MaxTokens, opts.MaxTokens), ResponseFormat: it.Response,
 					Sampling: core.Sampling{Temperature: &zero, Seed: &opts.Seed},

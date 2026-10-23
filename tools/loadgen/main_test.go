@@ -1,6 +1,15 @@
 package main
 
-import "testing"
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"math/rand/v2"
+	"net/http"
+	"strconv"
+	"testing"
+	"time"
+)
 
 func TestAnswerAndWhy(t *testing.T) {
 	for _, c := range []struct {
@@ -36,5 +45,87 @@ func TestClaimSharesTheBudget(t *testing.T) {
 		if !g.claim() {
 			t.Fatal("an unlimited run ran out")
 		}
+	}
+}
+
+func post(t *testing.T, h *hooks, id, status, signature string) int {
+	t.Helper()
+	body := []byte(`{"type":"job.` + status + `","job":{"id":"` + id + `","status":"` + status + `"}}`)
+	req, _ := http.NewRequest(http.MethodPost, h.url, bytes.NewReader(body))
+	req.Header.Set("X-NanoLLM-Timestamp", "1700000000")
+	if signature == "" {
+		signature = "sha256=" + sign(h.secret, "1700000000", body)
+	}
+	req.Header.Set("X-NanoLLM-Signature", signature)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	return resp.StatusCode
+}
+
+// The receiver verifies the signature the server puts on a webhook, hands the
+// delivery to whoever waits for the job (even if it came first), and answers a
+// tenth of the jobs' first delivery with a 500 so that the retry runs.
+func TestWebhookReceiver(t *testing.T) {
+	h, stop, err := startHooks("127.0.0.1:0", "s3cret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stop()
+	var plain, refused string
+	for i := 0; plain == "" || refused == ""; i++ {
+		id := "job_" + strconv.Itoa(i)
+		if sum := sha256.Sum256([]byte(id)); sum[0]%10 == 0 {
+			refused = id
+		} else {
+			plain = id
+		}
+	}
+	if code := post(t, h, plain, "succeeded", "sha256=00"); code != http.StatusUnauthorized {
+		t.Fatalf("a wrong signature: %d", code)
+	}
+	if code := post(t, h, plain, "succeeded", ""); code != http.StatusNoContent {
+		t.Fatalf("a good delivery: %d", code)
+	}
+	m, ok := h.await(context.Background(), plain, time.Second) // it came before the wait began
+	if !ok || m.Status != "succeeded" || m.JobID != plain {
+		t.Fatalf("%+v %v", m, ok)
+	}
+	if code := post(t, h, refused, "canceled", ""); code != http.StatusInternalServerError {
+		t.Fatalf("the first delivery of %s: %d", refused, code)
+	}
+	if code := post(t, h, refused, "canceled", ""); code != http.StatusNoContent {
+		t.Fatalf("its retry: %d", code)
+	}
+	if m, ok = h.await(context.Background(), refused, time.Second); !ok || m.Status != "canceled" {
+		t.Fatalf("%+v %v", m, ok)
+	}
+	if _, ok = h.await(context.Background(), "job_never", 50*time.Millisecond); ok {
+		t.Fatal("a job nobody announced")
+	}
+	if recv, bad := h.stats(); recv != 2 || bad != 1 {
+		t.Fatalf("received %d, refused %d", recv, bad)
+	}
+}
+
+func TestPickMixWithAndWithoutJobs(t *testing.T) {
+	rng := rand.New(rand.NewPCG(1, 2))
+	count := func(g *gen) map[string]int {
+		c := map[string]int{}
+		for range 4000 {
+			c[g.pick(rng)]++
+		}
+		return c
+	}
+	if c := count(&gen{}); c["job"] != 0 || c["chat"] < 2000 {
+		t.Errorf("without a receiver: %v", c)
+	}
+	if c := count(&gen{hooks: &hooks{}}); c["job"] < 150 || c["job"] > 330 {
+		t.Errorf("with a receiver jobs are about six percent: %v", c)
+	}
+	if c := count(&gen{only: "tool"}); c["tool"] != 4000 {
+		t.Errorf("-only: %v", c)
 	}
 }

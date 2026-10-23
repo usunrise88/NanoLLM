@@ -47,7 +47,10 @@ func main() {
 	maxTokens := flag.Int("max-tokens", 96, "tokens per answer")
 	seed := flag.Uint64("seed", 1, "random seed of the mix")
 	analyze := flag.String("analyze", "", "analyze a report file instead of running")
-	only := flag.String("only", "", "run one kind of request only: chat, abandon, tool, json or long (default: the mix)")
+	only := flag.String("only", "", "run one kind of request only: chat, abandon, tool, json, long or job (default: the mix)")
+	hookListen := flag.String("hook-listen", "", "address for the webhook receiver (127.0.0.1:0 picks a port); adds queue jobs to the mix")
+	hookSecret := flag.String("hook-secret", "loadgen-secret", "the server's queue.webhook_secret")
+	queueDB := flag.String("queue-db", "", "the server's queue database (nanollm.db), to record its size")
 	count := flag.Int("n", 0, "stop after this many requests (0: run for -duration)")
 	extra := flag.String("extra", "", "JSON object merged into every request body, e.g. '{\"max_reasoning_tokens\":64}'")
 	badOut := flag.String("bad-out", "", "append every answer the checker rejected (request and response) to this JSON-lines file")
@@ -75,7 +78,20 @@ func main() {
 		os.Exit(2)
 	}
 	g := &gen{base: strings.TrimRight(*base, "/"), key: *key, model: *model, maxTokens: *maxTokens, pid: *pid,
-		http: &http.Client{Timeout: 0}, start: time.Now(), only: *only, limit: *count}
+		http: &http.Client{Timeout: 0}, start: time.Now(), only: *only, limit: *count, queueDB: *queueDB}
+	if *hookListen != "" {
+		h, stop, err := startHooks(*hookListen, *hookSecret)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "loadgen:", err)
+			os.Exit(1)
+		}
+		defer stop()
+		g.hooks = h
+	}
+	if *only == "job" && g.hooks == nil {
+		fmt.Fprintln(os.Stderr, "loadgen: -only job needs -hook-listen")
+		os.Exit(2)
+	}
 	if *extra != "" {
 		if err := json.Unmarshal([]byte(*extra), &g.extra); err != nil {
 			fmt.Fprintln(os.Stderr, "loadgen: -extra:", err)
@@ -125,11 +141,13 @@ type gen struct {
 	http             *http.Client
 	start            time.Time
 
-	extra map[string]any // merged into every request body
-	only  string         // one kind of request, or "" for the mix
-	limit int            // requests to send before stopping; 0 is no limit
-	sent  int
-	bad   io.Writer // rejected answers, one JSON object per line
+	hooks   *hooks         // the webhook receiver; nil leaves queue jobs out of the mix
+	queueDB string         // the server's queue database, whose size goes into the report
+	extra   map[string]any // merged into every request body
+	only    string         // one kind of request, or "" for the mix
+	limit   int            // requests to send before stopping; 0 is no limit
+	sent    int
+	bad     io.Writer // rejected answers, one JSON object per line
 
 	mu     sync.Mutex
 	window []sample // since the last report
@@ -168,6 +186,13 @@ type Report struct {
 	RSS       int64              `json:"rss"`
 	Server    *serverStats       `json:"server,omitempty"`
 	ServerErr string             `json:"server_err,omitempty"`
+	// QueueDB is the size of the queue database and its journal files, and
+	// Hooks the webhook deliveries verified and refused so far.
+	QueueDB int64 `json:"queue_db_bytes,omitempty"`
+	Hooks   *struct {
+		Received int `json:"received"`
+		BadSig   int `json:"bad_signature"`
+	} `json:"hooks,omitempty"`
 }
 
 type serverStats struct {
@@ -211,6 +236,16 @@ func (g *gen) report() Report {
 	}
 	if g.pid > 0 {
 		r.RSS = procRSS(g.pid)
+	}
+	if g.queueDB != "" {
+		r.QueueDB = dbBytes(g.queueDB)
+	}
+	if g.hooks != nil {
+		recv, bad := g.hooks.stats()
+		r.Hooks = &struct {
+			Received int `json:"received"`
+			BadSig   int `json:"bad_signature"`
+		}{recv, bad}
 	}
 	if st, err := g.stats(); err != nil {
 		r.ServerErr = err.Error()
@@ -311,7 +346,7 @@ var topics = []string{
 var followups = []string{"Explain it more simply.", "Give one example.", "Summarize in one sentence.", "Объясни проще.", "Приведи пример.", "Сократи до одного предложения."}
 
 // kinds are the request kinds -only picks from.
-var kinds = []string{"chat", "abandon", "tool", "json", "long"}
+var kinds = []string{"chat", "abandon", "tool", "json", "long", "job"}
 
 // claim says whether this worker may send another request: the -n budget is
 // shared by all workers. A worker that finds it spent leaves its loop; the
@@ -331,7 +366,23 @@ func (g *gen) pick(rng *rand.Rand) string {
 	if g.only != "" {
 		return g.only
 	}
-	switch r := rng.Float64(); {
+	r := rng.Float64()
+	if g.hooks != nil { // queue jobs take six percent
+		switch {
+		case r < 0.50:
+			return "chat"
+		case r < 0.65:
+			return "abandon"
+		case r < 0.74:
+			return "tool"
+		case r < 0.83:
+			return "json"
+		case r < 0.89:
+			return "job"
+		}
+		return "long"
+	}
+	switch {
 	case r < 0.55:
 		return "chat"
 	case r < 0.70:
@@ -355,6 +406,8 @@ func (g *gen) worker(ctx context.Context, rng *rand.Rand, id int) {
 			g.toolCall(ctx, rng)
 		case "json":
 			g.jsonSchema(ctx, rng)
+		case "job":
+			g.job(ctx, rng)
 		default:
 			g.longPrompt(ctx, rng)
 		}
@@ -644,6 +697,18 @@ func analyzeFile(path string, w io.Writer) error {
 	}
 	sort.Strings(bad)
 	fmt.Fprintf(w, "requests: %v\nnot ok or cancelled: %s\n", totals, orNone(bad))
+	if last.QueueDB > 0 {
+		var dx, dy []float64
+		for _, r := range reps[from:] {
+			dx = append(dx, r.ElapsedS/3600)
+			dy = append(dy, float64(r.QueueDB)/(1<<20))
+		}
+		ds, _ := fit(dx, dy)
+		fmt.Fprintf(w, "queue database after warm-up: %.2f MiB at the start, %.2f at the end, trend %+.3f MiB/h\n", dy[0], dy[len(dy)-1], ds)
+	}
+	if last.Hooks != nil {
+		fmt.Fprintf(w, "webhooks: %d verified, %d refused for a bad signature\n", last.Hooks.Received, last.Hooks.BadSig)
+	}
 	third := len(reps) / 3
 	p95 := func(rs []Report, key string) float64 {
 		var v []float64

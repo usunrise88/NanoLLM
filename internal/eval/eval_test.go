@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"math/rand/v2"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -120,5 +121,47 @@ func TestRunOnFake(t *testing.T) {
 	}
 	if !seen["a"] || !seen["b"] {
 		t.Fatalf("the order was not randomised: %+v", prefs)
+	}
+}
+
+// Every built-in suite parses, and the answer line of the reasoning suite is
+// checked by a pattern that accepts the value and nothing near it.
+func TestBuiltinSuitesLoad(t *testing.T) {
+	for _, name := range Suites() {
+		if name == "long-context" {
+			continue
+		}
+		items, _, err := LoadSuite(name)
+		if err != nil || len(items) == 0 {
+			t.Errorf("%s: %d items, %v", name, len(items), err)
+		}
+	}
+}
+
+func TestReasoningSuiteChecker(t *testing.T) {
+	items, _, err := LoadSuite("reasoning")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 48 {
+		t.Fatalf("%d items", len(items))
+	}
+	it := items[0]                                                                // reason-arith-ru-1: the answer is a number
+	m := regexp.MustCompile(`\]\*(\d+)\[`).FindStringSubmatch(it.Checker.Pattern) // …ANSWER:\s*[*`]*355[*`]*…
+	if m == nil {
+		t.Fatalf("pattern %q", it.Checker.Pattern)
+	}
+	right := m[1]
+	for answer, want := range map[string]bool{
+		"Сначала считаем.\nANSWER: " + right:           true,
+		"…\n**ANSWER: " + right + "**":                 true,
+		"…\nanswer: " + right + ".":                    true,
+		"ANSWER: " + right + "0":                       false, // a longer number is not the value
+		"ANSWER: 1" + right:                            false,
+		"The result is " + right + " (no answer line)": false,
+	} {
+		if pass, _ := it.Checker.Check(answer, nil); *pass != want {
+			t.Errorf("%q: %v", answer, *pass)
+		}
 	}
 }
