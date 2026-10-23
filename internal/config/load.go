@@ -378,6 +378,12 @@ func (o ModelOverride) validate() error {
 	if p := o.Speculative.PMin; p < 0 || p >= 1 {
 		return fmt.Errorf("speculative.p_min must be in [0, 1), got %v", p)
 	}
+	if m := o.Stream.Method; m != "" && m != "advise" && m != "pread" {
+		return fmt.Errorf("stream.method must be advise or pread, got %q", m)
+	}
+	if o.Stream.Depth < 0 {
+		return fmt.Errorf("stream.depth must not be negative, got %d", o.Stream.Depth)
+	}
 	if o.Stream.Ahead < 0 || o.Stream.Keep < 0 {
 		return fmt.Errorf("stream.ahead and stream.keep must not be negative, got %d and %d", o.Stream.Ahead, o.Stream.Keep)
 	}

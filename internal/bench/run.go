@@ -338,8 +338,7 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 	}
 	spec = spec.WithDefaultThreads()
 	batch, _ := v.int("batch")
-	verifyRows, _ := v.int("verify_rows")
-	ws := WorkerSpec{Load: spec, Place: place, Slow: o.Slow, Batch: batch, VerifyRows: verifyRows, OnlyBatch: v["only"] == "batch", Env: v.Env(), Cold: o.Cold || budgetOf(name).RAM > 0 && !o.Advisory && userScopes()}
+	ws := WorkerSpec{Load: spec, Place: place, Slow: o.Slow, Batch: batch, OnlyBatch: v["only"] == "batch", Env: v.Env(), Cold: o.Cold || budgetOf(name).RAM > 0 && !o.Advisory && userScopes()}
 	for _, lr := range p.LockRanges {
 		r := memlock.Range{Off: lr.Offset, Len: lr.Length}
 		if lr.Role == registry.RoleDrafter {

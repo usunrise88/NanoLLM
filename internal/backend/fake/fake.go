@@ -104,7 +104,7 @@ func (b *Backend) Load(ctx context.Context, spec backend.LoadSpec) (backend.Mode
 	m := &Model{
 		opts: b.opts,
 		caps: backend.Capabilities{
-			NCtx: nctx, Slots: slots, NBatch: nbatch,
+			NCtx: nctx, Slots: slots, NBatch: nbatch, VerifyRows: spec.VerifyRows,
 			SWAFull: spec.SWAFull, SWAWindow: 512, NVocab: NVocab,
 		},
 		path:  spec.Path,

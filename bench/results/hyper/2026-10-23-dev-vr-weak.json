@@ -1,0 +1,459 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "v0.1.0-rc.1-21-ge529d6d-dirty",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a"
+    },
+    "ggml_cpu_variant": "haswell",
+    "os": "linux",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "AMD",
+      "model": "AMD EPYC 7351P",
+      "cores": 16,
+      "threads": 32,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c"
+      ]
+    },
+    "memory": {
+      "total_bytes": 135036997632
+    },
+    "system": {
+      "vendor": "ASRockRack",
+      "family": "EPYCD8-2T",
+      "product": "EPYCD8-2T",
+      "form_factor": "server",
+      "chassis": "desktop"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "26.04",
+      "kernel_mm": "7.0"
+    },
+    "power": {},
+    "disk": {
+      "type": "hdd"
+    },
+    "extra": [
+      {
+        "key": "numa_nodes",
+        "value": "4"
+      },
+      {
+        "key": "governor",
+        "value": "performance"
+      },
+      {
+        "key": "boost",
+        "value": "1"
+      },
+      {
+        "key": "thp",
+        "value": "madvise"
+      },
+      {
+        "key": "numa_balancing",
+        "value": "1"
+      },
+      {
+        "key": "loadavg_1m",
+        "value": "14.21"
+      },
+      {
+        "key": "system_name_from",
+        "value": "baseboard"
+      },
+      {
+        "key": "model_disk",
+        "value": "md3"
+      },
+      {
+        "key": "model_disk_rotational",
+        "value": "1"
+      },
+      {
+        "key": "model_read_ahead_kb",
+        "value": "8192"
+      },
+      {
+        "key": "model_max_sectors_kb",
+        "value": "4096"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "preset": "ram-8g",
+      "plan_hash": "64749d087ad65ccb",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 4,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 54624.427,
+        "tg_tok_s": {},
+        "batch": [
+          {
+            "seqs": 1,
+            "agg_tok_s": 10.349066824098719,
+            "per_seq_tok_s": 11.67308165526009,
+            "mtp_agg_tok_s": 11.973555717460272,
+            "mtp_per_seq_tok_s": 13.78325590584987,
+            "acceptance": 0.6777777777777778
+          },
+          {
+            "seqs": 2,
+            "agg_tok_s": 14.18669663186049,
+            "per_seq_tok_s": 8.079674171028007,
+            "mtp_agg_tok_s": 11.898086971737841,
+            "mtp_per_seq_tok_s": 6.744763530620011,
+            "acceptance": 0.655367231638418
+          },
+          {
+            "seqs": 4,
+            "agg_tok_s": 14.567947444721055,
+            "per_seq_tok_s": 4.779900294253562,
+            "mtp_agg_tok_s": 11.727793360944245,
+            "mtp_per_seq_tok_s": 3.6135536200064733,
+            "acceptance": 0.653179190751445
+          }
+        ],
+        "peak_rss": 7378509824,
+        "peak_page_cache": 50339840,
+        "peak_cgroup": 7414456320,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        }
+      },
+      "reps": 5,
+      "output": {},
+      "status": "ok",
+      "variant": "batch=4,only=batch,verify_rows=0"
+    },
+    {
+      "preset": "ram-8g",
+      "plan_hash": "619446f83a16ee10",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 4,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 53392.165,
+        "tg_tok_s": {},
+        "batch": [
+          {
+            "seqs": 1,
+            "agg_tok_s": 10.378831823650065,
+            "per_seq_tok_s": 11.699188795125256,
+            "mtp_agg_tok_s": 11.937886195858749,
+            "mtp_per_seq_tok_s": 13.737462175905787,
+            "acceptance": 0.6777777777777778
+          },
+          {
+            "seqs": 2,
+            "agg_tok_s": 12.871908354808935,
+            "per_seq_tok_s": 8.385492678879508,
+            "mtp_agg_tok_s": 11.682585482609385,
+            "mtp_per_seq_tok_s": 7.086618708348954,
+            "acceptance": 0.6597938144329897
+          },
+          {
+            "seqs": 4,
+            "agg_tok_s": 14.902125857088528,
+            "per_seq_tok_s": 4.770368435976371,
+            "mtp_agg_tok_s": 14.236767984227848,
+            "mtp_per_seq_tok_s": 4.789298737742943,
+            "acceptance": 1
+          }
+        ],
+        "peak_rss": 7365910528,
+        "peak_page_cache": 50339840,
+        "peak_cgroup": 7401979904,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        }
+      },
+      "reps": 5,
+      "output": {},
+      "status": "ok",
+      "variant": "batch=4,only=batch,verify_rows=3"
+    },
+    {
+      "preset": "ram-8g",
+      "plan_hash": "d4a68f060ae2922d",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 4,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 51442.705,
+        "tg_tok_s": {},
+        "batch": [
+          {
+            "seqs": 1,
+            "agg_tok_s": 10.38076292519345,
+            "per_seq_tok_s": 11.701400930435366,
+            "mtp_agg_tok_s": 12.001233056564356,
+            "mtp_per_seq_tok_s": 13.818776679225955,
+            "acceptance": 0.6777777777777778
+          },
+          {
+            "seqs": 2,
+            "agg_tok_s": 14.15103086238397,
+            "per_seq_tok_s": 8.041933572034184,
+            "mtp_agg_tok_s": 12.74076755308146,
+            "mtp_per_seq_tok_s": 7.225732513378899,
+            "acceptance": 0.72
+          },
+          {
+            "seqs": 4,
+            "agg_tok_s": 14.555754112707486,
+            "per_seq_tok_s": 4.777436419797212,
+            "mtp_agg_tok_s": 14.561561338314009,
+            "mtp_per_seq_tok_s": 4.794724872810617,
+            "acceptance": 1
+          }
+        ],
+        "peak_rss": 7356862464,
+        "peak_page_cache": 50339840,
+        "peak_cgroup": 7392444416,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        }
+      },
+      "reps": 5,
+      "output": {},
+      "status": "ok",
+      "variant": "batch=4,only=batch,verify_rows=4"
+    },
+    {
+      "preset": "ram-8g",
+      "plan_hash": "9ce40b349cceaa85",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 4,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 53105.929,
+        "tg_tok_s": {},
+        "batch": [
+          {
+            "seqs": 1,
+            "agg_tok_s": 10.366865982110811,
+            "per_seq_tok_s": 11.706546954595733,
+            "mtp_agg_tok_s": 11.95133497220222,
+            "mtp_per_seq_tok_s": 13.7946476233032,
+            "acceptance": 0.6777777777777778
+          },
+          {
+            "seqs": 2,
+            "agg_tok_s": 14.117332661672998,
+            "per_seq_tok_s": 8.041731622923104,
+            "mtp_agg_tok_s": 11.598569551969218,
+            "mtp_per_seq_tok_s": 6.565320005093173,
+            "acceptance": 0.655367231638418
+          },
+          {
+            "seqs": 4,
+            "agg_tok_s": 14.279374738168245,
+            "per_seq_tok_s": 4.529417941025642,
+            "mtp_agg_tok_s": 11.967871640836693,
+            "mtp_per_seq_tok_s": 4.161676705767006,
+            "acceptance": 0.6939890710382514
+          }
+        ],
+        "peak_rss": 7372607488,
+        "peak_page_cache": 50339840,
+        "peak_cgroup": 7408664576,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        }
+      },
+      "reps": 5,
+      "output": {},
+      "status": "ok",
+      "variant": "batch=4,only=batch,verify_rows=6"
+    },
+    {
+      "preset": "ram-8g",
+      "plan_hash": "82a9522dee391b8b",
+      "plan": {
+        "mode": "ram-full",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 32768,
+        "slots": 4,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 4,
+        "enforcement": "strict",
+        "threads_batch": 4,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "dio",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "node:0",
+        "cpus": "0-3",
+        "cold": true
+      },
+      "metrics": {
+        "load_ms": 51532.68,
+        "tg_tok_s": {},
+        "batch": [
+          {
+            "seqs": 1,
+            "agg_tok_s": 10.39319187425062,
+            "per_seq_tok_s": 11.714497508052196,
+            "mtp_agg_tok_s": 12.012770753313104,
+            "mtp_per_seq_tok_s": 13.831907985438697,
+            "acceptance": 0.6777777777777778
+          },
+          {
+            "seqs": 2,
+            "agg_tok_s": 14.164203300540661,
+            "per_seq_tok_s": 8.046425984611142,
+            "mtp_agg_tok_s": 11.892554027716393,
+            "mtp_per_seq_tok_s": 6.7439523758793705,
+            "acceptance": 0.655367231638418
+          },
+          {
+            "seqs": 4,
+            "agg_tok_s": 14.970327357710275,
+            "per_seq_tok_s": 4.552824817226761,
+            "mtp_agg_tok_s": 12.860067654695026,
+            "mtp_per_seq_tok_s": 4.028024064175122,
+            "acceptance": 0.731404958677686
+          }
+        ],
+        "peak_rss": 7374499840,
+        "peak_page_cache": 50339840,
+        "peak_cgroup": 7410339840,
+        "buffers": {
+          "CPU": 2002947931,
+          "CPU_REPACK": 2656053492
+        }
+      },
+      "reps": 5,
+      "output": {},
+      "status": "ok",
+      "variant": "batch=4,only=batch,verify_rows=8"
+    }
+  ],
+  "date": "2026-10-23",
+  "duration_s": 3720.56561986
+}

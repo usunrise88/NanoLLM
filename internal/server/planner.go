@@ -56,7 +56,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 		Model: model, Preset: preset, Mode: mode, KVType: ov.KVType, Proven: plan.ProvenFor(runtime.GOOS),
 		NCtx: ov.NCtx.N, Slots: ov.Slots.N,
 		NoMTP: ov.Speculative.Type == config.SpecNone, DraftMax: ov.Speculative.NMax, DraftPMin: ov.Speculative.PMin,
-		NoRepack: ov.Repack == "off",
+		VerifyRows: ov.Speculative.VerifyRows, NoRepack: ov.Repack == "off",
 	}
 	// MTP on the CPU: on by default where the device lists the multi-row Q4_0
 	// kernels, off elsewhere with the reason in the plan (plan.DefaultCPUMTP).
@@ -116,6 +116,7 @@ func PlannerPlacer(ctx context.Context, req PlaceRequest) (Placement, error) {
 	}
 	if spec.Stream != nil {
 		spec.Stream.Ahead, spec.Stream.Keep, spec.Stream.Evict = ov.Stream.Ahead, ov.Stream.Keep, ov.Stream.Evict
+		spec.Stream.Method, spec.Stream.Depth = ov.Stream.Method, ov.Stream.Depth
 	}
 	switch ov.Repack {
 	case "off":

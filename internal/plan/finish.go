@@ -91,7 +91,7 @@ func (pl *planner) finish(t *trial, target Target) *Plan {
 			where = pl.dev.Selector
 		}
 		p.MTP = MTP{
-			Enabled: true, DraftMax: pl.draftMax, DraftPMin: pl.req.DraftPMin,
+			Enabled: true, DraftMax: pl.draftMax, DraftPMin: pl.req.DraftPMin, VerifyRows: max(pl.req.VerifyRows, 0),
 			Reason: fmt.Sprintf("the drafter (%s) runs on %s with the target's output layer and reads its KV cache",
 				mibStr(pl.req.Model.Drafter.Total()), where),
 		}

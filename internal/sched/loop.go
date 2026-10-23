@@ -169,6 +169,7 @@ func New(m backend.Model) *Loop {
 		wake:  make(chan struct{}, 1),
 		slots: make([]slot, caps.Slots),
 	}
+	l.verifyRows.Store(int32(max(caps.VerifyRows, 0)))
 	go l.run()
 	return l
 }
@@ -539,12 +540,11 @@ func (l *Loop) step(active []int) {
 		chosen = append(chosen, seq)
 	}
 	// With a bound on the rows spent on drafts, what is left after every
-	// slot has its token is shared out evenly (the first slots, interactive
-	// ones first, take the odd rows), so a second sequence does not see the
-	// first draft everything.
+	// slot has its token is shared out evenly, so that a second sequence does
+	// not see the first draft everything.
 	rows := int(l.verifyRows.Load())
-	share, extra := draftShares(rows, budget, len(chosen))
-	for i, seq := range chosen {
+	share := draftShares(rows, budget, len(chosen))
+	for _, seq := range chosen {
 		h := l.slots[seq].h
 		draft := 0
 		if !h.req.NoDraft && l.caps.MaxDraft > 0 {
@@ -554,7 +554,7 @@ func (l *Loop) step(active []int) {
 			}
 			allowed := budget
 			if rows > 0 {
-				allowed = min(budget, share+boolInt(i < extra))
+				allowed = min(budget, share)
 			}
 			draft = min(l.caps.MaxDraft, allowed, max(left, 0), l.caps.NCtx-len(l.slots[seq].cached)-2)
 			draft = max(draft, 0)
@@ -712,21 +712,15 @@ func lcp(a, b []backend.Token) int {
 	return n
 }
 
-func boolInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
 // draftShares splits the rows a step may spend on drafts among n decoding
 // slots: rows is the bound on Σ(1 + draft) (zero: none), budget what the batch
-// has left after every slot's own token. Each slot may draft share rows, and
-// the first extra slots one more.
-func draftShares(rows, budget, n int) (share, extra int) {
+// has left after every slot's own token. Each slot may draft share rows, the
+// same for all. Rows that do not divide are left unspent: a draft for one
+// sequence and none for its neighbour measured worse than no drafting at all
+// (docs/AUTOTUNE.md, "MTP и несколько последовательностей").
+func draftShares(rows, budget, n int) int {
 	if rows <= 0 || n <= 0 {
-		return 0, 0
+		return 0
 	}
-	spare := min(budget, max(rows-n, 0))
-	return spare / n, spare % n
+	return min(budget, max(rows-n, 0)) / n
 }

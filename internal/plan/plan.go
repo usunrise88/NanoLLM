@@ -87,6 +87,9 @@ type MTP struct {
 	Reason    string  `json:"reason"`
 	DraftMax  int     `json:"draft_max,omitempty"`
 	DraftPMin float64 `json:"draft_p_min,omitempty"`
+	// VerifyRows bounds the rows of a scheduler step spent on drafts and
+	// their checks over the decoding sequences; zero is no bound.
+	VerifyRows int `json:"verify_rows,omitempty"`
 }
 
 // NGram is prompt-lookup drafting (OPT-5): drafts come from the sequence

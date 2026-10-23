@@ -155,6 +155,11 @@ type StreamSpec struct {
 	Ahead  int
 	Keep   int
 	Evict  bool
+	// Method is how the layers are read ahead: "" or "advise" (the system's
+	// readahead: madvise WILLNEED, PrefetchVirtualMemory) or "pread" (reads
+	// of the file, Depth at a time; OPT-9). Depth is zero for four.
+	Method string
+	Depth  int
 	// Probe installs the layer callback and does nothing in it, to measure
 	// what the callback alone costs.
 	Probe bool
@@ -165,7 +170,7 @@ func (s *StreamSpec) Active() bool {
 	return s != nil && len(s.Ranges) > 0 && (s.Ahead > 0 || s.Evict || s.Probe)
 }
 
-// WithEnv applies the NANOLLM_STREAM_AHEAD, _KEEP, _EVICT and _PROBE
+// WithEnv applies the NANOLLM_STREAM_AHEAD, _KEEP, _EVICT, _METHOD, _DEPTH and _PROBE
 // variables over the spec, for the benchmark sweeps and the autotuner: the
 // configuration of a served model sets the fields directly.
 func (s *StreamSpec) WithEnv() *StreamSpec {
@@ -184,6 +189,12 @@ func (s *StreamSpec) WithEnv() *StreamSpec {
 		o.Evict = true
 	case "0":
 		o.Evict = false
+	}
+	if v := os.Getenv("NANOLLM_STREAM_METHOD"); v != "" {
+		o.Method = v
+	}
+	if v, err := strconv.Atoi(os.Getenv("NANOLLM_STREAM_DEPTH")); err == nil && v >= 0 {
+		o.Depth = v
 	}
 	if os.Getenv("NANOLLM_STREAM_PROBE") == "1" {
 		o.Probe = true
@@ -258,6 +269,10 @@ type LoadSpec struct {
 	// step, stopping when the drafter's top probability drops below DraftPMin.
 	DraftMax  int
 	DraftPMin float64
+	// VerifyRows bounds the rows of a step spent on drafts and their checks,
+	// summed over the decoding slots (Σ 1 + drafts); zero is no bound. The
+	// scheduler enforces it (sched.Loop.SetVerifyRows).
+	VerifyRows int
 	// NGram is the match length of prompt-lookup drafting (internal/ngram),
 	// which drafts up to DraftMax tokens from the sequence itself; zero is
 	// off. It is used when no MTP drafter is loaded.
@@ -385,7 +400,10 @@ type Capabilities struct {
 	NBatch int // tokens per Step across all slots, drafts included
 	// MaxDraft is 0 when no drafter is loaded.
 	MaxDraft int
-	SWAFull  bool
+	// VerifyRows is the spec's bound on the rows spent on drafts in a step;
+	// zero is none. The scheduler starts from it.
+	VerifyRows int
+	SWAFull    bool
 	// SWAWindow is how far back a trim may reach without a fresh prefill when
 	// SWAFull is off; 0 when the model has no sliding-window layers.
 	SWAWindow int

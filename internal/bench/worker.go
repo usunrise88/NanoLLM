@@ -51,9 +51,6 @@ type WorkerSpec struct {
 	// OnlyBatch runs the throughput curve and nothing else (a sweep of the
 	// scheduler's drafting policy needs only that).
 	OnlyBatch bool `json:"only_batch,omitempty"`
-	// VerifyRows bounds the rows spent on drafts in a step (the scheduler's
-	// SetVerifyRows); zero is no bound.
-	VerifyRows int `json:"verify_rows,omitempty"`
 	// Echo adds the echo scenario (dev suite): the model copies a given
 	// text, which is where prompt lookup drafts pay.
 	Echo bool `json:"echo,omitempty"`
@@ -138,7 +135,6 @@ func measure(ctx context.Context, spec WorkerSpec) (WorkerResult, error) {
 	res.Metrics.LoadMS = ms(time.Since(start))
 	loop := sched.New(m)
 	defer loop.Close()
-	loop.SetVerifyRows(spec.VerifyRows)
 	res, err = run(ctx, m, loop, spec, res)
 	if cg != nil {
 		// Read while the model is still loaded: the peak and the page cache

@@ -42,6 +42,8 @@ var variantKeys = map[string]string{
 	"stream_ahead":  "layers read ahead of the compute in the file-backed modes M8, M9 (OPT-8); 0 is off",
 	"stream_keep":   "leading layers the streamer never evicts",
 	"stream_evict":  "on or off: drop a layer's pages once it is computed",
+	"stream_method": "advise or pread: how the next layers are read (the system's readahead, or reads of the file at stream_depth)",
+	"stream_depth":  "reads in flight of stream_method=pread (0 is four)",
 	"numa":          "off, interleave or node:N",
 	"env.NAME":      "an environment variable for the worker (OMP_PROC_BIND, GGML_*)",
 }
@@ -115,7 +117,7 @@ func checkValue(key, v string) error {
 		if n, err := strconv.Atoi(v); err != nil || n < 2 || n > 64 {
 			return fmt.Errorf("%q is not a number of sequences from 2 to 64", v)
 		}
-	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "verify_rows", "stream_ahead", "stream_keep", "ngram":
+	case "threads", "threads_batch", "n_batch", "n_ubatch", "n_ctx", "slots", "draft_max", "verify_rows", "stream_ahead", "stream_keep", "stream_depth", "ngram":
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 {
 			return fmt.Errorf("%q is not a non-negative integer", v)
@@ -136,6 +138,10 @@ func checkValue(key, v string) error {
 	case "sampling":
 		if v != "host" && v != "device" {
 			return fmt.Errorf("%q is not host or device", v)
+		}
+	case "stream_method":
+		if v != "advise" && v != "pread" {
+			return fmt.Errorf("%q is not advise or pread", v)
 		}
 	case "mtp", "repack", "swa_full", "stream_evict":
 		if v != "on" && v != "off" {
@@ -208,6 +214,12 @@ func (v Variant) Plan(req *plan.Request) {
 	}
 	if n, ok := v.int("draft_max"); ok {
 		req.DraftMax = n
+	}
+	if n, ok := v.int("verify_rows"); ok {
+		req.VerifyRows = n
+		if n == 0 {
+			req.VerifyRows = -1 // in a sweep 0 is "no bound", over the CPU default
+		}
 	}
 	if s, ok := v["draft_p_min"]; ok {
 		req.DraftPMin, _ = strconv.ParseFloat(s, 64)
@@ -290,6 +302,12 @@ func (v Variant) Load(spec *backend.LoadSpec) {
 		}
 		if n, ok := v.int("stream_keep"); ok {
 			st.Keep = n
+		}
+		if s, ok := v["stream_method"]; ok {
+			st.Method = s
+		}
+		if n, ok := v.int("stream_depth"); ok {
+			st.Depth = n
 		}
 		switch v["stream_evict"] {
 		case "on":

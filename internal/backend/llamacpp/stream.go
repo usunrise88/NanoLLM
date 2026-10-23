@@ -1,6 +1,7 @@
 package llamacpp
 
 import (
+	"cmp"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -110,7 +111,7 @@ func (m *model) attachStream(spec *backend.StreamSpec, cp *LlamaContextParams) {
 			layers[r.Layer] = append(layers[r.Layer], memlock.Range{Off: r.Offset, Len: r.Length})
 		}
 		var err error
-		s, err = memlock.NewStreamer(m.spec.Path, layers, memlock.StreamOptions{Ahead: spec.Ahead, Keep: spec.Keep, Evict: spec.Evict})
+		s, err = memlock.NewStreamer(m.spec.Path, layers, memlock.StreamOptions{Ahead: spec.Ahead, Keep: spec.Keep, Evict: spec.Evict, Method: spec.Method, Depth: spec.Depth})
 		if err != nil {
 			note("is off: %v", err)
 			if !spec.Probe {
@@ -130,7 +131,7 @@ func (m *model) attachStream(spec *backend.StreamSpec, cp *LlamaContextParams) {
 	m.streamID, m.stream = id, s
 	if s != nil {
 		s.Warm()
-		note("is on: %d layers, ahead %d, keep %d, evict %v", s.Layers(), spec.Ahead, spec.Keep, spec.Evict)
+		note("is on: %d layers, ahead %d, keep %d, evict %v, method %s", s.Layers(), spec.Ahead, spec.Keep, spec.Evict, cmp.Or(spec.Method, memlock.MethodAdvise))
 	} else {
 		note("probe: the callback is installed and does nothing")
 	}

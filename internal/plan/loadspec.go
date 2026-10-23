@@ -51,6 +51,7 @@ func (p *Plan) LoadSpec(modelPath, drafterPath string) (backend.LoadSpec, error)
 		s.DrafterPath = drafterPath
 		s.DraftMax = p.MTP.DraftMax
 		s.DraftPMin = p.MTP.DraftPMin
+		s.VerifyRows = p.MTP.VerifyRows
 	}
 	if len(p.StreamRanges) > 0 {
 		st := &backend.StreamSpec{}

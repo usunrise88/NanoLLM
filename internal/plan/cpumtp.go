@@ -35,4 +35,11 @@ func (r *Request) DefaultCPUMTP(multiRow bool) {
 	if r.DraftPMin == 0 {
 		r.DraftPMin = CPUMTPDraftPMin
 	}
+	if r.VerifyRows == 0 {
+		// Drafts only while one sequence decodes. With two or more the
+		// checks of all of them cost more than the drafts save: 0.7-0.9x of
+		// plain decoding on both profiles of the EPYC (docs/AUTOTUNE.md,
+		// "MTP и несколько последовательностей").
+		r.VerifyRows = 1 + r.DraftMax
+	}
 }

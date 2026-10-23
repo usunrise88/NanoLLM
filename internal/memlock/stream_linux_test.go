@@ -110,6 +110,30 @@ func TestStreamerReadsAheadAndEvictsBehind(t *testing.T) {
 		}
 	})
 
+	t.Run("pread ahead", func(t *testing.T) {
+		reset()
+		// The reads are the streamer's own: no filesystem can ignore them, and
+		// layers wider than one chunk (4 MiB) are read in several, at a depth of 3.
+		s, err := NewStreamer(path, layers, StreamOptions{Ahead: 1, Method: MethodPread, Depth: 3})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer s.Close()
+		s.Layer(0)
+		eventually(t, "layer 1 to be read by pread", func() bool { return resident(1) > layer*9/10 })
+		if r := resident(3); r > layer/2 {
+			t.Errorf("layer 3 is resident (%d bytes) though only one layer ahead was asked", r)
+		}
+		s.Layer(3) // wraps to layer 0
+		eventually(t, "layer 0 to be read by pread after layer 3 (wrap)", func() bool { return resident(0) > layer*9/10 })
+		if st := s.Stats(); st.Errors != 0 || st.WillNeed < layer {
+			t.Errorf("stats %+v", st)
+		}
+		if _, err := NewStreamer(path, layers, StreamOptions{Ahead: 1, Method: "readv"}); err == nil {
+			t.Error("an unknown method was accepted")
+		}
+	})
+
 	t.Run("evict behind, keep the first", func(t *testing.T) {
 		reset()
 		for l := range 4 {
@@ -204,5 +228,32 @@ func TestMergeSpans(t *testing.T) {
 	want = []span{{100, 100}, {210, 40}, {1000, 150}, {1400, 10}}
 	if !slices.Equal(got, want) {
 		t.Errorf("gap 0: %v, want %v", got, want)
+	}
+}
+
+// A span is rounded out to whole pages, so the last one of a file that is not
+// a whole number of pages reaches past its end: reading it is not an error.
+func TestStreamerPreadAtTheEndOfTheFile(t *testing.T) {
+	const size = 8<<20 + 1000
+	path := tempFile(t, size)
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	m, err := unix.Mmap(int(f.Fd()), 0, size, unix.PROT_READ, unix.MAP_PRIVATE)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unix.Munmap(m)
+	s, err := NewStreamer(path, map[int][]Range{0: {{Off: 0, Len: size}}, 1: {{Off: 0, Len: 4096}}}, StreamOptions{Ahead: 1, Method: MethodPread})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	s.Layer(1) // layer 0 is next
+	eventually(t, "layer 0 to be read", func() bool { return s.Stats().WillNeed >= 8<<20 })
+	if st := s.Stats(); st.Errors != 0 {
+		t.Errorf("the end of the file counted as an error: %+v", st)
 	}
 }

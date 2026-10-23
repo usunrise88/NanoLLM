@@ -193,6 +193,12 @@ type Stream struct {
 	Keep int `yaml:"keep"`
 	// Evict drops a layer's pages once it is computed.
 	Evict bool `yaml:"evict"`
+	// Method is how the layers are read ahead: advise (the system's
+	// readahead, the default) or pread (reads of the file, Depth at a time;
+	// for an NVMe disk, which needs a queue deeper than one).
+	Method string `yaml:"method"`
+	// Depth is the reads in flight of method pread; zero is four.
+	Depth int `yaml:"depth"`
 }
 
 // Speculative decoding types.
@@ -210,6 +216,12 @@ type Speculative struct {
 	NMax int `yaml:"n_max"`
 	// PMin is the drafter probability below which a draft stops early.
 	PMin float64 `yaml:"p_min"`
+	// VerifyRows bounds the rows of one scheduler step spent on drafts and
+	// their checks, summed over the sequences decoding at once. Zero is
+	// auto: on a CPU with the multi-row kernels 1 + n_max (drafts only while
+	// one sequence decodes: with more the checks cost more than they save),
+	// no bound elsewhere. A negative number removes the bound.
+	VerifyRows int `yaml:"verify_rows"`
 	// Match is the number of trailing tokens that must occur earlier in the
 	// sequence for type ngram to draft the tokens that followed them
 	// (default 3).

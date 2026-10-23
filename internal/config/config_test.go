@@ -96,6 +96,12 @@ func TestValidateRefuses(t *testing.T) {
 		"bad flash attention": func(c *Config) {
 			c.Models.Overrides = map[string]ModelOverride{"m": {FlashAttention: "fast"}}
 		},
+		"bad stream method": func(c *Config) {
+			c.Models.Overrides = map[string]ModelOverride{"m": {Stream: Stream{Method: "readv"}}}
+		},
+		"negative stream depth": func(c *Config) {
+			c.Models.Overrides = map[string]ModelOverride{"m": {Stream: Stream{Method: "pread", Depth: -1}}}
+		},
 		"bad ggml-cuda switch name": func(c *Config) {
 			c.Models.Overrides = map[string]ModelOverride{"m": {CudaNano: map[string]int{"MMVQ NWARPS": 12}}}
 		},

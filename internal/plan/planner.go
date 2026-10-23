@@ -59,6 +59,10 @@ type Request struct {
 	// DraftMax bounds MTP drafts per step; 0 is DefaultDraftMax.
 	DraftMax  int
 	DraftPMin float64
+	// VerifyRows bounds the rows of a step spent on drafts and their checks
+	// over the decoding sequences. Zero asks for the default (the CPU rule of
+	// DefaultCPUMTP, none elsewhere); a negative number is no bound.
+	VerifyRows int
 	// NGram turns on prompt-lookup drafting with this match length (OPT-5);
 	// an MTP drafter, when the plan runs one, takes precedence.
 	NGram int

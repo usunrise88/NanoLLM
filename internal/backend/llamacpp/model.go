@@ -152,12 +152,13 @@ func (b *llamaBackend) Load(ctx context.Context, spec backend.LoadSpec) (backend
 	m.swaFull = cp.SwaFull
 	m.recurrent = llamaModelIsRecurrent(m.mdl) || llamaModelIsHybrid(m.mdl)
 	m.caps = backend.Capabilities{
-		NCtx:      int(llamaNCtxSeq(m.ctx)),
-		Slots:     int(llamaNSeqMax(m.ctx)),
-		NBatch:    int(llamaNBatch(m.ctx)),
-		SWAFull:   m.swaFull,
-		SWAWindow: m.nSWA,
-		NVocab:    m.nVocab,
+		NCtx:       int(llamaNCtxSeq(m.ctx)),
+		Slots:      int(llamaNSeqMax(m.ctx)),
+		NBatch:     int(llamaNBatch(m.ctx)),
+		VerifyRows: spec.VerifyRows,
+		SWAFull:    m.swaFull,
+		SWAWindow:  m.nSWA,
+		NVocab:     m.nVocab,
 	}
 	m.nOutputsMax = int(cp.NOutputsMax)
 	if m.nOutputsMax == 0 {
