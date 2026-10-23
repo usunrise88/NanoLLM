@@ -16,19 +16,21 @@ comments (`SPEC §4`) refer to it. Structure and conventions follow
 
 ## Status
 
-Stage 1 is done: everything that does not need fast hardware works and is
-verified in CI. Speed and quality are measured from stage 2 on, on real
-machines ([docs/ROADMAP.md](docs/ROADMAP.md), [docs/STAGE1.md](docs/STAGE1.md)).
+`v0.1.0-rc.1` is out as a pre-release (libraries `b11600-n8`). Stage 1 (code that does not need fast
+hardware) and stage 2 (a 16-core EPYC server, CPU only) are done; stage 3 (RTX 3070 Ti laptop) is measured
+but its gate is not closed; Apple M1 passes golden, KLD and conformance on Metal. What is left, what each
+machine showed and the audit of the roadmap are in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/STAGE2.md](docs/STAGE2.md)
+and [docs/AUTOTUNE.md](docs/AUTOTUNE.md) (every optimization variant with its results, kept behind a switch).
 
 | Area | State |
 | --- | --- |
-| Engine | purego binding to `libllama` from the pinned llama.cpp `b11600` release archives (no cgo), Gemma 4 E4B QAT (Q4_0) with its MTP drafter, greedy output identical to `llama-server`; CPU verified on a VM, Vulkan placement on lavapipe; CUDA and Metal are untested on real GPUs |
+| Engine | purego binding to `libllama` (no cgo) from our build of the pinned llama.cpp `b11600` with a series of eight patches (`patches/llama.cpp`): Q4_0 repack kernels for AVX2 and AVX-VNNI, a CUDA backend tuned to the model, Vulkan on Intel iGPUs. Gemma 4 E4B QAT (Q4_0) with its MTP drafter, greedy output identical to `llama-server`. Verified on CPU (EPYC and a laptop), Metal (M1), CUDA and Vulkan (RTX, Iris Xe: measured, golden not yet recorded) |
 | Placement | `nanollm plan` places the model from its measured tensor inventory for every preset (`vram-*`, `uma-*`, `ram-*`): VRAM, locked RAM, file-backed; range-lock keeps the locked part resident |
-| Server | OpenAI-compatible `/v1/chat/completions` (streaming, tools, `response_format`, logprobs) and the native API; continuous batching, prompt cache, model pool, API keys and rate limits; SQLite job queue with SSE progress and signed webhooks |
+| Server | OpenAI-compatible `/v1/chat/completions` (streaming, tools, `response_format`, logprobs), the native API and an Ollama-compatible one (`api.dialects: [openai, native, ollama]`, opt-in); continuous batching, prompt cache, model pool, API keys and rate limits; SQLite job queue with SSE progress and signed webhooks; a 24 h soak on the real model passed |
 | CLI | `init` (config, keys, model download with resume), `serve`, `run` (REPL or `--prompt`), `models` (catalog, pull, inspect), `plan`, `devices`, `key`, `service`, `bench`, `eval` |
 | Web UI | Chat, Jobs, Models, Devices, Settings, Bench; English and Russian |
-| Benchmark | `nanollm bench` runs presets one process each and submits results only on explicit consent; the service in `services/bench` is written and tested, not hosted yet |
-| Evaluation | `nanollm eval` suites (Russian instructions, JSON and tools, long context, 50 prompts for blind rating), KLD tooling against the reference configuration |
+| Benchmark | `nanollm bench` runs presets one process each and submits results only on explicit consent; the service in `services/bench` runs at [nano.llmto.day](https://nano.llmto.day/benchmarks) |
+| Evaluation | `nanollm eval` suites (Russian and English instructions, JSON and tools, long context, reasoning, 50 prompts for blind rating), KLD tooling against the reference configuration |
 | Delivery | release archives for Linux, Windows and macOS, `install.sh` / `install.ps1` as a service, Docker images (CPU/Vulkan, CUDA); macOS signing waits for Apple credentials |
 
 ## Install
@@ -132,7 +134,7 @@ internal/pool/          model pool, slots, prompt cache
 internal/sched/         device governor, continuous batching
 internal/chat/          Gemma 4 template, tool-call and reasoning parsers
 internal/grammar/       JSON Schema to GBNF
-internal/api/           adapter registry; native/, openai/ dialects
+internal/api/           adapter registry; native/, openai/, ollama/ dialects
 internal/server/        runtime wiring for serve and run
 internal/httpx/         auth, problem+json, SSE, middleware
 internal/registry/      catalog, manifests, downloads, tensor inventories

@@ -7,7 +7,7 @@
 # that must agree) and the candidates are held to it. Each chunk scores the second
 # half of 4096 tokens, 2048 positions with up to 4095 tokens before them.
 #
-#   scripts/kld-4096.sh [CHUNKS]      # default 16 chunks of 4096 tokens
+#   scripts/kld-4096.sh [CHUNKS]      # default 16 chunks of 4096 tokens (the corpus has 14)
 #
 # The reference logits (~0.5 MB per token) go to ~/nanollm-data/kld/ and stay
 # out of git; the reports go to bench/results/<host>/. Each run is a transient
@@ -47,11 +47,11 @@ cand() { # cand NAME TOOLS FLAGS...
 		-out "$OUT/$DATE-kld$CTX-$name.json" -- -fa on --chunks "$CHUNKS" "$@"
 }
 
-# Pairs that must agree: noise.
-cand self-t$T "$UP" -t "$T"
-cand threads4 "$UP" -t 4
+# The pair that must agree, whose KLD is the noise: another set of kernels (the repeat
+# of the reference and another thread count give exactly zero, 2.2 of QUALITY-STAGE2).
 cand variant-x64 "$X64" -t "$T"
-# Candidates of the stage: what we want to know the cost of.
-cand no-repack "$UP" -t "$T" --no-repack
+# Candidates of the stage: what we want to know the cost of. At 4096 tokens a run takes
+# an hour or two, so the one the question is about comes first.
 cand kv-q8_0 "$UP" -t "$T" -ctk q8_0 -ctv q8_0
+cand no-repack "$UP" -t "$T" --no-repack
 echo "=== done"
