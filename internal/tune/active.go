@@ -7,7 +7,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/config"
@@ -272,6 +271,3 @@ func (a *Active) Staleness() Staleness {
 	}
 	return Staleness{Stale: a.Stale || a.Missing, Missing: a.Missing, Changes: a.Changes, Suggest: &Suggest{Mode: a.Mode}}
 }
-
-// age is how long ago a profile was made.
-func (p *Profile) age() time.Duration { return time.Since(p.Created) }

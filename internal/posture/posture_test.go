@@ -1,6 +1,7 @@
 package posture
 
 import (
+	"errors"
 	"runtime"
 	"testing"
 )
@@ -27,7 +28,7 @@ func TestApplyAndBack(t *testing.T) {
 		return
 	}
 	// Elsewhere a priority cannot be taken back, and the caller is told.
-	if err != ErrRestart {
+	if !errors.Is(err, ErrRestart) {
 		t.Fatalf("Apply(false) after Apply(true): %v, want ErrRestart", err)
 	}
 	// The test process stays low for the rest of its life: acceptable.

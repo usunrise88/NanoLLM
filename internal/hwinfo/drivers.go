@@ -1,6 +1,9 @@
 package hwinfo
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // GPUDriver is a display driver the OS has installed. Intel and AMD drivers on
 // Windows are not versioned by nvidia-smi, and the registry is where their
@@ -24,17 +27,17 @@ func (d GPUDriver) Age(now time.Time) time.Duration {
 
 // vendorOf names the maker from a display adapter's description.
 func vendorOf(desc string) string {
-	d := lower(desc)
+	d := strings.ToLower(desc)
 	switch {
-	case contains(d, "nvidia"), contains(d, "geforce"), contains(d, "quadro"):
+	case strings.Contains(d, "nvidia"), strings.Contains(d, "geforce"), strings.Contains(d, "quadro"):
 		return "NVIDIA"
-	case contains(d, "intel"):
+	case strings.Contains(d, "intel"):
 		return "Intel"
-	case contains(d, "amd"), contains(d, "radeon"), contains(d, "ati "):
+	case strings.Contains(d, "amd"), strings.Contains(d, "radeon"), strings.Contains(d, "ati "):
 		return "AMD"
-	case contains(d, "apple"):
+	case strings.Contains(d, "apple"):
 		return "Apple"
-	case contains(d, "microsoft basic"), contains(d, "basic render"):
+	case strings.Contains(d, "microsoft basic"), strings.Contains(d, "basic render"):
 		return "Microsoft"
 	}
 	return ""

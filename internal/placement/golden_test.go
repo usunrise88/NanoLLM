@@ -21,7 +21,7 @@ const goldenDir = "../../testdata/plan/tune"
 func TestGoldenModePlans(t *testing.T) {
 	iris := backend.Device{Backend: "llamacpp", ID: "vulkan1", Type: backend.GPU, Name: "Iris Xe", MemoryTotal: 16 * gib, MemoryFree: 15 * gib,
 		Unified: true, Features: []string{backend.FeatureFlashAttnSmallBatch}}
-	cap4 := int64(4*gib + 100<<20)
+	cap4 := 4*gib + 100<<20
 	modes := map[string]Tune{
 		"silent":   {Source: SourceMode, Preset: "ram-4g", MinNCtx: 4608, Threads: 2, ThreadsBatch: 2},
 		"optimal":  {Source: SourceMode, MemCap: cap4, MinNCtx: 4608, Threads: 7, ThreadsBatch: 7},
@@ -43,6 +43,12 @@ func TestGoldenModePlans(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			r := resolve(t, Input{Device: c.device, Tune: modes[c.mode], GOOS: "windows"})
+			if c.mode == "powerful" {
+				// The powerful mode takes the machine's default teams
+				// (hwinfo.DefaultThreads): the machine that runs the test, not the one
+				// the plan is about.
+				r.Spec.Threads, r.Spec.ThreadsBatch = 0, 0
+			}
 			got, err := json.MarshalIndent(struct {
 				Plan any `json:"plan"`
 				Spec any `json:"spec"`

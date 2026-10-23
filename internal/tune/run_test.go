@@ -156,10 +156,6 @@ func TestPowerfulUsesNoMemoryCap(t *testing.T) {
 	}
 }
 
-// A drafter whose answers differ from plain decoding is turned off and the
-// run says so.
-type mismatchBackend struct{ *fake.Backend }
-
 func TestVariantsOfADevice(t *testing.T) {
 	cands := &Candidate{Device: Device{Type: "gpu", Kind: "cuda"}, Class: rtx3070ti}
 	vs, static, mech := variantsFor(&Survey{}, cands, PlanInput{})

@@ -12,14 +12,6 @@ import (
 	"github.com/usunrise88/nanollm/internal/registry"
 )
 
-// machine is a scripted computer: every device runs the fake engine at its own
-// speed, the numbers of bench/results/*/optimize-stage0-* made quicker by the
-// same factor, so a run takes seconds and the ratios stay the real ones.
-type machine struct {
-	survey  *Survey
-	engines map[string]*fake.Backend
-}
-
 // scaleUp is how much faster than the real device the scripted one runs.
 const scaleUp = 5
 
@@ -56,9 +48,9 @@ func (b *scriptedBackend) Load(ctx context.Context, spec backend.LoadSpec) (back
 // rusunrisebook is an i7-12700H laptop with an RTX 3070 Ti and an Iris Xe.
 func rusunrisebook(t *testing.T, m registry.Manifest) (*Survey, *scriptedBackend) {
 	t.Helper()
-	cpu := backend.Device{Backend: fake.Name, ID: "cpu", Type: backend.CPU, Name: "12th Gen Intel(R) Core(TM) i7-12700H", MemoryTotal: 32 * int64(GiB), MemoryFree: 12 * int64(GiB), Features: []string{backend.FeatureMultiRowQ4_0}}
-	rtx := backend.Device{Backend: fake.Name, ID: "cuda0", Type: backend.GPU, Name: "NVIDIA GeForce RTX 3070 Ti Laptop GPU", MemoryTotal: 8 * int64(GiB), MemoryFree: 7 * int64(GiB), Features: []string{backend.FeatureCudaNano, backend.FeatureBackendSampling}}
-	iris := backend.Device{Backend: fake.Name, ID: "vulkan1", Type: backend.GPU, Name: "Intel(R) Iris(R) Xe Graphics", MemoryTotal: 16 * int64(GiB), MemoryFree: 15 * int64(GiB), Unified: true}
+	cpu := backend.Device{Backend: fake.Name, ID: "cpu", Type: backend.CPU, Name: "12th Gen Intel(R) Core(TM) i7-12700H", MemoryTotal: 32 * GiB, MemoryFree: 12 * GiB, Features: []string{backend.FeatureMultiRowQ4_0}}
+	rtx := backend.Device{Backend: fake.Name, ID: "cuda0", Type: backend.GPU, Name: "NVIDIA GeForce RTX 3070 Ti Laptop GPU", MemoryTotal: 8 * GiB, MemoryFree: 7 * GiB, Features: []string{backend.FeatureCudaNano, backend.FeatureBackendSampling}}
+	iris := backend.Device{Backend: fake.Name, ID: "vulkan1", Type: backend.GPU, Name: "Intel(R) Iris(R) Xe Graphics", MemoryTotal: 16 * GiB, MemoryFree: 15 * GiB, Unified: true}
 	b := &scriptedBackend{
 		Backend: fake.New(fake.Options{}),
 		devices: []backend.Device{cpu, rtx, iris},
@@ -72,7 +64,7 @@ func rusunrisebook(t *testing.T, m registry.Manifest) (*Survey, *scriptedBackend
 		Versions: Versions{LibsRelease: "b1-n1"},
 		OS:       OSInfo{Name: "windows"},
 		CPU:      CPUInfo{Model: cpu.Name, Arch: "amd64", Physical: 14, Logical: 20, PCores: 6, ECores: 8, Variant: "alderlake", Features: cpu.Features, NUMANodes: 1},
-		RAM:      RAMInfo{Total: 32 * int64(GiB), Available: 12 * int64(GiB)},
+		RAM:      RAMInfo{Total: 32 * GiB, Available: 12 * GiB},
 		Disk:     DiskInfo{Path: "fake.gguf", Speed: &hwinfo.DiskSpeed{SeqMiBs: 3295}},
 		Model:    modelInfo(SurveyOptions{Manifest: m, ModelPath: "fake.gguf", DrafterPath: "fake-drafter.gguf"}),
 		Load:     LoadInfo{CPUPercent: 3, GPUPercent: 2},
@@ -91,7 +83,7 @@ func rusunrisebook(t *testing.T, m registry.Manifest) (*Survey, *scriptedBackend
 // hyper is a 16-core EPYC server with four memory nodes and a hard disk.
 func hyper(t *testing.T, m registry.Manifest) (*Survey, *scriptedBackend) {
 	t.Helper()
-	cpu := backend.Device{Backend: fake.Name, ID: "cpu", Type: backend.CPU, Name: "AMD EPYC 7351P 16-Core Processor", MemoryTotal: 62 * int64(GiB), MemoryFree: 50 * int64(GiB)}
+	cpu := backend.Device{Backend: fake.Name, ID: "cpu", Type: backend.CPU, Name: "AMD EPYC 7351P 16-Core Processor", MemoryTotal: 62 * GiB, MemoryFree: 50 * GiB}
 	b := &scriptedBackend{
 		Backend: fake.New(fake.Options{}),
 		devices: []backend.Device{cpu},
@@ -101,7 +93,7 @@ func hyper(t *testing.T, m registry.Manifest) (*Survey, *scriptedBackend) {
 		Versions: Versions{LibsRelease: "b1-n1"},
 		OS:       OSInfo{Name: "linux"},
 		CPU:      CPUInfo{Model: cpu.Name, Arch: "amd64", Physical: 16, Logical: 32, Variant: "haswell", NUMANodes: 4},
-		RAM:      RAMInfo{Total: 62 * int64(GiB), Available: 50 * int64(GiB)},
+		RAM:      RAMInfo{Total: 62 * GiB, Available: 50 * GiB},
 		Disk:     DiskInfo{Path: "fake.gguf", Speed: &hwinfo.DiskSpeed{SeqMiBs: 130}},
 		Model:    modelInfo(SurveyOptions{Manifest: m, ModelPath: "fake.gguf", DrafterPath: "fake-drafter.gguf"}),
 		Load:     LoadInfo{CPUPercent: 2, GPUPercent: -1},

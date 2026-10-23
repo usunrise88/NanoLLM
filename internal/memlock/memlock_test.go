@@ -72,7 +72,7 @@ func TestPinAndClose(t *testing.T) {
 // mapping ("Access is denied"), which failed every range-locked run of the
 // drafter (M8 with MTP).
 func TestPinRangeToTheEndOfAnOddSizedFile(t *testing.T) {
-	size := int64(3*PageSize + 704)
+	size := 3*PageSize + 704
 	path := tempFile(t, size)
 	pin, err := PinFile(path, []Range{{Off: PageSize, Len: size - PageSize}})
 	if errors.Is(err, ErrLimit) {

@@ -100,8 +100,8 @@ func summarize(f fixture) string {
 }
 
 func fixtures() []fixture {
-	rtxMem := MemoryResult{PeakPrivate: 695 * int64(MiB), VRAMDedicated: 3420 * int64(MiB), VRAMShared: 176 * int64(MiB), VRAMSource: "pdh"}
-	cpuMem := MemoryResult{PeakPrivate: 3374 * int64(MiB)}
+	rtxMem := MemoryResult{PeakPrivate: 695 * MiB, VRAMDedicated: 3420 * MiB, VRAMShared: 176 * MiB, VRAMSource: "pdh"}
+	cpuMem := MemoryResult{PeakPrivate: 3374 * MiB}
 	nvme := &hwinfo.DiskSpeed{SeqMiBs: 3295}
 	hdd := &hwinfo.DiskSpeed{SeqMiBs: 124}
 	rtx := func() *Candidate {
@@ -115,9 +115,9 @@ func fixtures() []fixture {
 	cores := Cores{Physical: 14, Logical: 20}
 
 	over := rtxMem
-	over.PeakPrivate = 1000 * int64(MiB)
+	over.PeakPrivate = 1000 * MiB
 	spill := rtxMem
-	spill.VRAMShared = 2084 * int64(MiB)
+	spill.VRAMShared = 2084 * MiB
 
 	return []fixture{
 		{
@@ -169,8 +169,8 @@ func fixtures() []fixture {
 				cpu("ram-4g", 3362),
 			},
 			probe: map[string]ProbeResult{
-				"llamacpp:cpu/ram-1g": probe(MemoryResult{PeakPrivate: 611 * int64(MiB)}, 21, vr("off", 0, 0, 2.7)),
-				"llamacpp:cpu/ram-4g": probe(MemoryResult{PeakPrivate: 3374 * int64(MiB)}, 90, vr("off", 0, 0, 11.0)),
+				"llamacpp:cpu/ram-1g": probe(MemoryResult{PeakPrivate: 611 * MiB}, 21, vr("off", 0, 0, 2.7)),
+				"llamacpp:cpu/ram-4g": probe(MemoryResult{PeakPrivate: 3374 * MiB}, 90, vr("off", 0, 0, 11.0)),
 			},
 		},
 		{
@@ -182,8 +182,8 @@ func fixtures() []fixture {
 				cand(cpuDev(), "ram-3g", "M7 ram-ple-disk", 3010*MiB, 0, 0),
 			},
 			probe: map[string]ProbeResult{
-				"llamacpp:cpu/ram-1g": probe(MemoryResult{PeakPrivate: 611 * int64(MiB)}, 21, vr("off", 0, 0, 2.7)),
-				"llamacpp:cpu/ram-3g": probe(MemoryResult{PeakPrivate: 3030 * int64(MiB)}, 30, vr("off", 0, 0, 8.4)),
+				"llamacpp:cpu/ram-1g": probe(MemoryResult{PeakPrivate: 611 * MiB}, 21, vr("off", 0, 0, 2.7)),
+				"llamacpp:cpu/ram-3g": probe(MemoryResult{PeakPrivate: 3030 * MiB}, 30, vr("off", 0, 0, 8.4)),
 			},
 		},
 		{
@@ -197,7 +197,7 @@ func fixtures() []fixture {
 			name: "draft-mismatch", mode: Powerful, cores: cores, disk: nvme,
 			cands: []*Candidate{cand(cpuDev(), "", "M6 ram-full", 6000*MiB, 0, 0)},
 			probe: func() map[string]ProbeResult {
-				p := probe(MemoryResult{PeakPrivate: 6000 * int64(MiB)}, 148, vr("off", 0, 0, 10.3), vr("mtp2/0.5", 2, 0.5, 19.1))
+				p := probe(MemoryResult{PeakPrivate: 6000 * MiB}, 148, vr("off", 0, 0, 10.3), vr("mtp2/0.5", 2, 0.5, 19.1))
 				p.Verify = &VerifyResult{Checked: true, Match: false, At: 7, Tokens: 32}
 				return map[string]ProbeResult{"llamacpp:cpu": p}
 			}(),
@@ -291,7 +291,7 @@ func TestDecideRules(t *testing.T) {
 // shared video memory above the plan's host memory (not counting the driver's)
 // by more than the slack is a spill.
 func TestSpillRule(t *testing.T) {
-	mib := int64(MiB)
+	mib := MiB
 	rtx := func(host int64) *Candidate {
 		c := cand(cudaDev(), "", "M", host*mib+plan.GPUHostMemory, 3449*mib, 0)
 		c.DriverHost = plan.GPUHostMemory

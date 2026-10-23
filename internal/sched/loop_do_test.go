@@ -97,7 +97,7 @@ func (a *atomicInt) get() int  { a.mu.Lock(); defer a.mu.Unlock(); return a.v }
 func TestDoReturnsWhatFnReturnsAndHonoursCancel(t *testing.T) {
 	l, m := newLoop(t, fake.Options{DecodeRate: 100}, backend.LoadSpec{})
 	boom := errors.New("boom")
-	if err := l.Do(context.Background(), func(backend.Model) error { return boom }); err != boom {
+	if err := l.Do(context.Background(), func(backend.Model) error { return boom }); !errors.Is(err, boom) {
 		t.Fatalf("got %v", err)
 	}
 	// A request keeps the loop busy; a Do whose caller gives up before the

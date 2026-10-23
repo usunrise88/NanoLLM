@@ -20,7 +20,7 @@ func ProcessVRAM(pid int) (VRAM, error) {
 	defer cancel()
 	out, err := exec.CommandContext(ctx, "nvidia-smi", "--query-compute-apps=pid,used_memory", "--format=csv,noheader,nounits").Output()
 	if err != nil {
-		return VRAM{}, fmt.Errorf("%w: nvidia-smi: %v", ErrUnavailable, err)
+		return VRAM{}, fmt.Errorf("%w: nvidia-smi: %w", ErrUnavailable, err)
 	}
 	return parseComputeApps(string(out), pid)
 }

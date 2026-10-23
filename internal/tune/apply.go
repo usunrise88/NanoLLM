@@ -51,13 +51,15 @@ func Apply(p *Profile, o ApplyOptions) (ApplyResult, error) {
 	}
 	b, err := os.ReadFile(o.ConfigPath)
 	if err != nil {
+		// Not a failure of the run: the profile is saved, and the person is told
+		// what to set by hand.
 		res.Note = "the configuration cannot be read: " + err.Error()
-		return res, nil
+		return res, nil //nolint:nilerr // the error is reported in Note
 	}
 	doc, err := config.ParseDocument(b)
 	if err != nil {
 		res.Note = err.Error()
-		return res, nil
+		return res, nil //nolint:nilerr // the error is reported in Note
 	}
 	before := doc.TuneMode()
 	doc.SetTuneMode(string(p.Mode))

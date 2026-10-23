@@ -102,14 +102,3 @@ func (r *runs[T]) get(id string) (T, bool) {
 	v, ok := r.byID[id]
 	return v, ok
 }
-
-// latest is the most recent run, if any.
-func (r *runs[T]) latest() (T, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	var zero T
-	if len(r.order) == 0 {
-		return zero, false
-	}
-	return r.byID[r.order[len(r.order)-1]], true
-}
