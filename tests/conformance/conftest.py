@@ -1,4 +1,5 @@
-"""Conformance tests: the official OpenAI Python client against `nanollm serve`.
+"""Conformance tests: the official OpenAI Python client (and, in test_ollama.py,
+the Ollama one) against `nanollm serve`.
 
 By default a server is started on the fake backend, built from this checkout
 (or taken from $NANOLLM_BIN). Set NANOLLM_BASE_URL to run the same suite
@@ -16,6 +17,9 @@ import pytest
 from openai import OpenAI
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+# The key of the second, authenticated server that test_ollama.py starts.
+SECURED_KEY = "sk-conformance"
 
 
 def _free_port():
@@ -39,6 +43,50 @@ def _wait_ready(base, proc, timeout=60):
     raise RuntimeError("nanollm did not become ready at " + base)
 
 
+_built = None
+
+
+def _binary():
+    """$NANOLLM_BIN, or a binary built once from this checkout."""
+    global _built
+    binary = os.environ.get("NANOLLM_BIN")
+    if binary:
+        return binary
+    if _built is None:
+        _built = os.path.join(tempfile.mkdtemp(prefix="nanollm-bin-"), "nanollm")
+        subprocess.run(["go", "build", "-o", _built, "./cmd/nanollm"], cwd=ROOT, check=True)
+    return _built
+
+
+def _start(extra=""):
+    """Starts `nanollm serve` on the fake backend with every dialect; returns (base URL, process)."""
+    tmp = tempfile.mkdtemp(prefix="nanollm-conformance-")
+    port = _free_port()
+    cfg = os.path.join(tmp, "nanollm.yaml")
+    with open(cfg, "w") as f:
+        f.write(
+            "server:\n  addr: 127.0.0.1:%d\n  data_dir: %s\n"
+            "api:\n  dialects: [openai, native, ollama]\n"
+            "backends:\n  enabled: [fake]\n"
+            "generation:\n  max_tokens_cap: 512\n"
+            "log:\n  level: warn\n%s" % (port, os.path.join(tmp, "data"), extra)
+        )
+    log = open(os.path.join(tmp, "serve.log"), "w")
+    proc = subprocess.Popen([_binary(), "serve", "-config", cfg], stdout=log, stderr=log)
+    base = "http://127.0.0.1:%d" % port
+    try:
+        _wait_ready(base, proc)
+    except BaseException:
+        proc.terminate()
+        raise
+    return base, proc
+
+
+def _stop(proc):
+    proc.terminate()
+    proc.wait(timeout=30)
+
+
 @pytest.fixture(scope="session")
 def server():
     base = os.environ.get("NANOLLM_BASE_URL")
@@ -46,29 +94,23 @@ def server():
         _wait_ready(base.rstrip("/"), None)
         yield {"base": base.rstrip("/"), "fake": False}
         return
-    tmp = tempfile.mkdtemp(prefix="nanollm-conformance-")
-    binary = os.environ.get("NANOLLM_BIN")
-    if not binary:
-        binary = os.path.join(tmp, "nanollm")
-        subprocess.run(["go", "build", "-o", binary, "./cmd/nanollm"], cwd=ROOT, check=True)
-    port = _free_port()
-    cfg = os.path.join(tmp, "nanollm.yaml")
-    with open(cfg, "w") as f:
-        f.write(
-            "server:\n  addr: 127.0.0.1:%d\n  data_dir: %s\n"
-            "backends:\n  enabled: [fake]\n"
-            "generation:\n  max_tokens_cap: 512\n"
-            "log:\n  level: warn\n" % (port, os.path.join(tmp, "data"))
-        )
-    log = open(os.path.join(tmp, "serve.log"), "w")
-    proc = subprocess.Popen([binary, "serve", "-config", cfg], stdout=log, stderr=log)
-    base = "http://127.0.0.1:%d" % port
+    base, proc = _start()
     try:
-        _wait_ready(base, proc)
         yield {"base": base, "fake": True}
     finally:
-        proc.terminate()
-        proc.wait(timeout=30)
+        _stop(proc)
+
+
+@pytest.fixture(scope="session")
+def secured_server(server):
+    """A second fake server that requires an API key: {"base": …, "key": …}."""
+    if not server["fake"]:
+        pytest.skip("starts a server of its own, on the fake backend")
+    base, proc = _start("auth:\n  mode: apikey\n  keys:\n    - {name: tester, secret: %s}\n" % SECURED_KEY)
+    try:
+        yield {"base": base, "key": SECURED_KEY}
+    finally:
+        _stop(proc)
 
 
 @pytest.fixture(scope="session")
