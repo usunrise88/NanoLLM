@@ -16,9 +16,9 @@
 //     and the model-building routes (/api/create, /api/copy, /api/push,
 //     /api/blobs, DELETE /api/delete) answer 501. Delete a model with
 //     `nanollm models rm`.
-//   - Image input, "raw", "template", "suffix", "context" and logprobs answer
-//     400: the prompt always goes through the model's own chat template, and the
-//     model has no vision input yet.
+//   - Image input, "raw", "template", "suffix" and "context" answer 400: the
+//     prompt always goes through the model's own chat template, and the model
+//     has no vision input yet.
 //   - Sampling that a request leaves out comes from the model card, not from
 //     Ollama's defaults (temperature 0.8). options.num_ctx is accepted and
 //     ignored: the context is what the placement plan leaves, and a prompt that
@@ -65,7 +65,7 @@ func init() { adapter.Register(config.DialectOllama, &Adapter{}) }
 // CompatVersion is the Ollama release whose API this dialect follows, reported
 // by GET /api/version. Clients gate features on it, so it names the behaviour
 // implemented here and not NanoLLM's own build.
-const CompatVersion = "0.12.6"
+const CompatVersion = "0.12.11"
 
 // Quantization is what every model reports as quantization_level: the one model
 // the server carries is a QAT int4 (Q4_0) build.

@@ -24,7 +24,10 @@ type common struct {
 	Stream    *bool           `json:"stream"`
 	Think     json.RawMessage `json:"think"`
 	KeepAlive json.RawMessage `json:"keep_alive"`
-	Logprobs  bool            `json:"logprobs"`
+	// Logprobs asks for the log-probability of each token chosen, and
+	// TopLogprobs for that many alternatives at each position.
+	Logprobs    bool `json:"logprobs"`
+	TopLogprobs int  `json:"top_logprobs"`
 }
 
 type chatRequest struct {
@@ -77,9 +80,6 @@ const noImages = "this model does not accept images: image input arrives with mu
 func (c common) base(m registry.Manifest) (core.ChatRequest, keepAlive, []core.Warning, error) {
 	var req core.ChatRequest
 	var ka keepAlive
-	if c.Logprobs {
-		return req, ka, nil, core.Errorf(core.CodeInvalidRequest, "logprobs are not supported by the ollama API of this server; /v1/chat/completions has them").WithParam("logprobs")
-	}
 	opts, err := parseOptions(c.Options)
 	if err != nil {
 		return req, ka, nil, err
@@ -97,6 +97,10 @@ func (c common) base(m registry.Manifest) (core.ChatRequest, keepAlive, []core.W
 	}
 	req.Generation = core.Generation{
 		Model: m.ID, Sampling: opts.Sampling, MaxTokens: opts.NumPredict, Stop: opts.Stop, ResponseFormat: format,
+		Logprobs: c.Logprobs,
+	}
+	if c.Logprobs {
+		req.TopLogprobs = c.TopLogprobs
 	}
 	req.EnableThinking = think
 	return req, ka, opts.warning(), nil
@@ -208,6 +212,35 @@ func toolCalls(calls []core.ToolCall, from int) []respToolCall {
 	return out
 }
 
+// respLogprob is one chosen token's log-probability, with the alternatives
+// that were asked for.
+type respLogprob struct {
+	Token       string        `json:"token"`
+	Logprob     float64       `json:"logprob"`
+	Bytes       []int         `json:"bytes,omitempty"`
+	TopLogprobs []respLogprob `json:"top_logprobs,omitempty"`
+}
+
+func logprobs(lps []core.Logprob) []respLogprob {
+	var out []respLogprob
+	for _, lp := range lps {
+		e := respLogprob{Token: lp.Token, Logprob: lp.Logprob, Bytes: byteList(lp.Token)}
+		for _, t := range lp.Top {
+			e.TopLogprobs = append(e.TopLogprobs, respLogprob{Token: t.Token, Logprob: t.Logprob, Bytes: byteList(t.Token)})
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+func byteList(s string) []int {
+	out := make([]int, len(s))
+	for i := range len(s) {
+		out[i] = int(s[i])
+	}
+	return out
+}
+
 // timings are the durations (nanoseconds) and counts the last line carries.
 type timings struct {
 	TotalDuration      int64 `json:"total_duration"`
@@ -234,9 +267,12 @@ func timingsOf(start time.Time, res *core.ChatResult) *timings {
 type fragment struct {
 	content, thinking string
 	calls             []respToolCall
+	logprobs          []respLogprob
 }
 
-func (f fragment) empty() bool { return f.content == "" && f.thinking == "" && len(f.calls) == 0 }
+func (f fragment) empty() bool {
+	return f.content == "" && f.thinking == "" && len(f.calls) == 0 && len(f.logprobs) == 0
+}
 
 // final is what closes an answer.
 type final struct {
@@ -262,6 +298,7 @@ type chatResponse struct {
 	Done       bool      `json:"done"`
 	DoneReason string    `json:"done_reason,omitempty"`
 	*timings
+	Logprobs []respLogprob `json:"logprobs,omitempty"`
 	// Warnings is an extension; clients ignore it.
 	Warnings []core.Warning `json:"warnings,omitempty"`
 }
@@ -282,6 +319,7 @@ type generateResponse struct {
 	Done       bool      `json:"done"`
 	DoneReason string    `json:"done_reason,omitempty"`
 	*timings
+	Logprobs []respLogprob  `json:"logprobs,omitempty"`
 	Warnings []core.Warning `json:"warnings,omitempty"`
 }
 
@@ -318,7 +356,8 @@ func (h *handler) chat(w http.ResponseWriter, r *http.Request) {
 	spec := &runSpec{req: creq, stream: req.streaming(), keep: keep, warnings: warns}
 	spec.render = func(f fragment, fin *final) any {
 		resp := chatResponse{Model: name, CreatedAt: time.Now().UTC(),
-			Message: chatReply{Role: core.RoleAssistant, Content: f.content, Thinking: f.thinking, ToolCalls: f.calls}}
+			Message:  chatReply{Role: core.RoleAssistant, Content: f.content, Thinking: f.thinking, ToolCalls: f.calls},
+			Logprobs: f.logprobs}
 		if fin != nil {
 			resp.Done, resp.DoneReason, resp.timings, resp.Warnings = true, fin.reason, fin.timings, fin.warnings
 		}
@@ -382,7 +421,7 @@ func (h *handler) generate(w http.ResponseWriter, r *http.Request) {
 	name := req.Model
 	spec := &runSpec{req: creq, stream: req.streaming(), keep: keep, warnings: warns}
 	spec.render = func(f fragment, fin *final) any {
-		resp := generateResponse{Model: name, CreatedAt: time.Now().UTC(), Response: f.content, Thinking: f.thinking}
+		resp := generateResponse{Model: name, CreatedAt: time.Now().UTC(), Response: f.content, Thinking: f.thinking, Logprobs: f.logprobs}
 		if fin != nil {
 			resp.Done, resp.DoneReason, resp.timings, resp.Warnings = true, fin.reason, fin.timings, fin.warnings
 		}
@@ -463,6 +502,7 @@ func (h *handler) serve(w http.ResponseWriter, r *http.Request, m registry.Manif
 		}
 		httpx.WriteJSON(w, http.StatusOK, spec.render(fragment{
 			content: res.Message.Content, thinking: res.Message.ReasoningContent, calls: toolCalls(res.Message.ToolCalls, 0),
+			logprobs: logprobs(res.Logprobs),
 		}, finish(res)))
 		h.unloadAfter(r, m, spec.keep)
 		return
@@ -547,7 +587,7 @@ func (h *handler) stream(w http.ResponseWriter, ctx context.Context, svc core.Se
 				}
 				return st.Line(spec.render(fragment{}, finish(res.res))) == nil
 			}
-			f := fragment{content: d.Content, thinking: d.ReasoningContent, calls: toolCalls(d.ToolCalls, calls)}
+			f := fragment{content: d.Content, thinking: d.ReasoningContent, calls: toolCalls(d.ToolCalls, calls), logprobs: logprobs(d.Logprobs)}
 			calls += len(d.ToolCalls)
 			if f.empty() {
 				continue

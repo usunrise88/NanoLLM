@@ -577,6 +577,60 @@ func TestFormat(t *testing.T) {
 	wantError(t, e.post(t, "/api/chat", `{"model":"gemma4","format":5,`+msgs("x")+`}`), 400, "format")
 }
 
+func TestLogprobs(t *testing.T) {
+	e := newEnv(t, setup{})
+	type entry struct {
+		Token       string
+		Logprob     float64
+		Bytes       []int
+		TopLogprobs []struct {
+			Token   string
+			Logprob float64
+		} `json:"top_logprobs"`
+	}
+	type withLogprobs struct{ Logprobs []entry }
+
+	ask := `"model":"gemma4","logprobs":true,"top_logprobs":2,`
+	whole := decodeJSON[withLogprobs](t, e.post(t, "/api/chat", `{`+ask+`"stream":false,`+msgs("abc [[fake:echo]]")+`}`))
+	if r := e.spy.last(); !r.Logprobs || r.TopLogprobs != 2 {
+		t.Errorf("core got %+v", r.Generation)
+	}
+	if len(whole.Logprobs) < 3 {
+		t.Fatalf("%+v", whole)
+	}
+	for _, lp := range whole.Logprobs {
+		if lp.Token == "" || lp.Logprob > 0 || len(lp.Bytes) == 0 || len(lp.TopLogprobs) != 2 {
+			t.Errorf("%+v", lp)
+		}
+	}
+
+	// Streamed, each line carries the log-probabilities of its own tokens.
+	var streamed int
+	resp := e.post(t, "/api/chat", `{`+ask+msgs("abc [[fake:echo]]")+`}`)
+	sc := bufio.NewScanner(resp.Body)
+	for sc.Scan() {
+		var l withLogprobs
+		if err := json.Unmarshal(sc.Bytes(), &l); err != nil {
+			t.Fatal(err)
+		}
+		streamed += len(l.Logprobs)
+	}
+	if streamed != len(whole.Logprobs) {
+		t.Errorf("%d entries streamed, %d buffered", streamed, len(whole.Logprobs))
+	}
+
+	gen := decodeJSON[withLogprobs](t, e.post(t, "/api/generate", `{`+ask+`"stream":false,"prompt":"abc [[fake:echo]]"}`))
+	if len(gen.Logprobs) != len(whole.Logprobs) {
+		t.Errorf("generate: %d entries", len(gen.Logprobs))
+	}
+
+	// Not asked for, not sent.
+	raw, _ := io.ReadAll(e.post(t, "/api/chat", `{"model":"gemma4","stream":false,`+msgs("abc [[fake:echo]]")+`}`).Body)
+	if strings.Contains(string(raw), "logprobs") {
+		t.Errorf("logprobs without being asked: %s", raw)
+	}
+}
+
 func TestThink(t *testing.T) {
 	e := newEnv(t, setup{})
 	for _, tc := range []struct {
@@ -745,7 +799,7 @@ func TestUnsupportedAndInvalid(t *testing.T) {
 		{"template", "/api/generate", `{"model":"gemma4","prompt":"x","template":"{{ .Prompt }}"}`, "custom template", 400},
 		{"suffix", "/api/generate", `{"model":"gemma4","prompt":"x","suffix":"y"}`, "suffix", 400},
 		{"context", "/api/generate", `{"model":"gemma4","prompt":"x","context":[1,2]}`, "context", 400},
-		{"logprobs", "/api/chat", `{"model":"gemma4","logprobs":true,` + msgs("x") + `}`, "logprobs", 400},
+		{"too many top_logprobs", "/api/chat", `{"model":"gemma4","logprobs":true,"top_logprobs":99,` + msgs("x") + `}`, "top_logprobs", 400},
 		{"bad JSON", "/api/chat", `not json`, "not valid JSON", 400},
 		{"empty body", "/api/chat", ``, "empty", 400},
 		{"content that is not a string", "/api/chat", `{"model":"gemma4","messages":[{"role":"user","content":[{"type":"text","text":"x"}]}]}`, "not valid JSON", 400},
