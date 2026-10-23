@@ -145,9 +145,19 @@ type File struct {
 	// FileSize is the size of the file on disk; 0 when the header came from a
 	// stream of unknown length.
 	FileSize int64
+	// KVEnd is where the metadata ends and the tensor table starts; TableEnd
+	// where the table ends, before the padding up to DataOffset. Relayout
+	// copies the metadata between the fixed 24-byte start and KVEnd as it is.
+	KVEnd    int64
+	TableEnd int64
 
-	index map[string]int
+	index    map[string]int
+	alignOff int64 // offset of the u32 value of general.alignment; 0 when absent
 }
+
+// AlignmentOffset is where the u32 value of general.alignment sits in the
+// file; false when the key is absent and the alignment is the default.
+func (f *File) AlignmentOffset() (int64, bool) { return f.alignOff, f.alignOff > 0 }
 
 // FileOffset is where t's bytes start in the file.
 func (f *File) FileOffset(t TensorInfo) int64 { return f.DataOffset + int64(t.Offset) }
@@ -401,9 +411,13 @@ func Parse(r io.Reader) (*File, error) {
 		if err != nil {
 			return nil, fmt.Errorf("metadata %q: %w", key, err)
 		}
+		if key == KeyAlignment {
+			f.alignOff = rd.n - 4 // checked to be a u32 below
+		}
 		f.index[key] = len(f.KV)
 		f.KV = append(f.KV, KV{Key: key, Value: v})
 	}
+	f.KVEnd = rd.n
 
 	if v, ok := f.Lookup(KeyAlignment); ok {
 		a, isU32 := v.Data.(uint32)
@@ -430,6 +444,7 @@ func Parse(r io.Reader) (*File, error) {
 		f.Tensors = append(f.Tensors, t)
 	}
 
+	f.TableEnd = rd.n
 	f.DataOffset = rd.n
 	if nTensors > 0 {
 		f.DataOffset = pad(rd.n, f.Alignment)

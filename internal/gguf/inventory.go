@@ -28,8 +28,12 @@ type Tensor struct {
 // works from, so it carries the file's identity: an inventory is only valid
 // for the bytes whose SHA256 it names.
 type Inventory struct {
-	Role       string  `json:"role"`
-	SHA256     string  `json:"sha256"`
+	Role   string `json:"role"`
+	SHA256 string `json:"sha256"`
+	// Layout names the tensor order of the file: empty for the file as
+	// published, LayoutNano for one written by Relayout. The planner merges
+	// the stream ranges of a nano file, which lie back to back by design.
+	Layout     string  `json:"layout,omitempty"`
 	Size       int64   `json:"size"`
 	Version    uint32  `json:"version"`
 	Alignment  int64   `json:"alignment"`
