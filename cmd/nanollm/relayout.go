@@ -181,7 +181,7 @@ var rangeCases = []rangeCase{
 // printRanges plans the original inventory and the relaid one under the same
 // presets and prints how many lock and stream ranges each makes.
 func printRanges(w io.Writer, before, after gguf.Inventory) {
-	fmt.Fprintf(w, "\n  ranges the planner makes   %-30s %-30s\n", "original", "nano")
+	fmt.Fprintf(w, "\n  ranges the planner makes   %-34s %-34s\n", "original", "nano")
 	count := func(inv gguf.Inventory, c rangeCase) string {
 		preset, err := plan.LookupPreset(c.preset)
 		if err != nil {
@@ -210,7 +210,7 @@ func printRanges(w io.Writer, before, after gguf.Inventory) {
 		return s
 	}
 	for _, c := range rangeCases {
-		fmt.Fprintf(w, "  %-26s %-30s %-30s\n", c.label, count(before, c), count(after, c))
+		fmt.Fprintf(w, "  %-26s %-34s %-34s\n", c.label, count(before, c), count(after, c))
 	}
 }
 

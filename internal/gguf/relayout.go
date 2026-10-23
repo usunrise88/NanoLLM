@@ -29,8 +29,8 @@ import (
 // tensor table to list tensors in the order of their data and each tensor to
 // start where the previous one ends, padded to the single general.alignment of
 // the file. So the layout cannot put a section start on a 2 MiB boundary
-// without padding every tensor to 2 MiB (E4B: +1 GiB, and the pinned section
-// 700 MiB wide); the alignment is the knob, and its default is the 4 KiB of a
+// without padding every tensor to 2 MiB (E4B: +1.1 GiB, and the pinned section
+// 640 MiB wide); the alignment is the knob, and its default is the 4 KiB of a
 // disk block and a page, the unit O_DIRECT and mlock work in.
 
 // LayoutVersion is the version of the order Relayout writes. A change of the

@@ -49,7 +49,7 @@ models:
       # layout: original  # original | nano (OPT-7): nano loads the copy that `nanollm models relayout ID` wrote beside
       #                   # the model file: tensors in execution order, the pinned set and each layer's weights in one
       #                   # range each (the plan is made from that file's own offsets); the same bytes, 0.8 MiB more
-      #                   # on disk. Refuses to start without the copy. A probe on a hard disk showed no difference
+      #                   # on disk. Refuses to load without the copy. A probe on a hard disk showed no difference
       #                   # (docs/AUTOTUNE.md, OPT-7); meant for NVMe and other disks
       # flash_attention: auto  # auto | on | off | small: small keeps flash attention for batches of up to 8 tokens and
       #                   # prefills through the matmul attention (auto on an Intel iGPU with Vulkan on Windows
