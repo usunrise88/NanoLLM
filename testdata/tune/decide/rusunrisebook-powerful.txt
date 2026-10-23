@@ -1,0 +1,5 @@
+mode powerful
+  llamacpp:cuda0             chosen                   answer    2.3 s  decode  179.8  held  4115 MiB  mtp3/0
+  llamacpp:cpu               slower                   answer   43.4 s  decode   19.1  held  3374 MiB  mtp2/0.5  (43.4 s for a typical answer against 2.3 s)
+chosen llamacpp:cuda0
+problems 

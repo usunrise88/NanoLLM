@@ -1,0 +1,4 @@
+mode silent
+  llamacpp:cpu/ram-4g        below the minimum speed  answer 1524.0 s  decode    0.6  held  3374 MiB  off  (0.60 tokens per second after a long prompt, the minimum is 1)
+chosen nothing
+problems silent_unavailable/error
