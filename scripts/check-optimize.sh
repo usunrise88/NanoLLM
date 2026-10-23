@@ -15,21 +15,24 @@
 #             remove it again
 #   -m DIR    the models to copy for -a (default: registry.models_dir is not read;
 #             /var/lib/nanollm/models if it exists)
+#   -s        skip the dry runs and the measurements (with -a: only the installer)
 #
 # Send the output directory back. Nothing outside it changes, except what -a
 # installs and removes.
 set -u
 
-BIN=./nanollm CFG=./nanollm.yaml OUT=./check-optimize ARCHIVE="" MODELS=/var/lib/nanollm/models
-while getopts "b:c:o:a:m:h" opt; do
+BIN=./nanollm CFG=./nanollm.yaml OUT=./check-optimize ARCHIVE="" MODELS=/var/lib/nanollm/models SKIP=0
+while getopts "b:c:o:a:m:sh" opt; do
   case "$opt" in
-    b) BIN=$OPTARG ;; c) CFG=$OPTARG ;; o) OUT=$OPTARG ;; a) ARCHIVE=$OPTARG ;; m) MODELS=$OPTARG ;;
-    *) sed -n '2,22p' "$0"; exit 2 ;;
+    b) BIN=$OPTARG ;; c) CFG=$OPTARG ;; o) OUT=$OPTARG ;; a) ARCHIVE=$OPTARG ;; m) MODELS=$OPTARG ;; s) SKIP=1 ;;
+    *) sed -n '2,24p' "$0"; exit 2 ;;
   esac
 done
 HERE="$(cd "$(dirname "$0")" && pwd)"
-[[ -x "$BIN" ]] || { echo "check-optimize: $BIN is not an executable (-b)" >&2; exit 2; }
-[[ -f "$CFG" ]] || { echo "check-optimize: $CFG is not a file (-c)" >&2; exit 2; }
+if [[ $SKIP -eq 0 ]]; then
+  [[ -x "$BIN" ]] || { echo "check-optimize: $BIN is not an executable (-b)" >&2; exit 2; }
+  [[ -f "$CFG" ]] || { echo "check-optimize: $CFG is not a file (-c)" >&2; exit 2; }
+fi
 mkdir -p "$OUT"
 FAILED=0
 say()  { printf '==> %s\n' "$*"; }
@@ -64,6 +67,7 @@ if have lscpu; then
   NUMA_NODES=${NUMA_NODES:-1}
 fi
 
+if [[ $SKIP -eq 0 ]]; then
 say "dry runs (nothing is measured)"
 for m in silent optimal powerful; do
   start=$(date +%s.%N)
@@ -116,6 +120,8 @@ for m in silent optimal powerful; do
       [[ "$NUMA_NODES" -gt 1 ]] && { [[ -n "$numa" ]] && pass "powerful picked the NUMA policy '$numa'" || fail "no NUMA policy in the powerful profile"; } ;;
   esac
 done
+
+fi
 
 if [[ -n "$ARCHIVE" ]]; then
   say "the installer: install.sh --archive into /opt/nanollm-check as nanollm-check"

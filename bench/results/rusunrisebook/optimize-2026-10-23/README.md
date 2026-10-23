@@ -49,8 +49,9 @@ rights or the hardware.
   (`../optimize-wsl2-2026-10-23/`); what stays open is a real hard disk and several NUMA nodes. The HDD, NUMA and haswell paths are covered by the synthetic decisions
   (`testdata/tune/decide/silent-hdd.txt`, the blind run's hyper case, `TestNUMAPoliciesAreCandidatesOnAMultiNodeMachine`) and by
   the numbers of the 2026-10-19/20 runs in `bench/results/hyper/`, not by a run.
-- **The installed service (LocalSystem):** PDH counters from LocalSystem and the real `install.ps1` / `install.sh` need
-  administrator rights or root. The service path was exercised with `nanollm serve` as the user.
+- **The installed service (LocalSystem):** PDH counters from LocalSystem and the real `install.ps1` need administrator rights.
+  The service path was exercised with `nanollm serve` as the user. The real `install.sh` as a systemd service ran as root on WSL2 and
+  passed (`../optimize-wsl2-2026-10-23/installer/`).
 - **Battery, power saver, a slow disk, a VM or WSL, session 0:** this machine is on AC with both drives NVMe; these problems are
   reproduced by the unit tests on synthetic surveys (`TestProblemsOfASurvey`, `TestEnvironmentProblems`,
   `TestNoGPULibraryProblems`), not by hand.
