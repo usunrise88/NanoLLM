@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/usunrise88/nanollm/internal/backend"
 )
@@ -203,5 +204,43 @@ func TestLoopNeverEnds(t *testing.T) {
 	got, outs := generate(t, m, 0, "[[fake:loop]]", 0, 50)
 	if outs[len(outs)-1].EOG || !strings.HasPrefix(got, "la la ") {
 		t.Fatalf("loop: %q", got)
+	}
+}
+
+func TestTunerAndBatchTimer(t *testing.T) {
+	cost := func(tokens, outputs int) time.Duration {
+		return time.Duration(10+2*(tokens-1)) * time.Millisecond
+	}
+	m := load(t, Options{MaxDraft: 3, BatchCost: cost}, backend.LoadSpec{DrafterPath: "d", DraftMax: 3, Threads: 6, ThreadsBatch: 8})
+	if th, tb := m.Threads(); th != 6 || tb != 8 {
+		t.Fatalf("loaded with 6/8, reports %d/%d", th, tb)
+	}
+	if err := m.SetThreads(2, 2); err != nil {
+		t.Fatal(err)
+	}
+	if th, tb := m.Threads(); th != 2 || tb != 2 {
+		t.Fatalf("set 2/2, reports %d/%d", th, tb)
+	}
+	if m.SetThreads(0, 2) == nil {
+		t.Error("zero threads accepted")
+	}
+	if m.DraftCeiling() != 3 || m.SetDraft(4, 0) == nil {
+		t.Errorf("ceiling %d, SetDraft(4) accepted", m.DraftCeiling())
+	}
+	if err := m.SetDraft(1, 0.5); err != nil || m.Capabilities().MaxDraft != 1 {
+		t.Fatalf("SetDraft(1): %v, caps %+v", err, m.Capabilities())
+	}
+	if err := m.SetDraft(0, 0); err != nil || m.Capabilities().MaxDraft != 0 {
+		t.Fatalf("SetDraft(0): %v, caps %+v", err, m.Capabilities())
+	}
+	if d, err := m.TimeBatch(context.Background(), 0, make([]backend.Token, 3), 3); err != nil || d != 14*time.Millisecond {
+		t.Fatalf("TimeBatch(3) = %v, %v", d, err)
+	}
+	if _, err := m.TimeBatch(context.Background(), 5, make([]backend.Token, 1), 1); err == nil {
+		t.Error("a slot out of range was timed")
+	}
+	plain := load(t, Options{}, backend.LoadSpec{})
+	if plain.SetDraft(1, 0) == nil {
+		t.Error("SetDraft on a model without a drafter was accepted")
 	}
 }

@@ -44,6 +44,10 @@ type Options struct {
 	Memory int64
 	// NoGPU hides the fake GPU device.
 	NoGPU bool
+	// BatchCost is what Model.TimeBatch reports for a batch of n tokens with
+	// the given number of output rows, standing in for a device's cost curve
+	// (docs/OPTIMIZE.md, §3.8); nil is a flat 10 ms.
+	BatchCost func(tokens, outputs int) time.Duration
 }
 
 // Backend is the fake engine.
@@ -119,6 +123,8 @@ func (b *Backend) Load(ctx context.Context, spec backend.LoadSpec) (backend.Mode
 	for i := range m.slots {
 		m.slots[i].genStart = -1
 	}
+	m.draftCeiling = m.caps.MaxDraft
+	m.threads, m.batchThreads = spec.Threads, spec.ThreadsBatch
 	return m, nil
 }
 
@@ -151,6 +157,11 @@ type Model struct {
 	mu     sync.Mutex
 	slots  []slot
 	closed bool
+
+	// draftCeiling is the DraftMax the model was loaded with; threads are the
+	// last SetThreads (backend.Tuner).
+	draftCeiling          int
+	threads, batchThreads int
 }
 
 func (m *Model) Tokenize(text string, addSpecial, parseSpecial bool) ([]backend.Token, error) {
@@ -461,3 +472,79 @@ func (m *Model) Close() error {
 	m.closed = true
 	return nil
 }
+
+// SetThreads records the teams (backend.Tuner); Threads reads them back.
+func (m *Model) SetThreads(threads, batch int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.closed {
+		return fmt.Errorf("fake: model is closed")
+	}
+	if threads <= 0 || batch <= 0 {
+		return fmt.Errorf("fake: %d decode and %d prompt threads, both must be positive", threads, batch)
+	}
+	m.threads, m.batchThreads = threads, batch
+	return nil
+}
+
+// Threads is the decode and prompt teams the model was loaded or last set with.
+func (m *Model) Threads() (threads, batch int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.threads, m.batchThreads
+}
+
+// SetDraft lowers the drafting limit (backend.Tuner); like the real context it
+// cannot go above what the model was loaded with.
+func (m *Model) SetDraft(max int, pMin float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.closed {
+		return fmt.Errorf("fake: model is closed")
+	}
+	if max < 0 || pMin < 0 || pMin > 1 {
+		return fmt.Errorf("fake: draft max or p_min out of range")
+	}
+	if m.draftCeiling == 0 {
+		return fmt.Errorf("fake: no drafter is loaded")
+	}
+	if max > m.draftCeiling {
+		return fmt.Errorf("fake: draft max %d is above the %d the model was loaded with", max, m.draftCeiling)
+	}
+	m.caps.MaxDraft = max
+	return nil
+}
+
+func (m *Model) DraftCeiling() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.draftCeiling
+}
+
+// TimeBatch reports Options.BatchCost for the batch and leaves the cache as it
+// was (backend.BatchTimer).
+func (m *Model) TimeBatch(ctx context.Context, seq int, tokens []backend.Token, outputs int) (time.Duration, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.closed {
+		return 0, fmt.Errorf("fake: model is closed")
+	}
+	if _, err := m.slot(seq); err != nil {
+		return 0, err
+	}
+	if len(tokens) == 0 || len(tokens) > m.caps.NBatch || outputs < 0 || outputs > len(tokens) {
+		return 0, fmt.Errorf("fake: a timed batch of %d tokens with %d outputs does not fit", len(tokens), outputs)
+	}
+	if m.opts.BatchCost == nil {
+		return 10 * time.Millisecond, nil
+	}
+	return m.opts.BatchCost(len(tokens), outputs), nil
+}
+
+var (
+	_ backend.Tuner      = (*Model)(nil)
+	_ backend.BatchTimer = (*Model)(nil)
+)
