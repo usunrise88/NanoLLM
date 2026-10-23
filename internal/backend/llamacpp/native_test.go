@@ -25,7 +25,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -248,11 +247,6 @@ func TestNativeRefusesForeignCommit(t *testing.T) {
 	t.Logf("refusal: %v", err)
 }
 
-// patchedSymbols are the staging functions of patches/next (patched_bind.go): a released
-// library has them only once the patches are in its series, so the count of bound symbols
-// leaves them out.
-var patchedSymbols = []string{"llama_model_set_output_shortlist", "llama_set_output_shortlist", "llama_model_get_tensor"}
-
 func TestNativeCPUDevice(t *testing.T) {
 	b := testBackend(t)
 	t.Logf("ggml_commit() = %q, version %s, cpu variant %q", b.lib.commit, b.Version(), b.CPUVariant())
@@ -290,14 +284,8 @@ func TestNativeCPUDevice(t *testing.T) {
 		t.Error("an unknown device selector was accepted")
 	}
 	t.Logf("staging symbols bound: %v", b.lib.cxx)
-	bound := 0
-	for name := range b.lib.cxx {
-		if !slices.Contains(patchedSymbols, name) {
-			bound++
-		}
-	}
-	if want := len(cxxSymbols) - len(patchedSymbols); bound != want {
-		t.Errorf("bound %d of %d staging-header functions", bound, want)
+	if len(b.lib.cxx) != len(cxxSymbols) {
+		t.Errorf("bound %d of %d staging-header functions", len(b.lib.cxx), len(cxxSymbols))
 	}
 }
 
