@@ -248,6 +248,11 @@ func TestNativeRefusesForeignCommit(t *testing.T) {
 	t.Logf("refusal: %v", err)
 }
 
+// patchedSymbols are the staging functions of patches/next (patched_bind.go): a released
+// library has them only once the patches are in its series, so the count of bound symbols
+// leaves them out.
+var patchedSymbols = []string{"llama_model_set_output_shortlist", "llama_set_output_shortlist", "llama_model_get_tensor"}
+
 func TestNativeCPUDevice(t *testing.T) {
 	b := testBackend(t)
 	t.Logf("ggml_commit() = %q, version %s, cpu variant %q", b.lib.commit, b.Version(), b.CPUVariant())

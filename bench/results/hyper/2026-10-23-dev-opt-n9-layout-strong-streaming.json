@@ -1,0 +1,315 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "next3",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "4d4f7ae2a982f4b41ff518cd968eb95afa7e7cbf"
+    },
+    "ggml_cpu_variant": "haswell",
+    "os": "linux",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "AMD",
+      "model": "AMD EPYC 7351P",
+      "cores": 16,
+      "threads": 32,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c"
+      ]
+    },
+    "memory": {
+      "total_bytes": 135036997632
+    },
+    "system": {
+      "vendor": "ASRockRack",
+      "family": "EPYCD8-2T",
+      "product": "EPYCD8-2T",
+      "form_factor": "server",
+      "chassis": "desktop"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "26.04",
+      "kernel_mm": "7.0"
+    },
+    "power": {},
+    "disk": {
+      "type": "hdd"
+    },
+    "extra": [
+      {
+        "key": "numa_nodes",
+        "value": "4"
+      },
+      {
+        "key": "governor",
+        "value": "performance"
+      },
+      {
+        "key": "boost",
+        "value": "1"
+      },
+      {
+        "key": "thp",
+        "value": "madvise"
+      },
+      {
+        "key": "numa_balancing",
+        "value": "1"
+      },
+      {
+        "key": "loadavg_1m",
+        "value": "5.66"
+      },
+      {
+        "key": "system_name_from",
+        "value": "baseboard"
+      },
+      {
+        "key": "model_disk",
+        "value": "md3"
+      },
+      {
+        "key": "model_disk_rotational",
+        "value": "1"
+      },
+      {
+        "key": "model_read_ahead_kb",
+        "value": "8192"
+      },
+      {
+        "key": "model_max_sectors_kb",
+        "value": "4096"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "preset": "ram-2g",
+      "plan_hash": "b5fd0506e5b9b2be",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "original"
+      },
+      "metrics": {
+        "load_ms": 20348.062,
+        "pp_tok_s": 37.65223482641716,
+        "tg_tok_s": {
+          "d0": 0.10700715829036303
+        },
+        "peak_rss": 2765361152,
+        "peak_locked": 424312832,
+        "peak_page_cache": 1335275520,
+        "peak_cgroup": 2348814336,
+        "buffers": {
+          "CPU_Mapped": 3115025629,
+          "CPU_REPACK": 1128771092
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "layout=original"
+    },
+    {
+      "preset": "ram-2g",
+      "plan_hash": "b726e3bbb4f94668",
+      "plan": {
+        "mode": "ram-hybrid",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "nano"
+      },
+      "metrics": {
+        "load_ms": 19137.037,
+        "pp_tok_s": 37.36923652020805,
+        "tg_tok_s": {
+          "d0": 0.09787020216261771
+        },
+        "peak_rss": 2782015488,
+        "peak_locked": 424423424,
+        "peak_page_cache": 1327349760,
+        "peak_cgroup": 2348810240,
+        "buffers": {
+          "CPU_Mapped": 3115025520,
+          "CPU_REPACK": 1128771092
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "layout=nano"
+    },
+    {
+      "preset": "ram-1g",
+      "plan_hash": "15520daa6097ae0b",
+      "plan": {
+        "mode": "mmap",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "original"
+      },
+      "metrics": {
+        "load_ms": 34088.703,
+        "pp_tok_s": 18.273031699459484,
+        "tg_tok_s": {
+          "d0": 0.051035757579478175
+        },
+        "peak_rss": 1289887744,
+        "peak_locked": 2932736,
+        "peak_page_cache": 1137651712,
+        "peak_cgroup": 1275072512,
+        "buffers": {
+          "CPU_Mapped": 4243796760
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "layout=original"
+    },
+    {
+      "preset": "ram-1g",
+      "plan_hash": "d7176bd5be64bd04",
+      "plan": {
+        "mode": "mmap",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": true,
+        "mtp": true,
+        "threads": 16,
+        "enforcement": "strict",
+        "threads_batch": 16,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "off",
+        "load_mode": "mmap",
+        "lazy": "off",
+        "draft_max": 2,
+        "draft_p_min": 0.5,
+        "numa": "interleave",
+        "cold": true,
+        "layout": "nano"
+      },
+      "metrics": {
+        "load_ms": 36119.239,
+        "pp_tok_s": 20.913633659310253,
+        "tg_tok_s": {
+          "d0": 0.04968611072058006
+        },
+        "peak_rss": 1300885504,
+        "peak_locked": 3043328,
+        "peak_page_cache": 1139261440,
+        "peak_cgroup": 1275072512,
+        "buffers": {
+          "CPU_Mapped": 4243733708
+        },
+        "stddev": {
+          "pp_tok_s": 0,
+          "tg_tok_s.d0": 0
+        }
+      },
+      "reps": 1,
+      "output": {},
+      "status": "ok",
+      "variant": "layout=nano"
+    }
+  ],
+  "date": "2026-10-23",
+  "duration_s": 904.108520162
+}

@@ -2,6 +2,7 @@ package bench
 
 import (
 	"errors"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -34,6 +35,9 @@ func TestVariantLayoutKey(t *testing.T) {
 // OPT-7 in a sweep: layout=nano plans from the relaid copy's inventory and
 // loads its path, and a result says which layout ran.
 func TestPlanRunLayout(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("M8 is not proven on macOS (range-lock), so the planner refuses ram-2g there")
+	}
 	cat, err := registry.Builtin()
 	if err != nil {
 		t.Fatal(err)

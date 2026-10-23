@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -42,6 +43,9 @@ func nanoOfCatalog(t *testing.T, m registry.Manifest, path string) registry.Rela
 }
 
 func TestPlannerPlacerPlansFromTheRelaidInventory(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("M8 is not proven on macOS (range-lock), so the planner refuses ram-2g there")
+	}
 	m := defaultModel(t)
 	req := cpuRequest(m)
 	req.Override.Preset, req.Override.Mode = "ram-2g", "M8"
