@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+
+	"github.com/usunrise88/nanollm/internal/core"
 )
 
 func newStore(t *testing.T) *KeyStore {
@@ -87,5 +90,23 @@ func TestRequireAdmin(t *testing.T) {
 func TestBadDigestIsRefused(t *testing.T) {
 	if _, err := NewKeyStore([]KeySpec{{Secret: "sha256:abc"}}); err == nil {
 		t.Fatal("short digest accepted")
+	}
+}
+
+func TestWriteProblemSetsRetryAfter(t *testing.T) {
+	rec := httptest.NewRecorder()
+	WriteProblem(rec, core.Errorf(core.CodeModelUnavailable, "being measured").WithRetryAfter(7*time.Second+200*time.Millisecond))
+	if rec.Code != http.StatusServiceUnavailable || rec.Header().Get("Retry-After") != "8" {
+		t.Fatalf("%d, Retry-After %q", rec.Code, rec.Header().Get("Retry-After"))
+	}
+	rec = httptest.NewRecorder()
+	WriteProblem(rec, core.Errorf(core.CodeModelUnavailable, "loading"))
+	if rec.Header().Get("Retry-After") != "" {
+		t.Fatalf("Retry-After %q without a time to wait", rec.Header().Get("Retry-After"))
+	}
+	rec = httptest.NewRecorder()
+	WriteProblem(rec, core.Errorf(core.CodeConflict, "a run is in progress"))
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("conflict is %d", rec.Code)
 	}
 }

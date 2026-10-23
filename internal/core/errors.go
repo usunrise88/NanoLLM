@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // Code is a stable, machine-readable error identifier. Dialects map it to their
@@ -27,7 +28,10 @@ const (
 	CodeRateLimited           Code = "rate_limited"
 	CodeModelUnavailable      Code = "model_unavailable"
 	CodeNotImplemented        Code = "not_implemented"
-	CodeInternal              Code = "internal"
+	// CodeConflict: the request is fine but the server's state forbids it now
+	// (an optimization is already running).
+	CodeConflict Code = "conflict"
+	CodeInternal Code = "internal"
 )
 
 // Error is the single error type crossing the service boundary.
@@ -35,7 +39,11 @@ type Error struct {
 	Code    Code   `json:"code"`
 	Message string `json:"message"`
 	Param   string `json:"param,omitempty"`
-	cause   error
+	// RetryAfter, when above zero, says how long until the same request can
+	// succeed (the model is being measured by the autotuner). Dialects send it
+	// as the Retry-After header, and the job queue waits it out.
+	RetryAfter time.Duration `json:"-"`
+	cause      error
 }
 
 func (e *Error) Error() string {
@@ -61,6 +69,9 @@ func Errorf(code Code, format string, args ...any) *Error {
 
 // WithParam names the offending request field.
 func (e *Error) WithParam(p string) *Error { e.Param = p; return e }
+
+// WithRetryAfter says when to try again.
+func (e *Error) WithRetryAfter(d time.Duration) *Error { e.RetryAfter = d; return e }
 
 // WithCause attaches an internal cause. The cause is logged, never returned to
 // a client.
@@ -96,6 +107,8 @@ func (c Code) HTTPStatus() int {
 		// as SPEC's queue.max_pending says, rather than a 429 that would
 		// tell a well-behaved client to slow down.
 		return http.StatusServiceUnavailable
+	case CodeConflict:
+		return http.StatusConflict
 	case CodeNotImplemented:
 		return http.StatusNotImplemented
 	default:

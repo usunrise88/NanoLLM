@@ -381,6 +381,9 @@ func (q *Queue) run(j *Job) {
 	}
 }
 
+// MaxRetryAfter is the longest a job waits on a server's Retry-After at a time.
+const MaxRetryAfter = 5 * time.Minute
+
 // transient says whether a line's error is the server's momentary state, not
 // the line's fault: the model is loading or unloading, every slot's wait queue
 // is full. Recording such a line as failed would lose work the server could do
@@ -403,9 +406,23 @@ func (q *Queue) chatWithRetry(ctx context.Context, req core.ChatRequest) (*core.
 	if max <= 0 {
 		max = 6
 	}
-	for attempt := 0; ; attempt++ {
+	for attempt := 0; ; {
 		res, err := q.svc.Chat(ctx, req, nil)
-		if err == nil || ctx.Err() != nil || !transient(err) || attempt >= max {
+		if err == nil || ctx.Err() != nil || !transient(err) {
+			return res, err
+		}
+		// A server that says when it will be back (the autotuner is measuring the
+		// model) is waited for as long as it says, and that wait is not an
+		// attempt: the job did nothing wrong by being there.
+		if after := core.AsError(err).RetryAfter; after > 0 {
+			select {
+			case <-time.After(min(after, MaxRetryAfter)):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+			continue
+		}
+		if attempt >= max {
 			return res, err
 		}
 		select {
@@ -414,6 +431,7 @@ func (q *Queue) chatWithRetry(ctx context.Context, req core.ChatRequest) (*core.
 			return nil, ctx.Err()
 		}
 		wait = min(wait*2, 30*time.Second)
+		attempt++
 	}
 }
 
