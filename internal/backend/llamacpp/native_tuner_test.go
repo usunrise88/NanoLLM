@@ -18,14 +18,25 @@ import (
 	"github.com/usunrise88/nanollm/internal/backend"
 )
 
-// tunerRun generates 64 tokens for each of the first prompts and returns the
+// tunerPrompts is how many of the equivalence prompts a run generates for: the
+// macOS runner decodes the tiny model at 1-3 tok/s and the native suite has the
+// 30 minutes of its timeout, so the short form is the default and
+// NANOLLM_TEST_LONG=1 asks for the full one.
+func tunerPrompts() int {
+	if os.Getenv("NANOLLM_TEST_LONG") != "" {
+		return 3
+	}
+	return 2
+}
+
+// tunerRun generates n tokens for each of the first prompts and returns the
 // tokens and the decode rate.
 func tunerRun(t *testing.T, m *model, n int) ([][]backend.Token, float64) {
 	t.Helper()
 	var all [][]backend.Token
 	var toks int
 	var d time.Duration
-	for _, p := range equivalencePrompts[:3] {
+	for _, p := range equivalencePrompts[:tunerPrompts()] {
 		prompt := tokenize(t, m, chat(m, p))
 		m.ClearSeq(0)
 		if err := m.SetSampler(0, greedy, prompt); err != nil {
@@ -44,8 +55,11 @@ func tunerRun(t *testing.T, m *model, n int) ([][]backend.Token, float64) {
 // model loaded with that draft_max; SetThreads changes nothing but the speed;
 // SetDraft above the loaded limit is refused.
 func TestNativeTunerEquivalence(t *testing.T) {
-	const n = 64
 	long := os.Getenv("NANOLLM_TEST_LONG") != ""
+	n := 24
+	if long {
+		n = 64
+	}
 	big := sharedMTPModel(t)
 	if big.DraftCeiling() != 3 {
 		t.Fatalf("draft ceiling %d, loaded with 3", big.DraftCeiling())
