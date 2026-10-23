@@ -1,0 +1,170 @@
+{
+  "plan": {
+    "model": "gemma-4-e4b-qat",
+    "preset": "uma-15g",
+    "device": {
+      "selector": "llamacpp:vulkan1",
+      "backend": "vulkan",
+      "memory": 16106127360,
+      "unified": true
+    },
+    "mode": "vram-ple-disk",
+    "mode_id": "M3",
+    "gpu_layers": -1,
+    "layers_on_gpu": 42,
+    "n_ctx": 16384,
+    "slots": 1,
+    "n_batch": 2048,
+    "n_ubatch": 512,
+    "n_outputs_max": 4,
+    "flash_attention": true,
+    "flash_attn_small_batch": true,
+    "kv": {
+      "type_k": "f16",
+      "type_v": "f16",
+      "swa_full": false,
+      "swa_full_reason": "the full sliding-window cache needs 600.0 MiB more than the budget leaves: the prompt cache reuses a prefix only within the last 512 tokens, and a slot without one prefills again",
+      "unified": false,
+      "cells_full": 16384,
+      "cells_swa": 1024,
+      "streams": 1,
+      "bytes": 310378496
+    },
+    "load_mode": "mmap",
+    "lazy_mode": "on",
+    "repack": false,
+    "mtp": {
+      "enabled": true,
+      "reason": "the drafter (41.9 MiB) runs on llamacpp:vulkan1 with the target's output layer and reads its KV cache",
+      "draft_max": 3
+    },
+    "groups": {
+      "G0": {
+        "vram": 377487360,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G1": {
+        "vram": 0,
+        "ram_locked": 0,
+        "file_backed": 1585446912,
+        "disk": 0
+      },
+      "G2": {
+        "vram": 376750080,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G3": {
+        "vram": 1857945600,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G4": {
+        "vram": 2241704,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G5": {
+        "vram": 310378496,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G6": {
+        "vram": 6142992,
+        "ram_locked": 0,
+        "file_backed": 37748736,
+        "disk": 0
+      },
+      "G7": {
+        "vram": 406428057,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      }
+    },
+    "memory": {
+      "unified": {
+        "budget": 16106127360,
+        "used": 3538700881,
+        "budgeted": true
+      },
+      "combined": {
+        "budget": 4399824896,
+        "used": 4008462929,
+        "budgeted": true
+      },
+      "file_backed": 1623195648,
+      "overhead_ram": 201326592
+    },
+    "compute_calibrated": false,
+    "target": {
+      "n_ctx": 32768,
+      "slots": 1
+    },
+    "warnings": [
+      "compute buffers (G7) for vulkan are not calibrated yet: the CPU fit stands in",
+      "1548.0 MiB stays file-backed: outside every budget, and cold pages fault in from disk",
+      "context is 16384×1, short of the preset's target 32768×1"
+    ],
+    "sources": {
+      "mem_cap": "mode",
+      "min_n_ctx": "mode"
+    },
+    "tried": [
+      {
+        "mode": "vram-full",
+        "id": "M1",
+        "fits": false,
+        "shortfall": {
+          "combined": 784091729
+        }
+      },
+      {
+        "mode": "vram-ple-host",
+        "id": "M2",
+        "fits": false,
+        "skipped": "the same as M1 on unified memory"
+      },
+      {
+        "mode": "vram-ple-disk",
+        "id": "M3",
+        "fits": true
+      }
+    ]
+  },
+  "spec": {
+    "Path": "m.gguf",
+    "DrafterPath": "d.gguf",
+    "Device": "llamacpp:vulkan1",
+    "GPULayers": -1,
+    "Overrides": null,
+    "LoadMode": "mmap",
+    "LazyMode": "on",
+    "Repack": false,
+    "NCtx": 16384,
+    "Slots": 1,
+    "NBatch": 2048,
+    "NUBatch": 512,
+    "NOutputsMax": 4,
+    "Threads": 0,
+    "ThreadsBatch": 0,
+    "KVTypeK": "f16",
+    "KVTypeV": "f16",
+    "FlashAttention": true,
+    "FlashAttnSmallBatch": true,
+    "BackendSampling": false,
+    "CudaNano": null,
+    "SWAFull": false,
+    "KVUnified": false,
+    "DraftMax": 3,
+    "DraftPMin": 0,
+    "NGram": 0,
+    "Stream": null
+  }
+}

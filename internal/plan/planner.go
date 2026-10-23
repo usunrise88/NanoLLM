@@ -92,6 +92,16 @@ type Request struct {
 	// NBatch and NUBatch default to DefaultNBatch and DefaultNUBatch.
 	NBatch  int
 	NUBatch int
+	// MemCap limits the memory the plan takes from the machine as a whole:
+	// private host memory plus video memory, in bytes, whatever the preset's own
+	// budgets say. Zero is no limit. The optimal mode of the autotuner sets it
+	// (docs/OPTIMIZE.md, §2). Under a cap M2 is not tried: M3 holds the same
+	// weights with less host memory at the same speed (measured on CUDA).
+	MemCap int64
+	// MinNCtx raises the smallest context per slot the planner settles for from
+	// FloorNCtx; it does not fix the context, which still grows to the preset's
+	// target.
+	MinNCtx int
 }
 
 // Defaults for what a request leaves open.
@@ -199,7 +209,7 @@ func (pl *planner) run() *Plan {
 		modes = []Mode{pl.req.Mode}
 	}
 	target := TargetFor(pl.req.Preset.Name)
-	floor := shape{nCtx: FloorNCtx, slots: FloorSlots}
+	floor := shape{nCtx: max(FloorNCtx, pl.req.MinNCtx), slots: FloorSlots}
 	// A fixed value is both floor and target: the planner neither grows it
 	// nor settles for less.
 	if pl.req.NCtx > 0 {
@@ -220,6 +230,11 @@ func (pl *planner) run() *Plan {
 		}
 		if why := pl.proven.why(m); why != "" {
 			a.Skipped = why
+			tried = append(tried, a)
+			continue
+		}
+		if pl.req.MemCap > 0 && m == VRAMPLEHost && len(modes) > 1 {
+			a.Skipped = "under a memory limit M3 takes the same weights with less host memory, at the same speed"
 			tried = append(tried, a)
 			continue
 		}
@@ -259,7 +274,7 @@ func refusal(tried []Attempt, floor shape) string {
 	var misses []miss
 	for _, a := range tried {
 		if a.Shortfall != nil {
-			misses = append(misses, miss{a.ID, a.Shortfall.VRAM + a.Shortfall.RAM + a.Shortfall.Unified})
+			misses = append(misses, miss{a.ID, a.Shortfall.VRAM + a.Shortfall.RAM + a.Shortfall.Unified + a.Shortfall.Combined})
 		}
 	}
 	if len(misses) == 0 {

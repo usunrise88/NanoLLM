@@ -23,10 +23,18 @@ type Key struct {
 	Mode     string `json:"mode,omitempty"`
 	Preset   string `json:"preset,omitempty"`
 	NCtx     int    `json:"n_ctx"`
+	// Tune identifies the autotuner's mode and profile the placement was made
+	// under (mode@hash), so that a profile that changes only threads or MTP
+	// still makes a new instance when it is applied.
+	Tune string `json:"tune,omitempty"`
 }
 
 func (k Key) String() string {
-	return fmt.Sprintf("%s@%s %s:%s %s/%s ctx=%d", k.Model, short(k.Revision), k.Backend, k.Device, k.Preset, k.Mode, k.NCtx)
+	s := fmt.Sprintf("%s@%s %s:%s %s/%s ctx=%d", k.Model, short(k.Revision), k.Backend, k.Device, k.Preset, k.Mode, k.NCtx)
+	if k.Tune != "" {
+		s += " tune=" + k.Tune
+	}
+	return s
 }
 
 func short(rev string) string {

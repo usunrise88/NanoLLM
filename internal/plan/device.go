@@ -76,6 +76,22 @@ const (
 	GPUOverheadVulkan = 160 << 20
 )
 
+// GPUHostMemory is the host memory a process with a CUDA or Vulkan context holds
+// beyond what the plan counts: the driver's and the runtime's own allocations.
+// It is counted against a MemCap only (a VRAM preset leaves host memory
+// unbounded). Measured on an RTX 3070 Ti Laptop with CUDA, mode M3: a private
+// working set of 695 MiB against the 223 MiB the plan has for the host, and the
+// same 470 MiB over in M2; on the Iris Xe through Vulkan, mode M3 on unified
+// memory: 3.65 GiB against the plan's 3.21, 445 MiB over
+// (bench/results/rusunrisebook/optimize-stage0-2026-10-23).
+const GPUHostMemory = 448 << 20
+
+// hasHostDriver says a device's backend brings a driver context with host
+// memory of its own (Metal's is not measured).
+func hasHostDriver(d *Device) bool {
+	return d != nil && (d.Backend == BackendCUDA || d.Backend == BackendVulkan)
+}
+
 func gpuOverhead(d *Device) int64 {
 	switch {
 	case d == nil || d.Unified:

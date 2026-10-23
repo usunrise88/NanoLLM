@@ -198,6 +198,12 @@ func (c *Config) Validate() error {
 	if u, err := url.Parse(c.Bench.SubmitURL); c.Bench.Submit != "never" && (err != nil || u.Scheme != "https" || u.Host == "") {
 		return fmt.Errorf("bench.submit_url %q must be an https URL", c.Bench.SubmitURL)
 	}
+	switch c.Tune.Mode {
+	case "", TuneSilent, TuneOptimal, TunePowerful:
+	default:
+		return fmt.Errorf("tune.mode must be %s, %s or %s (or empty to switch the autotuner off), got %q",
+			TuneSilent, TuneOptimal, TunePowerful, c.Tune.Mode)
+	}
 	if c.Server.MaxBody <= 0 {
 		return fmt.Errorf("server.max_body must be positive")
 	}

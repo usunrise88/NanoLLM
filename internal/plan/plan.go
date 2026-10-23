@@ -49,6 +49,9 @@ type Memory struct {
 	VRAM    *Usage `json:"vram,omitempty"`
 	RAM     *Usage `json:"ram,omitempty"`
 	Unified *Usage `json:"unified,omitempty"`
+	// Combined is the autotuner's limit on private memory plus video memory
+	// together (Request.MemCap); absent without one.
+	Combined *Usage `json:"combined,omitempty"`
 	// FileBacked is page cache the plan relies on; it is reported, never
 	// budgeted (SPEC §4, presets), except by strict benchmark runs.
 	FileBacked int64 `json:"file_backed"`
@@ -59,9 +62,10 @@ type Memory struct {
 
 // Shortfall is how many bytes a mode lacked, per budget.
 type Shortfall struct {
-	VRAM    int64 `json:"vram,omitempty"`
-	RAM     int64 `json:"ram,omitempty"`
-	Unified int64 `json:"unified,omitempty"`
+	VRAM     int64 `json:"vram,omitempty"`
+	RAM      int64 `json:"ram,omitempty"`
+	Unified  int64 `json:"unified,omitempty"`
+	Combined int64 `json:"combined,omitempty"`
 }
 
 func (s Shortfall) zero() bool { return s == Shortfall{} }
@@ -184,10 +188,13 @@ type Plan struct {
 	// this backend (docs/STAGE1.md 1.4).
 	ComputeCalibrated bool `json:"compute_calibrated"`
 
-	Target   Target    `json:"target"`
-	Warnings []string  `json:"warnings,omitempty"`
-	Tried    []Attempt `json:"tried"`
-	Refused  string    `json:"refused,omitempty"`
+	Target   Target   `json:"target"`
+	Warnings []string `json:"warnings,omitempty"`
+	// Sources says where each setting came from when the autotuner's mode or
+	// profile had a say: config, profile, mode or rule (docs/OPTIMIZE.md, §3.7).
+	Sources map[string]string `json:"sources,omitempty"`
+	Tried   []Attempt         `json:"tried"`
+	Refused string            `json:"refused,omitempty"`
 }
 
 // OK reports whether the plan found a mode.
