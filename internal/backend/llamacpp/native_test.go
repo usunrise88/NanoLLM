@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -284,8 +285,14 @@ func TestNativeCPUDevice(t *testing.T) {
 		t.Error("an unknown device selector was accepted")
 	}
 	t.Logf("staging symbols bound: %v", b.lib.cxx)
-	if len(b.lib.cxx) != len(cxxSymbols) {
-		t.Errorf("bound %d of %d staging-header functions", len(b.lib.cxx), len(cxxSymbols))
+	bound := 0
+	for name := range b.lib.cxx {
+		if !slices.Contains(patchedSymbols, name) {
+			bound++
+		}
+	}
+	if want := len(cxxSymbols) - len(patchedSymbols); bound != want {
+		t.Errorf("bound %d of %d staging-header functions", bound, want)
 	}
 }
 

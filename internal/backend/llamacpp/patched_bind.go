@@ -18,6 +18,10 @@ var (
 	llamaModelGetTensor          func(model LlamaModel, name string) unsafe.Pointer
 )
 
+// patchedSymbols are the names above: a released library has them only once the
+// patches are in its series, and a test that counts the bound symbols leaves them out.
+var patchedSymbols = []string{"llama_model_set_output_shortlist", "llama_set_output_shortlist", "llama_model_get_tensor"}
+
 func init() {
 	cxxSymbols = append(cxxSymbols,
 		cxxSymbol{"llama_model_set_output_shortlist", "_Z32llama_model_set_output_shortlistP11llama_modelPKii", "?llama_model_set_output_shortlist@@YA_NPEAUllama_model@@PEBHH@Z", &llamaModelSetOutputShortlist},
