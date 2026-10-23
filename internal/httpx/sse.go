@@ -37,13 +37,17 @@ type Stream struct {
 // NewStream sets the headers and returns a writer, or an error if the response
 // cannot be streamed at all.
 func NewStream(w http.ResponseWriter) (*Stream, error) {
+	return newStream(w, "text/event-stream")
+}
+
+func newStream(w http.ResponseWriter, contentType string) (*Stream, error) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		return nil, fmt.Errorf("sse: the response writer cannot flush")
 	}
 
 	h := w.Header()
-	h.Set("Content-Type", "text/event-stream")
+	h.Set("Content-Type", contentType)
 	h.Set("Cache-Control", "no-cache")
 	h.Set("Connection", "keep-alive")
 	// nginx buffers proxied responses by default, which turns a live stream
