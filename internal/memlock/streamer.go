@@ -139,7 +139,11 @@ func NewStreamer(path string, layers map[int][]Range, opt StreamOptions) (*Strea
 			return nil, err
 		}
 		s.file, s.ms = f, ms
-		for range max(opt.Depth, 1) {
+		depth := opt.Depth
+		if depth <= 0 {
+			depth = defaultDepth
+		}
+		for range depth {
 			s.bufs = append(s.bufs, make([]byte, preadChunk))
 		}
 		limit = preadChunk

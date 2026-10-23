@@ -129,6 +129,11 @@ func TestStreamerReadsAheadAndEvictsBehind(t *testing.T) {
 		if st := s.Stats(); st.Errors != 0 || st.WillNeed < layer {
 			t.Errorf("stats %+v", st)
 		}
+		if d, err := NewStreamer(path, layers, StreamOptions{Ahead: 1, Method: MethodPread}); err != nil || len(d.bufs) != defaultDepth {
+			t.Errorf("a zero depth should read %d at a time: %v", defaultDepth, err)
+		} else {
+			d.Close()
+		}
 		if _, err := NewStreamer(path, layers, StreamOptions{Ahead: 1, Method: "readv"}); err == nil {
 			t.Error("an unknown method was accepted")
 		}
