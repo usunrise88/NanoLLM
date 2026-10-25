@@ -180,7 +180,7 @@ func newEnv(t *testing.T, s setup) *env {
 			return engine.Target{Key: pool.Key{Model: model, Backend: "fake", Device: "cpu", NCtx: 4096}, Manifest: testCatalog[0]}, nil
 		})
 	e := &env{spy: &spy{Service: svc}, admin: &testAdmin{p: p, disk: map[string]string{}, pins: map[string]bool{}}}
-	deps := adapter.Deps{Service: e.spy, Catalog: testCatalog, DefaultModel: modelID, ConfigSnapshot: func() any { return nil }}
+	deps := adapter.Deps{Service: e.spy, Catalog: testCatalog, DefaultModel: func() string { return modelID }, ConfigSnapshot: func() any { return nil }}
 	if !s.noAdmin {
 		deps.Admin = e.admin
 	}

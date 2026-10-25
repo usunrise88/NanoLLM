@@ -80,7 +80,7 @@ func (a *benchAPI) start(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if body.Model == "" {
-		body.Model = a.rt.cfg.Models.Default
+		body.Model = a.rt.DefaultModel()
 	}
 	m, err := a.rt.manifest(body.Model)
 	if err != nil {

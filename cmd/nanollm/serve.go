@@ -166,7 +166,7 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 	if err := adapter.MountAll(mux, cfg.API.Dialects, adapter.Deps{
 		Service:        rt.Engine,
 		Admin:          rt,
-		DefaultModel:   cfg.Models.Default,
+		DefaultModel:   rt.DefaultModel,
 		Catalog:        catalog,
 		ConfigSnapshot: snapshot,
 		Extra:          jobs,

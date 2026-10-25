@@ -432,7 +432,7 @@ func (h *handler) chat(w http.ResponseWriter, r *http.Request) {
 	id, created := newID("chatcmpl-"), time.Now().Unix()
 	model := req.Model
 	if model == "" {
-		model = h.deps.DefaultModel
+		model = h.deps.Model()
 	}
 
 	if !req.Stream {
@@ -703,7 +703,7 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request) {
 	id, created := newID("cmpl-"), time.Now().Unix()
 	model := req.Model
 	if model == "" {
-		model = h.deps.DefaultModel
+		model = h.deps.Model()
 	}
 	if !req.Stream {
 		res, err := svc.Complete(r.Context(), creq, nil)
