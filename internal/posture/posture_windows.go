@@ -27,13 +27,16 @@ type powerThrottlingState struct {
 	StateMask   uint32
 }
 
-// Apply puts the process below normal priority and in the EcoQoS class when low
-// is set, and back to normal and out of it when it is not. Both work in either
-// direction while the process runs.
-func Apply(low bool) error {
+// ApplyLevel puts the process at normal priority (Normal), below it (Below), or
+// below it and in the EcoQoS class (Quiet), and out of the class at the other
+// two. Every change works in either direction while the process runs.
+func ApplyLevel(l Level) error {
 	class := uint32(windows.NORMAL_PRIORITY_CLASS)
 	state := uint32(0)
-	if low {
+	switch l {
+	case Below:
+		class = windows.BELOW_NORMAL_PRIORITY_CLASS
+	case Quiet:
 		class, state = windows.BELOW_NORMAL_PRIORITY_CLASS, executionSpeed
 	}
 	proc := windows.CurrentProcess()

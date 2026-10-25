@@ -15,6 +15,29 @@ var ErrRestart = errors.New("posture: the priority cannot be raised again withou
 // Nice is the priority of the quiet mode on the systems that have niceness.
 const Nice = 10
 
+// Level is how far the process steps back from the machine.
+type Level int
+
+const (
+	// Normal is the priority every process starts with.
+	Normal Level = iota
+	// Below is below normal priority alone: a process an application runs in
+	// the background (nanollm managed) in a mode that is not the quiet one.
+	Below
+	// Quiet is the quiet mode: below normal priority and, on Windows, the
+	// efficiency class as well. Elsewhere it is the same as Below.
+	Quiet
+)
+
+// Apply is ApplyLevel(Quiet) when low is set and ApplyLevel(Normal) when it is
+// not.
+func Apply(low bool) error {
+	if low {
+		return ApplyLevel(Quiet)
+	}
+	return ApplyLevel(Normal)
+}
+
 // State is the process's posture as the OS reports it.
 type State struct {
 	// Low is set when the priority is below normal.

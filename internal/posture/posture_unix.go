@@ -15,15 +15,15 @@ var (
 	low bool
 )
 
-// Apply lowers the priority of every thread of the process to Nice when low is
-// set; threads started later inherit it from the thread that starts them. A
-// process cannot raise its niceness back without CAP_SYS_NICE, so Apply(false)
-// after Apply(true) returns ErrRestart and the server stays quiet until it is
-// restarted.
-func Apply(want bool) error {
+// ApplyLevel lowers the priority of every thread of the process to Nice at
+// Below and Quiet, which are the same here; threads started later inherit it
+// from the thread that starts them. A process cannot raise its niceness back
+// without CAP_SYS_NICE, so Normal after a lower level returns ErrRestart and the
+// server stays low until it is restarted.
+func ApplyLevel(l Level) error {
 	mu.Lock()
 	defer mu.Unlock()
-	if !want {
+	if l == Normal {
 		if low {
 			return ErrRestart
 		}
