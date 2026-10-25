@@ -1,0 +1,289 @@
+{
+  "runs": [
+    {
+      "name": "first",
+      "events": [
+        {
+          "t": 2.7,
+          "event": "ready",
+          "api_version": 1,
+          "configured": false,
+          "data_dir": "<tmp>\\data",
+          "missing_models": [],
+          "pid": 35628,
+          "port": 56591,
+          "restart_required": false,
+          "tune": {
+            "mode": "silent",
+            "state": "missing"
+          },
+          "url": "http://127.0.0.1:56591",
+          "version": "dev"
+        },
+        {
+          "t": 3.5,
+          "event": "tune_started",
+          "estimate_s": 60,
+          "mode": "silent",
+          "model": "gemma-4-e4b-qat",
+          "reason": "missing",
+          "run": "fac967d73072464d"
+        },
+        {
+          "t": 41.9,
+          "event": "tune_done",
+          "answer_s": 395.91595459105736,
+          "applied": true,
+          "device": "llamacpp:cpu",
+          "measured_bytes": 671107392,
+          "mode": "silent",
+          "model": "gemma-4-e4b-qat",
+          "plan_mode": "M9 mmap",
+          "profile": "silent@7c37e6ae",
+          "run": "fac967d73072464d"
+        },
+        {
+          "t": 44.1,
+          "event": "tune_started",
+          "estimate_s": 45,
+          "mode": "optimal",
+          "model": "gemma-4-e4b-qat",
+          "reason": "settings",
+          "run": "fed2e94420c48844"
+        },
+        {
+          "t": 59.0,
+          "event": "tune_done",
+          "answer_s": 2.6154405181102365,
+          "applied": true,
+          "device": "llamacpp:cuda0",
+          "measured_bytes": 4136464384,
+          "mode": "optimal",
+          "model": "gemma-4-e4b-qat",
+          "plan_mode": "M3 vram-ple-disk",
+          "profile": "optimal@04994926",
+          "run": "fed2e94420c48844"
+        },
+        {
+          "t": 59.5,
+          "event": "stopping",
+          "reason": "stdin closed"
+        }
+      ],
+      "children": {
+        "conhost": {
+          "seen": 39,
+          "with_window": 0
+        },
+        "powershell": {
+          "seen": 1,
+          "with_window": 0
+        },
+        "nanollm": {
+          "seen": 17,
+          "with_window": 0
+        }
+      },
+      "ready": {
+        "event": "ready",
+        "api_version": 1,
+        "configured": false,
+        "data_dir": "<tmp>\\data",
+        "missing_models": [],
+        "pid": 35628,
+        "port": 56591,
+        "restart_required": false,
+        "tune": {
+          "mode": "silent",
+          "state": "missing"
+        },
+        "url": "http://127.0.0.1:56591",
+        "version": "dev"
+      },
+      "status_at_start": {
+        "chat": {
+          "state": "loading",
+          "models": [
+            "gemma-4-e4b-qat"
+          ]
+        },
+        "autotune": "missing"
+      },
+      "priority_silent": "BelowNormal",
+      "chat_during_measurement": {
+        "status": 503,
+        "retry_after": "10",
+        "seconds": 0.02,
+        "code": null
+      },
+      "chat_after_silent": {
+        "status": 200,
+        "retry_after": null,
+        "seconds": 1.49,
+        "usage": {
+          "prompt_tokens": 15,
+          "completion_tokens": 1,
+          "total_tokens": 16,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        }
+      },
+      "autotune_silent": {
+        "state": "ready",
+        "mode": "silent",
+        "model": "gemma-4-e4b-qat",
+        "profile": {
+          "id": "silent@7c37e6ae",
+          "created": "2026-10-24T02:14:15.1602242Z",
+          "device": "llamacpp:cpu",
+          "plan_mode": "M9 mmap",
+          "n_ctx": 4608,
+          "mtp": {
+            "enabled": false
+          },
+          "answer_s": 395.91595459105736,
+          "measured_bytes": 671107392
+        }
+      },
+      "patch_optimal": {
+        "status": 200,
+        "autotune": "missing"
+      },
+      "priority_optimal": "BelowNormal",
+      "chat_after_optimal": {
+        "status": 200,
+        "retry_after": null,
+        "seconds": 0.23,
+        "usage": {
+          "prompt_tokens": 15,
+          "completion_tokens": 2,
+          "total_tokens": 17,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        }
+      },
+      "autotune_optimal": {
+        "state": "ready",
+        "mode": "optimal",
+        "model": "gemma-4-e4b-qat",
+        "profile": {
+          "id": "optimal@04994926",
+          "created": "2026-10-24T02:14:31.1793745Z",
+          "device": "llamacpp:cuda0",
+          "plan_mode": "M3 vram-ple-disk",
+          "n_ctx": 16384,
+          "mtp": {
+            "draft_max": 2,
+            "enabled": true
+          },
+          "answer_s": 2.6154405181102365,
+          "measured_bytes": 4136464384
+        }
+      },
+      "stop": {
+        "stopping": "stdin closed",
+        "exit": 0
+      }
+    },
+    {
+      "name": "second",
+      "events": [
+        {
+          "t": 61.1,
+          "event": "ready",
+          "api_version": 1,
+          "configured": true,
+          "data_dir": "<tmp>\\data",
+          "missing_models": [],
+          "pid": 43492,
+          "port": 55078,
+          "restart_required": false,
+          "tune": {
+            "mode": "optimal",
+            "state": "ready"
+          },
+          "url": "http://127.0.0.1:55078",
+          "version": "dev"
+        },
+        {
+          "t": 76.7,
+          "event": "stopping",
+          "reason": "stdin closed"
+        }
+      ],
+      "children": {},
+      "ready": {
+        "event": "ready",
+        "api_version": 1,
+        "configured": true,
+        "data_dir": "<tmp>\\data",
+        "missing_models": [],
+        "pid": 43492,
+        "port": 55078,
+        "restart_required": false,
+        "tune": {
+          "mode": "optimal",
+          "state": "ready"
+        },
+        "url": "http://127.0.0.1:55078",
+        "version": "dev"
+      },
+      "event_within_15s": null,
+      "status": {
+        "chat": {
+          "state": "ready",
+          "models": [
+            "gemma-4-e4b-qat"
+          ]
+        },
+        "autotune": {
+          "state": "ready",
+          "mode": "optimal",
+          "model": "gemma-4-e4b-qat",
+          "profile": {
+            "id": "optimal@04994926",
+            "created": "2026-10-24T02:14:31.1793745Z",
+            "device": "llamacpp:cuda0",
+            "plan_mode": "M3 vram-ple-disk",
+            "n_ctx": 16384,
+            "mtp": {
+              "draft_max": 2,
+              "enabled": true
+            },
+            "answer_s": 2.6154405181102365,
+            "measured_bytes": 4136464384
+          }
+        }
+      },
+      "priority": "BelowNormal",
+      "chat": {
+        "status": 200,
+        "retry_after": null,
+        "seconds": 0.36,
+        "usage": {
+          "prompt_tokens": 15,
+          "completion_tokens": 1,
+          "total_tokens": 16,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 0
+          }
+        }
+      },
+      "stop": {
+        "stopping": "stdin closed",
+        "exit": 0
+      }
+    }
+  ]
+}
