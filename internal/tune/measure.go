@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/memlock"
 	"github.com/usunrise88/nanollm/internal/numa"
 	"github.com/usunrise88/nanollm/internal/plan"
+	"github.com/usunrise88/nanollm/internal/quietexec"
 	"github.com/usunrise88/nanollm/internal/registry"
 )
 
@@ -394,7 +394,7 @@ func WaitForCool(ctx context.Context, d Device, idleC int) {
 	}
 	deadline := time.Now().Add(CoolTimeout)
 	for time.Now().Before(deadline) && ctx.Err() == nil {
-		out, err := exec.CommandContext(ctx, "nvidia-smi", "--query-gpu=temperature.gpu,utilization.gpu", "--format=csv,noheader,nounits").Output()
+		out, err := quietexec.Command(ctx, "nvidia-smi", "--query-gpu=temperature.gpu,utilization.gpu", "--format=csv,noheader,nounits").Output()
 		if err != nil {
 			return
 		}
