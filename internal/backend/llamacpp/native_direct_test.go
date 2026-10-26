@@ -101,12 +101,21 @@ func TestNativeLayerRing(t *testing.T) {
 	base, want := run(nil)
 	base.Close()
 
+	layers := map[int]bool{}
+	for _, r := range ranges {
+		layers[r.Layer] = true
+	}
 	for name, st := range map[string]*backend.StreamSpec{
 		"ahead 2":       {Ranges: ranges, Ahead: 2, Method: "direct", Depth: 3},
 		"no read-ahead": {Ranges: ranges, Ahead: 0, Method: "direct", Depth: 1},
 		"keep 4":        {Ranges: ranges, Ahead: 3, Keep: 4, Method: "direct"},
 	} {
 		t.Run(name, func(t *testing.T) {
+			// The layers kept in memory are not read: a model with no more than Keep of them
+			// (the two of CI's tiny fixture) has nothing for the ring to feed.
+			if len(layers) <= st.Keep {
+				t.Skipf("the test model has %d streamed layers, %d of them kept: nothing to read", len(layers), st.Keep)
+			}
 			m, got := run(st)
 			defer m.Close()
 			if !slices.Equal(got, want) {

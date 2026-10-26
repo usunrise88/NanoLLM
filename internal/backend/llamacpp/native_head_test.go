@@ -10,8 +10,32 @@ import (
 	"testing"
 
 	"github.com/usunrise88/nanollm/internal/backend"
+	"github.com/usunrise88/nanollm/internal/gguf"
 	"github.com/usunrise88/nanollm/internal/registry"
 )
+
+// shortlistHead skips unless the model's output matrix is what patch 0009 serves: the
+// token embedding, tied to the head and quantized to Q4_0, as the real E4B has it. CI's
+// tiny fixture is f32, and the library then (rightly) attaches no shortlist.
+func shortlistHead(t *testing.T, path string) {
+	t.Helper()
+	f, err := gguf.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tied := false
+	for _, tn := range f.Tensors {
+		switch tn.Name {
+		case "output.weight":
+			t.Skip("the test model has its own output matrix: the shortlist serves the tied head")
+		case "token_embd.weight":
+			tied = tn.Type == gguf.TypeQ4_0
+		}
+	}
+	if !tied {
+		t.Skip("the test model's head is not a tied Q4_0 matrix, which the shortlist serves")
+	}
+}
 
 // OPT-4: with the output shortlist on, greedy decoding gives the tokens the
 // whole head gives (the argmax is in the list in 99.93 % of positions), a batch
@@ -27,6 +51,7 @@ func TestNativeOutputShortlist(t *testing.T) {
 		t.Skip("the libraries have no output shortlist (patches/llama.cpp/0009)")
 	}
 	path := testModelPath(t)
+	shortlistHead(t, path)
 	sl, err := registry.LoadShortlist("gemma-4-e4b-qat", registry.HeadShortlist, "")
 	if err != nil {
 		t.Fatal(err)
@@ -133,6 +158,7 @@ func TestNativeOutputShortlistGrammar(t *testing.T) {
 		t.Skip("the libraries have no output shortlist (patches/llama.cpp/0009)")
 	}
 	path := testModelPath(t)
+	shortlistHead(t, path)
 	sl, err := registry.LoadShortlist("gemma-4-e4b-qat", registry.HeadShortlist, "")
 	if err != nil {
 		t.Fatal(err)
@@ -201,7 +227,9 @@ func TestNativeOutputShortlistLogits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := baseSpec(testModelPath(t))
+	path := testModelPath(t)
+	shortlistHead(t, path)
+	s := baseSpec(path)
 	s.Slots = 1
 	s.HeadShortlist = sl.IDs
 	mm, err := b.Load(context.Background(), s)
