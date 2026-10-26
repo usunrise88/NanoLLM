@@ -1,0 +1,25 @@
+Measuring inside the running service (about 45 s)...
+[  1 s] waiting for the GPU to cool
+[  2 s] loading llamacpp:cuda0
+[ 11 s] llamacpp:cuda0: prefill 6168 tok/s, decode 142.3 tok/s, 2.8 s for a typical answer, 3.9 GiB held
+[ 11 s] chosen: llamacpp:cuda0
+NanoLLM optimize: optimal (up to 4.0 GiB of memory, 7 threads), 11 s
+
+  chosen   llamacpp:cuda0 NVIDIA GeForce RTX 3070 Ti Laptop GPU, M3 vram-ple-disk, 16384 tokens of context, MTP 3
+           typical answer 2.8 s: a 4096-token prompt at 6168 tok/s, 300 tokens at 142.3 tok/s
+  memory   3.9 GiB planned, 3.9 GiB measured (limit 4.0 GiB + 0.2 GiB)
+
+  candidate         memory   prefill  decode  answer  verdict
+  llamacpp:cuda0    3.9 GiB  6168     142.3   2.8 s   chosen
+  llamacpp:vulkan1  3.7 GiB  -        -       ~27 s   out: estimated 27 s for a typical answer against 2 s for the best
+  llamacpp:cpu      3.4 GiB  -        -       ~37 s   out: estimated 37 s for a typical answer against 2 s for the best
+  llamacpp:vulkan0  4.0 GiB  -        -       -       out: the same card runs through llamacpp:cuda0
+
+  device    [measured] a typical answer takes 2.8 s here; llamacpp:vulkan1 ~27 s (estimate), llamacpp:cpu ~37 s (estimate)
+  drafting  [measured] 1.48 times faster than without drafting; the setting of class bench/results/rusunrisebook/rtx-2026-10-21/README.md
+  threads   [posture] the model runs on the GPU
+
+  ! vram_busy              Other programs hold 2.0 GiB of the 8.0 GiB of video memory on NVIDIA GeForce RTX 3070 Ti Laptop GPU: the GPU budget is smaller. Close the programs that use the GPU (browser, games, streaming) and repeat the check.
+  ! busy_machine           The machine is busy (CPU 20%, GPU 0%): the measurement may come out too low. Close other programs and repeat the check.
+
+Profile optimal@ee0845d5 applied. The model was reloaded by it.

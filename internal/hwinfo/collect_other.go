@@ -9,3 +9,5 @@ import (
 )
 
 func collect(context.Context) benchfmt.Machine { return benchfmt.Machine{} }
+
+func cpuNameRaw() string { return "" }

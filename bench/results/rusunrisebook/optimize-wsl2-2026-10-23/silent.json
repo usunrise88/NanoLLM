@@ -1,0 +1,295 @@
+{
+  "schema": "nanollm.tune/v1",
+  "mode": "silent",
+  "constraints": {
+    "mode": "silent",
+    "cpu_only": true,
+    "threads": 2,
+    "threads_batch": 2,
+    "low_priority": true,
+    "min_n_ctx": 4608,
+    "min_tok_s": 1,
+    "goal": "min_memory"
+  },
+  "key": {
+    "mode": "silent",
+    "model": "gemma-4-e4b-qat",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605",
+    "libs_release": "b11600-n8",
+    "llama_commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a",
+    "schema": "nanollm.tune/v1",
+    "suite": 1,
+    "device": "llamacpp:cpu 12th Gen Intel(R) Core(TM) i7-12700H 15 GiB",
+    "cpu": "Intel Core i7-12700H",
+    "cores": 10,
+    "ram_gib": 15
+  },
+  "created": "2026-10-23T18:08:37.815768845Z",
+  "duration_s": 28.320291967,
+  "conditions": {
+    "power": "ac",
+    "cpu_percent": 1.2468827930174564,
+    "gpu_temp_c": 64,
+    "free_ram": 15399784448
+  },
+  "survey": {
+    "taken": "2026-10-23T18:08:10.421736481Z",
+    "elapsed_s": 1.40495689,
+    "versions": {
+      "nanollm": "v0.0.0-optcheck",
+      "libs_release": "b11600-n8",
+      "llama_tag": "b11600",
+      "llama_commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a"
+    },
+    "os": {
+      "name": "ubuntu",
+      "version": "24.04",
+      "wsl": true
+    },
+    "cpu": {
+      "model": "Intel Core i7-12700H",
+      "vendor": "Intel",
+      "arch": "amd64",
+      "physical": 10,
+      "logical": 20,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "f16c",
+        "avx_vnni"
+      ],
+      "variant": "alderlake",
+      "features": [
+        "multirow-q4_0"
+      ],
+      "numa_nodes": 1
+    },
+    "ram": {
+      "total": 16625348608,
+      "available": 15399784448
+    },
+    "devices": [
+      {
+        "selector": "llamacpp:cpu",
+        "backend": "llamacpp",
+        "id": "cpu",
+        "kind": "cpu",
+        "type": "cpu",
+        "name": "12th Gen Intel(R) Core(TM) i7-12700H",
+        "vendor": "Intel",
+        "memory_total": 16625348608,
+        "memory_free": 16625348608,
+        "features": [
+          "multirow-q4_0"
+        ]
+      }
+    ],
+    "gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "driver": "581.57",
+        "compute_cap": "8.6",
+        "util_percent": 0,
+        "temp_c": 64,
+        "sm_clock_mhz": 210,
+        "max_sm_clock_mhz": 1785,
+        "mem_used_mib": 1993,
+        "mem_total_mib": 8192,
+        "power_w": 18.48
+      }
+    ],
+    "disk": {
+      "path": "/home/rusunrise/optcheck/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "kind": {
+        "type": "ssd"
+      },
+      "speed": {
+        "seq_mib_s": 2536.1487635913177,
+        "rand_mib_s": 140.82094841372844,
+        "rand_iops": 2253.135174619655,
+        "read_bytes": 1221459968,
+        "direct": true
+      },
+      "system_disk": "hdd"
+    },
+    "power": {
+      "source": "ac"
+    },
+    "load": {
+      "cpu_percent": 1.2468827930174564,
+      "gpu_percent": 0,
+      "gpu_temp_c": 64
+    },
+    "model": {
+      "id": "gemma-4-e4b-qat",
+      "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+      "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+      "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605",
+      "path": "/home/rusunrise/optcheck/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "drafter_path": "/home/rusunrise/optcheck/models/gemma-4-e4b-qat/8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265/mtp-gemma-4-E4B-it.gguf",
+      "bytes": 4215695776
+    },
+    "notes": [
+      "the OS calls the model's drive rotational but it reads at 2536 MiB/s: taken for a virtual or solid-state disk"
+    ]
+  },
+  "candidates": [
+    {
+      "id": "llamacpp:cpu/ram-1g",
+      "mode": "M9 mmap",
+      "plan_bytes": 617336385,
+      "n_ctx": 4608,
+      "estimate_s": 534.5782080984424,
+      "measured": true,
+      "measured_bytes": 637229376,
+      "pp": 22.59480108372157,
+      "tg": 1.1900254471926708,
+      "answer_s": 433.37608942775273,
+      "load_s": 1.4899200000000001,
+      "verdict": "chosen",
+      "extrapolated": true
+    },
+    {
+      "id": "llamacpp:cpu/ram-1.5g",
+      "mode": "M8 ram-hybrid",
+      "plan_bytes": 1607158353,
+      "n_ctx": 4608,
+      "estimate_s": 492.0771277015002,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-2g",
+      "mode": "M8 ram-hybrid",
+      "plan_bytes": 2137999953,
+      "n_ctx": 4608,
+      "estimate_s": 492.0771277015002,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-3g",
+      "mode": "M7 ram-ple-disk",
+      "plan_bytes": 3164359249,
+      "n_ctx": 4608,
+      "estimate_s": 325.93456588819896,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-4g",
+      "mode": "M7 ram-ple-disk",
+      "plan_bytes": 3524020817,
+      "n_ctx": 8192,
+      "estimate_s": 325.93456588819896,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-6g",
+      "mode": "M6 ram-full",
+      "plan_bytes": 5973494353,
+      "n_ctx": 16384,
+      "estimate_s": 325.93456588819896,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-8g",
+      "mode": "M6 ram-full",
+      "plan_bytes": 6946572881,
+      "n_ctx": 32768,
+      "estimate_s": 325.93456588819896,
+      "measured": false,
+      "verdict": "not measured"
+    }
+  ],
+  "chosen": {
+    "device": {
+      "value": "llamacpp:cpu",
+      "source": "measured",
+      "why": "a typical answer takes 433.4 s here",
+      "alternatives": {
+        "llamacpp:cpu/ram-1g": 433.37608942775273
+      },
+      "confirmed": true
+    },
+    "preset": {
+      "value": "ram-1g",
+      "source": "measured",
+      "why": "the smallest budget that answers at 1 tokens per second or more",
+      "confirmed": true
+    },
+    "plan_mode": {
+      "value": "M9 mmap",
+      "source": "rule",
+      "why": "the planner's first mode that fits the budget",
+      "confirmed": true
+    },
+    "n_ctx": 4608,
+    "slots": 1,
+    "mtp": {
+      "value": {
+        "enabled": false
+      },
+      "source": "measured",
+      "why": "decoding without drafting is the fastest here",
+      "alternatives": {
+        "off": 3.9
+      },
+      "confirmed": true
+    },
+    "threads": {
+      "value": {
+        "threads": 2,
+        "threads_batch": 2
+      },
+      "source": "rule",
+      "why": "the limit of the silent mode",
+      "alternatives": {
+        "rule": 1.2
+      },
+      "confirmed": true
+    }
+  },
+  "memory": {
+    "plan_bytes": 617336385,
+    "private_bytes": 637229376,
+    "vram_bytes": 0,
+    "measured_bytes": 637229376
+  },
+  "answer": {
+    "pp": 22.59480108372157,
+    "tg": 1.1900254471926708,
+    "answer_s": 433.37608942775273,
+    "extrapolated": true,
+    "load_s": 1.4899200000000001
+  },
+  "problems": [
+    {
+      "code": "cuda_addon_missing",
+      "severity": "warn",
+      "message": "An NVIDIA GPU is present but the CUDA add-on is not installed: the card runs through Vulkan, slower.",
+      "advice": "Reinstall with the CUDA option (install.sh --cuda)."
+    },
+    {
+      "code": "wsl",
+      "severity": "info",
+      "message": "Running inside WSL: the GPU may be unavailable and the disk is slower."
+    }
+  ],
+  "skipped": [
+    "candidate llamacpp:cpu/ram-1.5g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-2g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-3g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-4g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-6g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-8g (a smaller one works)"
+  ],
+  "verified": {
+    "chosen_tok_s": 1.2
+  }
+}

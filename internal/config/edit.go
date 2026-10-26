@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -91,6 +93,66 @@ func isTopLevelKey(line string) bool {
 	}
 	name, _, found := strings.Cut(line, ":")
 	return found && name != "" && !strings.ContainsAny(name, " \t")
+}
+
+// Save writes the document to path (WriteValidated): atomically, and only if
+// the result loads. The file keeps its permissions; a new one gets 0600, for
+// the keys it may hold.
+func (d *Document) Save(path string) error {
+	b, err := d.Bytes()
+	if err != nil {
+		return err
+	}
+	// The rewritten file is parsed back first: an edit that produced something
+	// that is not YAML should fail while the working file is still the one on
+	// disk.
+	if _, err := ParseDocument(b); err != nil {
+		return err
+	}
+	perm := os.FileMode(0o600)
+	if st, err := os.Stat(path); err == nil {
+		perm = st.Mode().Perm()
+	}
+	return WriteValidated(path, b, perm)
+}
+
+// WriteValidated writes a configuration through a temporary file in the same
+// directory and renames it over path, but only once the loader accepts it: a
+// file that `serve` would refuse is worse than no file, because it looks like
+// the problem has been solved. An interrupted write leaves the old file.
+func WriteValidated(path string, data []byte, perm os.FileMode) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".nanollm-*.yaml")
+	if err != nil {
+		return err
+	}
+	// Gone after the rename; removes the leftover on any failure before it.
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	if err := tmp.Chmod(perm); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if _, err := Load(tmp.Name()); err != nil {
+		return fmt.Errorf("the configuration does not validate: %w", err)
+	}
+	return os.Rename(tmp.Name(), path)
+}
+
+// SetTuneMode sets tune.mode, the one key the autotuner writes.
+func (d *Document) SetTuneMode(mode string) { d.SetString("tune.mode", mode) }
+
+// TuneMode reads tune.mode from the document, empty when it is absent.
+func (d *Document) TuneMode() string {
+	if n := d.find("tune", "mode"); n != nil && n.Kind == yaml.ScalarNode {
+		return n.Value
+	}
+	return ""
 }
 
 // Keys returns the credentials the file declares, in file order.

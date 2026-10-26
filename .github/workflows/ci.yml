@@ -356,6 +356,110 @@ jobs:
             if (Test-Path $p) { throw "$p survived -Purge" }
           }
 
+      # The autotuner (docs/OPTIMIZE.md) through the real services, on the
+      # scripted backend: a runner has no model and no GPU, but it has
+      # administrator rights, which the check of a service account needs.
+      - name: nanollm optimize, through the systemd service
+        if: runner.os == 'Linux'
+        env:
+          ARCHIVE: ${{ steps.dist.outputs.archive }}
+        run: |
+          set -euo pipefail
+          sudo ./scripts/install.sh --archive "$ARCHIVE" --no-ui --no-download --addr 127.0.0.1:18080
+          sudo perl -pi -e 's/^  enabled: \[llamacpp\]/  enabled: [fake]/' /var/lib/nanollm/nanollm.yaml
+          sudo systemctl restart nanollm
+          for _ in $(seq 30); do curl -fsS 127.0.0.1:18080/healthz >/dev/null 2>&1 && break; sleep 1; done
+          sudo /opt/nanollm/nanollm optimize -config /var/lib/nanollm/nanollm.yaml --mode optimal --yes
+          status=$(sudo /opt/nanollm/nanollm optimize --status --json -config /var/lib/nanollm/nanollm.yaml)
+          echo "$status"
+          grep -q '"stale": false' <<<"$status"
+          grep -q '"missing": false' <<<"$status"
+          sudo ./scripts/install.sh --uninstall --purge
+
+      - name: nanollm optimize, through the launchd agent
+        if: runner.os == 'macOS'
+        env:
+          ARCHIVE: ${{ steps.dist.outputs.archive }}
+        run: |
+          set -euo pipefail
+          config="$HOME/Library/Application Support/NanoLLM/nanollm.yaml"
+          ./scripts/install.sh --archive "$ARCHIVE" --no-ui --no-download --addr 127.0.0.1:18080
+          perl -pi -e 's/^  enabled: \[llamacpp\]/  enabled: [fake]/' "$config"
+          /usr/local/nanollm/nanollm service restart
+          for _ in $(seq 30); do curl -fsS 127.0.0.1:18080/healthz >/dev/null 2>&1 && break; sleep 1; done
+          /usr/local/nanollm/nanollm optimize -config "$config" --mode optimal --yes
+          status=$(/usr/local/nanollm/nanollm optimize --status --json -config "$config")
+          echo "$status"
+          grep -q '"stale": false' <<<"$status"
+          grep -q '"missing": false' <<<"$status"
+          ./scripts/install.sh --uninstall --purge
+
+      # scripts/check-optimize.ps1 is the check an administrator runs on a real
+      # machine; here it runs the measurement as LocalSystem (a one-shot task in
+      # session 0) on the scripted backend. Windows PowerShell, as a person has.
+      - name: nanollm optimize, as LocalSystem
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tmp = Join-Path $env:RUNNER_TEMP 'optcheck'
+          New-Item -ItemType Directory -Force -Path (Join-Path $tmp 'data') | Out-Null
+          go build -o (Join-Path $tmp 'nanollm.exe') ./cmd/nanollm
+          @"
+          server:
+            addr: "127.0.0.1:18081"
+            data_dir: '$tmp\data'
+          auth:
+            mode: open
+          backends:
+            enabled: [fake]
+          ui:
+            enabled: false
+          "@ | ForEach-Object { $_ -replace '(?m)^ {10}', '' } | Set-Content -Encoding ASCII (Join-Path $tmp 'fake.yaml')
+          ./scripts/check-optimize.ps1 -Exe (Join-Path $tmp 'nanollm.exe') -Config (Join-Path $tmp 'fake.yaml') -Out (Join-Path $tmp 'out')
+          if ($LASTEXITCODE) { throw "check-optimize.ps1 failed" }
+
+      - name: nanollm optimize, through the Windows service
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ARCHIVE: ${{ steps.dist.outputs.archive }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $config = Join-Path $env:ProgramData 'NanoLLM\nanollm.yaml'
+          $exe = Join-Path $env:ProgramFiles 'NanoLLM\nanollm.exe'
+          ./scripts/install.ps1 -Archive $env:ARCHIVE -NoDownload -Addr 127.0.0.1:18080
+          if ($LASTEXITCODE) { throw "install.ps1 failed" }
+          (Get-Content $config -Raw) -replace 'enabled:\s*\[llamacpp\]', 'enabled: [fake]' | Set-Content $config -NoNewline -Encoding ascii
+          Restart-Service NanoLLM
+          foreach ($i in 1..30) { try { Invoke-WebRequest -UseBasicParsing http://127.0.0.1:18080/healthz | Out-Null; break } catch { Start-Sleep -Seconds 1 } }
+          & $exe optimize -config $config --mode optimal --yes
+          if ($LASTEXITCODE) { throw "optimize through the service failed" }
+          $status = (& $exe optimize --status --json -config $config) -join "`n"
+          $status
+          if ($status -notmatch '"stale": false' -or $status -notmatch '"missing": false') { throw "no current profile after the measurement" }
+          ./scripts/install.ps1 -Uninstall -Purge
+          if (Get-Service NanoLLM -ErrorAction SilentlyContinue) { throw "the service survived -Uninstall" }
+
+      # nanollm managed (nanollm-embedded.md) the way an application starts it:
+      # the binary of the archive as a child process with pipes, without a
+      # console window on Windows, as an ordinary user. The measurement at the
+      # start goes through its own worker processes, on the scripted backend.
+      - name: nanollm managed, as an application starts it
+        env:
+          ARCHIVE: ${{ steps.dist.outputs.archive }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/managed"
+          mkdir -p "$dir"
+          case "$ARCHIVE" in
+            *.zip) if command -v unzip >/dev/null; then unzip -q "$ARCHIVE" -d "$dir"; else 7z x -bso0 -o"$dir" "$ARCHIVE"; fi ;;
+            *) tar -xzf "$ARCHIVE" -C "$dir" ;;
+          esac
+          bin="$dir/nanollm"
+          [ "$RUNNER_OS" != Windows ] || bin="$dir/nanollm.exe"
+          NANOLLM_MANAGED_BINARY="$bin" go test -count=1 -v -run '^TestManagedBinary$' ./cmd/nanollm
+
   # Both container images (deploy/Dockerfile). The CPU one serves: healthy,
   # keys enforced, a reply from the tiny model. The CUDA one runs without a
   # GPU here and must fall back to the CPU and say why; on a GPU it is

@@ -1,6 +1,7 @@
 package memlock
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -63,5 +64,25 @@ func TestPinAndClose(t *testing.T) {
 	}
 	if pin.Locked() != 0 {
 		t.Fatal("still locked after close")
+	}
+}
+
+// A file whose size is not a multiple of the page size: the last range ends up
+// to a page past the end of it. Windows refused such a view of a read-only
+// mapping ("Access is denied"), which failed every range-locked run of the
+// drafter (M8 with MTP).
+func TestPinRangeToTheEndOfAnOddSizedFile(t *testing.T) {
+	size := 3*PageSize + 704
+	path := tempFile(t, size)
+	pin, err := PinFile(path, []Range{{Off: PageSize, Len: size - PageSize}})
+	if errors.Is(err, ErrLimit) {
+		t.Skipf("locking is not permitted here: %v", err)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pin.Close()
+	if pin.Locked() == 0 {
+		t.Fatal("nothing locked")
 	}
 }

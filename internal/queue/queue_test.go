@@ -380,6 +380,41 @@ func TestTransientErrorsAreRetried(t *testing.T) {
 	}
 }
 
+// A server that says when it will be back (the autotuner is measuring the
+// model) is waited for as long as it says, and the wait is not an attempt: more
+// holds than RetryMax pass, and the line is still done.
+func TestRetryAfterIsWaitedOutWithoutSpendingAttempts(t *testing.T) {
+	svc := &holdingService{holds: 5, after: 30 * time.Millisecond}
+	q := open(t, svc, Options{Concurrency: 1, RetryWait: time.Millisecond, RetryMax: 2})
+	start := time.Now()
+	j, _ := q.Submit(context.Background(), batch("a"), "", "", "")
+	j = wait(t, q, j.ID, (*Job).terminal)
+	if j.Status != StatusSucceeded || j.Results[0].Result == nil {
+		t.Fatalf("%+v", j)
+	}
+	if took := time.Since(start); took < 5*30*time.Millisecond {
+		t.Errorf("the job finished in %v, but the server asked for 5 waits of 30 ms", took)
+	}
+}
+
+type holdingService struct {
+	stubService
+	mu2   sync.Mutex
+	holds int
+	after time.Duration
+}
+
+func (s *holdingService) Chat(ctx context.Context, req core.ChatRequest, sink core.Sink) (*core.ChatResult, error) {
+	s.mu2.Lock()
+	if s.holds > 0 {
+		s.holds--
+		s.mu2.Unlock()
+		return nil, core.Errorf(core.CodeModelUnavailable, "the model is being measured").WithRetryAfter(s.after)
+	}
+	s.mu2.Unlock()
+	return s.stubService.Chat(ctx, req, sink)
+}
+
 // Finished jobs older than the retention are deleted with their lines;
 // newer ones and jobs still queued stay.
 func TestRetentionPurgesOldJobs(t *testing.T) {

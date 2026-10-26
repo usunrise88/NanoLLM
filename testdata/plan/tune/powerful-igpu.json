@@ -1,0 +1,151 @@
+{
+  "plan": {
+    "model": "gemma-4-e4b-qat",
+    "preset": "uma-15g",
+    "device": {
+      "selector": "llamacpp:vulkan1",
+      "backend": "vulkan",
+      "memory": 16106127360,
+      "unified": true
+    },
+    "mode": "vram-full",
+    "mode_id": "M1",
+    "gpu_layers": -1,
+    "layers_on_gpu": 42,
+    "n_ctx": 32768,
+    "slots": 1,
+    "n_batch": 2048,
+    "n_ubatch": 512,
+    "n_outputs_max": 4,
+    "flash_attention": true,
+    "flash_attn_small_batch": true,
+    "kv": {
+      "type_k": "f16",
+      "type_v": "f16",
+      "swa_full": true,
+      "swa_full_reason": "the full sliding-window cache fits the budget: the prompt cache can reuse a prefix of any length",
+      "unified": false,
+      "cells_full": 32768,
+      "cells_swa": 32768,
+      "streams": 1,
+      "bytes": 1879048192
+    },
+    "load_mode": "mmap",
+    "lazy_mode": "off",
+    "repack": false,
+    "mtp": {
+      "enabled": true,
+      "reason": "the drafter (41.9 MiB) runs on llamacpp:vulkan1 with the target's output layer and reads its KV cache",
+      "draft_max": 3
+    },
+    "groups": {
+      "G0": {
+        "vram": 377487360,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G1": {
+        "vram": 1585446912,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G2": {
+        "vram": 376750080,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G3": {
+        "vram": 1857945600,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G4": {
+        "vram": 2241704,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G5": {
+        "vram": 1879048192,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      },
+      "G6": {
+        "vram": 6142992,
+        "ram_locked": 0,
+        "file_backed": 37748736,
+        "disk": 0
+      },
+      "G7": {
+        "vram": 708417945,
+        "ram_locked": 0,
+        "file_backed": 0,
+        "disk": 0
+      }
+    },
+    "memory": {
+      "unified": {
+        "budget": 16106127360,
+        "used": 6994807377,
+        "budgeted": true
+      },
+      "file_backed": 37748736,
+      "overhead_ram": 201326592
+    },
+    "compute_calibrated": false,
+    "target": {
+      "n_ctx": 32768,
+      "slots": 1
+    },
+    "warnings": [
+      "compute buffers (G7) for vulkan are not calibrated yet: the CPU fit stands in",
+      "36.0 MiB stays file-backed: outside every budget, and cold pages fault in from disk"
+    ],
+    "sources": {
+      "min_n_ctx": "mode"
+    },
+    "tried": [
+      {
+        "mode": "vram-full",
+        "id": "M1",
+        "fits": true
+      }
+    ]
+  },
+  "spec": {
+    "Path": "m.gguf",
+    "DrafterPath": "d.gguf",
+    "Device": "llamacpp:vulkan1",
+    "GPULayers": -1,
+    "Overrides": null,
+    "LoadMode": "mmap",
+    "LazyMode": "off",
+    "Repack": false,
+    "NCtx": 32768,
+    "Slots": 1,
+    "NBatch": 2048,
+    "NUBatch": 512,
+    "NOutputsMax": 4,
+    "Threads": 0,
+    "ThreadsBatch": 0,
+    "KVTypeK": "f16",
+    "KVTypeV": "f16",
+    "FlashAttention": true,
+    "FlashAttnSmallBatch": true,
+    "BackendSampling": false,
+    "CudaNano": null,
+    "SWAFull": true,
+    "KVUnified": false,
+    "DraftMax": 3,
+    "DraftPMin": 0,
+    "HeadShortlist": null,
+    "VerifyRows": 0,
+    "NGram": 0,
+    "Stream": null
+  }
+}

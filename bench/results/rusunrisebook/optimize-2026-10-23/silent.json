@@ -1,0 +1,512 @@
+{
+  "schema": "nanollm.tune/v1",
+  "mode": "silent",
+  "constraints": {
+    "mode": "silent",
+    "cpu_only": true,
+    "threads": 2,
+    "threads_batch": 2,
+    "low_priority": true,
+    "min_n_ctx": 4608,
+    "min_tok_s": 1,
+    "goal": "min_memory"
+  },
+  "key": {
+    "mode": "silent",
+    "model": "gemma-4-e4b-qat",
+    "model_sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605",
+    "libs_release": "dev",
+    "llama_commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a",
+    "cuda_build": "cuda13",
+    "schema": "nanollm.tune/v1",
+    "suite": 1,
+    "device": "llamacpp:cpu 12th Gen Intel(R) Core(TM) i7-12700H 32 GiB",
+    "cpu": "Intel Core i7-12700H",
+    "cores": 14,
+    "ram_gib": 31
+  },
+  "created": "2026-10-23T16:32:07.9359239Z",
+  "duration_s": 39.0076981,
+  "conditions": {
+    "power": "ac",
+    "cpu_percent": 24.8062015503876,
+    "gpu_temp_c": 77,
+    "free_ram": 11901816832
+  },
+  "survey": {
+    "taken": "2026-10-23T16:31:28.9282258Z",
+    "elapsed_s": 1.7455181,
+    "versions": {
+      "nanollm": "dev",
+      "libs_release": "dev",
+      "llama_tag": "b11600",
+      "llama_commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a",
+      "cuda_build": "cuda13"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11"
+    },
+    "cpu": {
+      "model": "Intel Core i7-12700H",
+      "vendor": "Intel",
+      "arch": "amd64",
+      "physical": 14,
+      "logical": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ],
+      "variant": "alderlake",
+      "features": [
+        "multirow-q4_0"
+      ],
+      "numa_nodes": 1
+    },
+    "ram": {
+      "total": 34070962176,
+      "available": 11901816832,
+      "speed_mts": 3200,
+      "modules": 2
+    },
+    "devices": [
+      {
+        "selector": "llamacpp:cpu",
+        "backend": "llamacpp",
+        "id": "cpu",
+        "kind": "cpu",
+        "type": "cpu",
+        "name": "12th Gen Intel(R) Core(TM) i7-12700H",
+        "vendor": "Intel",
+        "memory_total": 34070962176,
+        "memory_free": 11901911040,
+        "features": [
+          "multirow-q4_0"
+        ]
+      },
+      {
+        "selector": "llamacpp:cuda0",
+        "backend": "llamacpp",
+        "id": "cuda0",
+        "kind": "cuda",
+        "type": "gpu",
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vendor": "NVIDIA",
+        "memory_total": 8589410304,
+        "memory_free": 7442792448,
+        "features": [
+          "backend-sampling",
+          "cuda-nano"
+        ],
+        "driver": "581.57",
+        "compute_cap": "8.6",
+        "cc": 86
+      },
+      {
+        "selector": "llamacpp:vulkan0",
+        "backend": "llamacpp",
+        "id": "vulkan0",
+        "kind": "vulkan",
+        "type": "gpu",
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vendor": "NVIDIA",
+        "memory_total": 8407482368,
+        "memory_free": 7442792448,
+        "driver": "581.57",
+        "compute_cap": "8.6",
+        "cc": 86
+      },
+      {
+        "selector": "llamacpp:vulkan1",
+        "backend": "llamacpp",
+        "id": "vulkan1",
+        "kind": "vulkan",
+        "type": "gpu",
+        "name": "Intel(R) Iris(R) Xe Graphics",
+        "vendor": "Intel",
+        "memory_total": 17035481088,
+        "memory_free": 16230174720,
+        "unified": true,
+        "features": [
+          "fa-small-batch"
+        ],
+        "driver": "32.0.101.7092",
+        "driver_date": "2026-09-03"
+      }
+    ],
+    "adapters": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vendor": "NVIDIA",
+        "version": "32.0.15.8157",
+        "date": "2025-10-09"
+      },
+      {
+        "name": "Intel(R) Iris(R) Xe Graphics",
+        "vendor": "Intel",
+        "version": "32.0.101.7092",
+        "date": "2026-09-03"
+      }
+    ],
+    "gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "driver": "581.57",
+        "compute_cap": "8.6",
+        "util_percent": 0,
+        "temp_c": 77,
+        "sm_clock_mhz": 1785,
+        "max_sm_clock_mhz": 1785,
+        "mem_used_mib": 1949,
+        "mem_total_mib": 8192,
+        "power_w": 51.24,
+        "processes": [
+          {
+            "pid": 2528,
+            "name": "CrossDeviceResume.exe"
+          },
+          {
+            "pid": 9304,
+            "name": "explorer.exe"
+          },
+          {
+            "pid": 11316,
+            "name": "NVIDIA Overlay.exe"
+          },
+          {
+            "pid": 12248,
+            "name": "StartMenuExperienceHost.exe"
+          },
+          {
+            "pid": 12208,
+            "name": "SearchHost.exe"
+          },
+          {
+            "pid": 14928,
+            "name": "msedgewebview2.exe"
+          },
+          {
+            "pid": 1972,
+            "name": "[Insufficient Permissions]"
+          },
+          {
+            "pid": 17200,
+            "name": "TextInputHost.exe"
+          },
+          {
+            "pid": 18172,
+            "name": "3CXSoftphone.exe"
+          },
+          {
+            "pid": 17572,
+            "name": "steamwebhelper.exe"
+          },
+          {
+            "pid": 20476,
+            "name": "notepad++.exe"
+          },
+          {
+            "pid": 22296,
+            "name": "xpiped.exe"
+          },
+          {
+            "pid": 21888,
+            "name": "wezterm-gui.exe"
+          },
+          {
+            "pid": 20628,
+            "name": "Telegram.exe"
+          },
+          {
+            "pid": 14948,
+            "name": "Code.exe"
+          },
+          {
+            "pid": 9088,
+            "name": "ShellExperienceHost.exe"
+          },
+          {
+            "pid": 26716,
+            "name": "SnippingTool.exe"
+          },
+          {
+            "pid": 32584,
+            "name": "Sunshine.exe"
+          },
+          {
+            "pid": 20068,
+            "name": "ApplicationFrameHost.exe"
+          },
+          {
+            "pid": 15904,
+            "name": "SystemSettings.exe"
+          },
+          {
+            "pid": 30116,
+            "name": "WindowsTerminal.exe"
+          },
+          {
+            "pid": 1964,
+            "name": "[Insufficient Permissions]"
+          },
+          {
+            "pid": 1372,
+            "name": "IntelGraphicsSoftware.exe"
+          },
+          {
+            "pid": 21752,
+            "name": "[Insufficient Permissions]"
+          },
+          {
+            "pid": 18020,
+            "name": "PowerSwitcher.TrayApp.exe"
+          },
+          {
+            "pid": 33912,
+            "name": "ai-softphone.exe"
+          },
+          {
+            "pid": 8664,
+            "name": "NVIDIA Overlay.exe"
+          },
+          {
+            "pid": 16512,
+            "name": "WINWORD.EXE"
+          },
+          {
+            "pid": 38080,
+            "name": "WINWORD.EXE"
+          },
+          {
+            "pid": 10676,
+            "name": "chrome.exe"
+          },
+          {
+            "pid": 21856,
+            "name": "chrome.exe"
+          },
+          {
+            "pid": 24952,
+            "name": "claude.exe"
+          },
+          {
+            "pid": 36440,
+            "name": "claude.exe"
+          },
+          {
+            "pid": 37900,
+            "name": "ShellHost.exe"
+          },
+          {
+            "pid": 32696,
+            "name": "nanollm-opt.exe"
+          }
+        ]
+      }
+    ],
+    "disk": {
+      "path": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "kind": {
+        "type": "nvme",
+        "bus": "nvme"
+      },
+      "speed": {
+        "seq_mib_s": 3286.4796026440754,
+        "rand_mib_s": 141.41941245714673,
+        "rand_iops": 2262.7105993143477,
+        "read_bytes": 1222049792,
+        "direct": true
+      },
+      "system_disk": "nvme"
+    },
+    "power": {
+      "source": "ac",
+      "plan": "Performance",
+      "name": "12f5b174-33cc-4f46-bb0f-d12fb6c649ae"
+    },
+    "load": {
+      "cpu_percent": 24.8062015503876,
+      "gpu_percent": 0,
+      "gpu_temp_c": 77
+    },
+    "model": {
+      "id": "gemma-4-e4b-qat",
+      "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+      "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+      "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605",
+      "path": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "drafter_path": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\mtp-gemma-4-E4B-it.gguf",
+      "bytes": 4215695776
+    }
+  },
+  "candidates": [
+    {
+      "id": "llamacpp:cpu/ram-1g",
+      "mode": "M9 mmap",
+      "plan_bytes": 617336385,
+      "n_ctx": 4608,
+      "estimate_s": 250.08746950090847,
+      "measured": true,
+      "measured_bytes": 672004416,
+      "pp": 20.84392741060622,
+      "tg": 1.5420997438998558,
+      "answer_s": 391.0480179713475,
+      "load_s": 3.5630900000000003,
+      "verdict": "chosen",
+      "extrapolated": true
+    },
+    {
+      "id": "llamacpp:cpu/ram-1.5g",
+      "mode": "M8 ram-hybrid",
+      "plan_bytes": 1607158353,
+      "n_ctx": 4608,
+      "estimate_s": 217.28974198320827,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-2g",
+      "mode": "M8 ram-hybrid",
+      "plan_bytes": 2137999953,
+      "n_ctx": 4608,
+      "estimate_s": 217.28974198320827,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-3g",
+      "mode": "M7 ram-ple-disk",
+      "plan_bytes": 3164359249,
+      "n_ctx": 4608,
+      "estimate_s": 73.7009159093924,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-4g",
+      "mode": "M7 ram-ple-disk",
+      "plan_bytes": 3524020817,
+      "n_ctx": 8192,
+      "estimate_s": 73.7009159093924,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-6g",
+      "mode": "M6 ram-full",
+      "plan_bytes": 5973494353,
+      "n_ctx": 16384,
+      "estimate_s": 73.7009159093924,
+      "measured": false,
+      "verdict": "not measured"
+    },
+    {
+      "id": "llamacpp:cpu/ram-8g",
+      "mode": "M6 ram-full",
+      "plan_bytes": 6946572881,
+      "n_ctx": 32768,
+      "estimate_s": 73.7009159093924,
+      "measured": false,
+      "verdict": "not measured"
+    }
+  ],
+  "chosen": {
+    "device": {
+      "value": "llamacpp:cpu",
+      "source": "measured",
+      "why": "a typical answer takes 391.0 s here",
+      "alternatives": {
+        "llamacpp:cpu/ram-1g": 391.0480179713475
+      },
+      "confirmed": true
+    },
+    "preset": {
+      "value": "ram-1g",
+      "source": "measured",
+      "why": "the smallest budget that answers at 1 tokens per second or more",
+      "confirmed": true
+    },
+    "plan_mode": {
+      "value": "M9 mmap",
+      "source": "rule",
+      "why": "the planner's first mode that fits the budget",
+      "confirmed": true
+    },
+    "n_ctx": 4608,
+    "slots": 1,
+    "mtp": {
+      "value": {
+        "enabled": false
+      },
+      "source": "measured",
+      "why": "decoding without drafting is the fastest here",
+      "alternatives": {
+        "off": 2.3
+      },
+      "confirmed": true
+    },
+    "threads": {
+      "value": {
+        "threads": 2,
+        "threads_batch": 2
+      },
+      "source": "rule",
+      "why": "the limit of the silent mode",
+      "alternatives": {
+        "rule": 1.5
+      },
+      "confirmed": true
+    }
+  },
+  "memory": {
+    "plan_bytes": 617336385,
+    "private_bytes": 672004416,
+    "vram_bytes": 0,
+    "measured_bytes": 672004416
+  },
+  "answer": {
+    "pp": 20.84392741060622,
+    "tg": 1.5420997438998558,
+    "answer_s": 391.0480179713475,
+    "extrapolated": true,
+    "load_s": 3.5630900000000003
+  },
+  "problems": [
+    {
+      "code": "busy_machine",
+      "severity": "warn",
+      "message": "The machine is busy (CPU 25%, GPU 0%): the measurement may come out too low.",
+      "advice": "Close other programs and repeat the check.",
+      "params": {
+        "cpu_percent": 24.8062015503876,
+        "gpu_percent": 0
+      }
+    },
+    {
+      "code": "hot_gpu",
+      "severity": "info",
+      "message": "NVIDIA GeForce RTX 3070 Ti Laptop GPU is at 77 C when idle.",
+      "advice": "Check the cooling: a hot GPU lowers its clocks within a minute.",
+      "params": {
+        "temp_c": 77
+      }
+    }
+  ],
+  "skipped": [
+    "candidate llamacpp:cpu/ram-1.5g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-2g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-3g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-4g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-6g (a smaller one works)",
+    "candidate llamacpp:cpu/ram-8g (a smaller one works)"
+  ],
+  "verified": {
+    "chosen_tok_s": 1.5
+  }
+}

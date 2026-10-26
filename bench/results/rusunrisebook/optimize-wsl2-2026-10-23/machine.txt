@@ -1,0 +1,17 @@
+Linux 6.6.87.2-microsoft-standard-WSL2 x86_64
+CPU(s):                               20
+Model name:                           12th Gen Intel(R) Core(TM) i7-12700H
+Thread(s) per core:                   2
+Core(s) per socket:                   10
+Socket(s):                            1
+NUMA node(s):                         1
+NUMA node0 CPU(s):                    0-19
+NAME ROTA TYPE   SIZE MODEL
+sda     1 disk 388.4M Virtual Disk
+sdb     1 disk   186M Virtual Disk
+sdc     1 disk     4G Virtual Disk
+sdd     1 disk     1T Virtual Disk
+sde     1 disk     1T Virtual Disk
+               total        used        free      shared  buff/cache   available
+Mem:           15855        1148        8707           3        6244       14706
+user: rusunrise (1000)

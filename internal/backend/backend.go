@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/usunrise88/nanollm/internal/hwinfo"
 )
@@ -484,6 +485,40 @@ type Model interface {
 
 	Close() error
 }
+
+// Tuner is implemented by a model whose thread teams and drafting limits can
+// change while it is loaded, which is how the autotuner (docs/OPTIMIZE.md,
+// §3.3) tries several settings on one load instead of one load each. Like Step
+// it is called from the model's scheduling loop (sched.Loop.Do), when no slot
+// is running.
+type Tuner interface {
+	// SetThreads sets the decode team and the prompt-processing team
+	// (LoadSpec.Threads and ThreadsBatch).
+	SetThreads(threads, batch int) error
+	// SetDraft sets how many tokens MTP (or prompt-lookup) drafting proposes
+	// per step and the drafter's p_min. Zero turns drafting off. The context
+	// reserves output rows for the DraftMax it was created with, so a larger
+	// value is an error: DraftCeiling is that limit.
+	SetDraft(max int, pMin float64) error
+	DraftCeiling() int
+}
+
+// BatchTimer is implemented by a model that can time a batch of a few tokens
+// on top of a slot's cache without keeping it: the cost of checking k draft
+// tokens against one decoded token, the quantity that decides whether
+// drafting pays on a device (docs/AUTOTUNE.md, the cost of a batch).
+type BatchTimer interface {
+	// TimeBatch evaluates tokens at the position after the slot's cache, with
+	// an output row (logits) for each of the last outputs tokens as a
+	// verification step has, waits for the device, removes the tokens again
+	// and reports how long the evaluation took. ErrNoRollback means the cache
+	// could not be restored and the slot has to be prefilled afresh.
+	TimeBatch(ctx context.Context, seq int, tokens []Token, outputs int) (time.Duration, error)
+}
+
+// ErrNoRollback is returned by TimeBatch when the cache cannot be cut back to
+// where it was (sliding-window layers without SWAFull).
+var ErrNoRollback = errors.New("backend: the cache cannot be rolled back")
 
 // Warner is implemented by a backend that loaded with problems worth showing
 // but not fatal: a GPU library in lib/ that did not load, and why (SPEC §3:

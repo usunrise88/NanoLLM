@@ -1,0 +1,6 @@
+==> removing the nanollm-check service
+removed /etc/systemd/system/nanollm-check.service
+the configuration, the models and the job database were left in place
+==> removing /opt/nanollm-check
+==> removing /var/lib/nanollm-check: the configuration, the keys, the weights and the job database
+==> done

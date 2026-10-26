@@ -1,0 +1,9 @@
+nanollm optimize --mode silent on Linux (WSL2 Ubuntu 24.04), sampled 14 s into the run with ps -eLo pid,tid,ni,comm,args:
+
+  pid     nice  threads
+  162111  0     1       the shell that started it
+  162113  0     17      nanollm optimize (the command)
+  162138  10    15      nanollm optimize worker: every thread of the measuring process is at nice 10
+
+The worker applies the quiet mode's priority to each thread under /proc/self/task, and the threads it starts later inherit it
+(internal/posture).

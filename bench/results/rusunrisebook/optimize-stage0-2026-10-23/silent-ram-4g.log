@@ -1,0 +1,3 @@
+[1/1] ram-4g threads=2,threads_batch=2 …
+[1/1] ram-4g   threads=2,threads_batch=2 ok       pp 92.4 tok/s  tg 11.0 tok/s  
+result: C:/Projects/nanollm/bench/results/rusunrisebook/optimize-stage0-2026-10-23/silent-ram-4g.json

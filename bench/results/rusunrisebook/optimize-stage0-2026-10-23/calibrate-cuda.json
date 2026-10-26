@@ -1,0 +1,292 @@
+{
+  "candidate": {
+    "id": "llamacpp:cuda0",
+    "device": {
+      "selector": "llamacpp:cuda0",
+      "backend": "llamacpp",
+      "id": "cuda0",
+      "kind": "cuda",
+      "type": "gpu",
+      "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+      "vendor": "NVIDIA",
+      "memory_total": 8589410304,
+      "memory_free": 7442792448,
+      "features": [
+        "backend-sampling",
+        "cuda-nano"
+      ],
+      "driver": "581.57",
+      "compute_cap": "8.6",
+      "cc": 86
+    },
+    "preset": "vram-6.5g",
+    "mode": "M1 vram-full",
+    "plan": {
+      "model": "gemma-4-e4b-qat",
+      "preset": "vram-6.5g",
+      "device": {
+        "selector": "llamacpp:cuda0",
+        "backend": "cuda",
+        "memory": 7442792448
+      },
+      "mode": "vram-full",
+      "mode_id": "M1",
+      "gpu_layers": -1,
+      "layers_on_gpu": 42,
+      "n_ctx": 16384,
+      "slots": 2,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "n_outputs_max": 8,
+      "flash_attention": true,
+      "backend_sampling": true,
+      "kv": {
+        "type_k": "f16",
+        "type_v": "f16",
+        "swa_full": false,
+        "swa_full_reason": "the full sliding-window cache needs 1200.0 MiB more than the budget leaves: the prompt cache reuses a prefix only within the last 512 tokens, and a slot without one prefills again",
+        "unified": false,
+        "cells_full": 16384,
+        "cells_swa": 1024,
+        "streams": 2,
+        "bytes": 620756992
+      },
+      "load_mode": "dio",
+      "lazy_mode": "off",
+      "repack": false,
+      "overrides": [
+        {
+          "pattern": "^token_embd\\.weight$",
+          "device": "llamacpp:cuda0"
+        },
+        {
+          "pattern": "^per_layer_token_embd\\.weight$",
+          "device": "llamacpp:cuda0"
+        }
+      ],
+      "mtp": {
+        "enabled": true,
+        "reason": "the drafter (41.9 MiB) runs on llamacpp:cuda0 with the target's output layer and reads its KV cache",
+        "draft_max": 3
+      },
+      "groups": {
+        "G0": {
+          "vram": 754974720,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G1": {
+          "vram": 1585446912,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G2": {
+          "vram": 376750080,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G3": {
+          "vram": 1857945600,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G4": {
+          "vram": 2241704,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G5": {
+          "vram": 620756992,
+          "ram_locked": 0,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G6": {
+          "vram": 43891728,
+          "ram_locked": 37748736,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G7": {
+          "vram": 169979412,
+          "ram_locked": 37748736,
+          "file_backed": 0,
+          "disk": 0
+        }
+      },
+      "memory": {
+        "vram": {
+          "budget": 6979321856,
+          "used": 5747531468,
+          "budgeted": true
+        },
+        "ram": {
+          "budget": 0,
+          "used": 276824064,
+          "budgeted": false
+        },
+        "file_backed": 0,
+        "overhead_vram": 335544320,
+        "overhead_ram": 201326592
+      },
+      "compute_calibrated": false,
+      "target": {
+        "n_ctx": 16384,
+        "slots": 2
+      },
+      "warnings": [
+        "a VRAM-only preset does not budget host RAM: this plan takes 264.0 MiB of it, measured, not bounded",
+        "compute buffers (G7) for cuda are not calibrated yet: the CPU fit stands in"
+      ],
+      "sources": {
+        "min_n_ctx": "mode"
+      },
+      "tried": [
+        {
+          "mode": "vram-full",
+          "id": "M1",
+          "fits": true
+        }
+      ]
+    },
+    "spec": {
+      "Path": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "DrafterPath": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\mtp-gemma-4-E4B-it.gguf",
+      "Device": "llamacpp:cuda0",
+      "GPULayers": -1,
+      "Overrides": [
+        {
+          "pattern": "^token_embd\\.weight$",
+          "device": "llamacpp:cuda0"
+        },
+        {
+          "pattern": "^per_layer_token_embd\\.weight$",
+          "device": "llamacpp:cuda0"
+        }
+      ],
+      "LoadMode": "dio",
+      "LazyMode": "off",
+      "Repack": false,
+      "NCtx": 16384,
+      "Slots": 2,
+      "NBatch": 2048,
+      "NUBatch": 512,
+      "NOutputsMax": 8,
+      "Threads": 0,
+      "ThreadsBatch": 0,
+      "KVTypeK": "f16",
+      "KVTypeV": "f16",
+      "FlashAttention": true,
+      "FlashAttnSmallBatch": false,
+      "BackendSampling": true,
+      "CudaNano": null,
+      "SWAFull": false,
+      "KVUnified": false,
+      "DraftMax": 3,
+      "DraftPMin": 0,
+      "NGram": 0,
+      "Stream": null
+    },
+    "class": {
+      "gpu_backend": "cuda",
+      "gpu_cc": "86",
+      "gpu_memory": "own",
+      "gpu_vendor": "nvidia",
+      "os": "windows"
+    },
+    "n_ctx": 16384,
+    "slots": 2,
+    "mtp": true,
+    "planned_private": 746586112,
+    "planned_vram": 5747531468,
+    "planned_bytes": 6494117580,
+    "estimate": {
+      "known": true,
+      "pp": 5152,
+      "tg": 154.16,
+      "answer_s": 2.741061154499479,
+      "basis": "cuda baseline (distance 0), depth factors estimated"
+    },
+    "measure": true
+  },
+  "probe": {
+    "load_ms": 5076.883,
+    "memory": {
+      "peak_private": 714387456,
+      "peak_commit": 6912962560,
+      "vram_dedicated": 5654343680,
+      "vram_shared": 191119360,
+      "vram_source": "pdh",
+      "buffers": 5405629480
+    },
+    "prefill": {
+      "tokens": 4096,
+      "pp512": 5692.8928902216785,
+      "pp": 6350.624883813488
+    },
+    "calibration": {
+      "pp512": 5692.8928902216785,
+      "pp4096": 6350.624883813488,
+      "tg0": 100.0090008100729,
+      "tg4096": 96.50701291953169,
+      "short_tg": 99.45588160771852,
+      "depth_pp": 1.1155356347423213,
+      "depth_tg": 0.9649832728836893,
+      "variants": {
+        "mtp2/0": [
+          143.36793582942218,
+          167.11810661021082
+        ],
+        "mtp3/0": [
+          125.82181115104788,
+          180.75903300229564
+        ],
+        "off": [
+          100.0090008100729,
+          96.50701291953169
+        ]
+      }
+    },
+    "batch_ms": {
+      "1": 9.858,
+      "3": 11.476,
+      "4": 12.047
+    },
+    "gpu_begin": {
+      "temp_c": 73,
+      "clock_mhz": 1410
+    },
+    "gpu_end": {
+      "temp_c": 78,
+      "clock_mhz": 1785
+    },
+    "elapsed_s": 0
+  },
+  "baseline": {
+    "device": "cuda",
+    "class": {
+      "gpu_backend": "cuda",
+      "gpu_cc": "86",
+      "gpu_memory": "own",
+      "gpu_vendor": "nvidia",
+      "os": "windows"
+    },
+    "pp512": 5692.9,
+    "tg0": 100,
+    "depth_pp": 1.12,
+    "depth_tg": 0.96,
+    "mtp_gain": 1.87,
+    "source": "bench/results/\u003cmachine\u003e/optimize-stage0-\u003cdate\u003e/calibrate-\u003cdevice\u003e.json"
+  },
+  "best_variant": "mtp3/0",
+  "mechanism": {
+    "1": 9.858,
+    "3": 11.476,
+    "4": 12.047
+  }
+}

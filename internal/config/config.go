@@ -23,8 +23,25 @@ type Config struct {
 	Queue      Queue      `yaml:"queue"`
 	Registry   Registry   `yaml:"registry"`
 	Bench      Bench      `yaml:"bench"`
+	Tune       Tune       `yaml:"tune"`
 	UI         UI         `yaml:"ui"`
 	Log        Log        `yaml:"log"`
+}
+
+// Autotuner modes tune.mode accepts (docs/OPTIMIZE.md).
+const (
+	TuneSilent   = "silent"
+	TuneOptimal  = "optimal"
+	TunePowerful = "powerful"
+)
+
+// Tune is the autotuner. Mode is empty when it is off, and then the server
+// behaves as it did before the module; otherwise silent, optimal or powerful.
+// `nanollm optimize` writes it after a measurement; the limits of the mode
+// apply from the first start, and the profile of the measurement refines the
+// choice inside them.
+type Tune struct {
+	Mode string `yaml:"mode"`
 }
 
 type Server struct {
@@ -330,6 +347,9 @@ func (c Config) ModelsPath() string {
 	}
 	return filepath.Join(c.Server.DataDir, "models")
 }
+
+// TunePath is where the autotuner keeps its profiles.
+func (c Config) TunePath() string { return filepath.Join(c.Server.DataDir, "tune") }
 
 // PromptCachePath is where the prompt cache on disk keeps its states.
 func (c Config) PromptCachePath() string {

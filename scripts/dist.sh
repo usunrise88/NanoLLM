@@ -89,6 +89,10 @@ LDFLAGS="-X main.version=$VERSION -X $LLAMACPP.PinnedTag=$LLAMA_TAG"
 if [[ -s scripts/llama.cpp.commit ]]; then
   LDFLAGS+=" -X $LLAMACPP.PinnedCommit=$(tr -d '[:space:]' < scripts/llama.cpp.commit)"
 fi
+# The autotune profile is keyed on the libraries' release.
+if [[ -s scripts/libs.release ]]; then
+  LDFLAGS+=" -X $LLAMACPP.LibsRelease=$(tr -d '[:space:]' < scripts/libs.release)"
+fi
 
 lipo_tool() {
   local t

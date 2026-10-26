@@ -1,0 +1,157 @@
+{
+  "schema": "nanollm.bench/v1",
+  "consent_version": "2026-10",
+  "suite": {
+    "id": "dev",
+    "version": "v1",
+    "prompts_sha256": "ad01c12080c9d8d68bf3bd9414940694635d0fdf85c2539ffee4b127c7429754",
+    "quick": true
+  },
+  "client": {
+    "nanollm": "dev",
+    "llama_cpp": {
+      "tag": "b11600",
+      "commit": "c96d19c520cd770d76dda528d45e36ef4f77c77a"
+    },
+    "ggml_cpu_variant": "alderlake",
+    "os": "windows",
+    "arch": "amd64"
+  },
+  "model": {
+    "id": "gemma-4-e4b-qat",
+    "revision": "8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265",
+    "sha256": "df0fd4ee07072c607c29a0a1cb4f98918426cca12f45a2776bdd6ee6d09a4de3",
+    "drafter_sha256": "423074e537504b4f9ec5eafed5c639fac82c96631626efccacdd3c4039b20605"
+  },
+  "machine": {
+    "cpu": {
+      "vendor": "Intel",
+      "model": "Intel Core i7-12700H",
+      "cores": 14,
+      "threads": 20,
+      "p_cores": 6,
+      "e_cores": 8,
+      "isa": [
+        "avx",
+        "avx2",
+        "fma",
+        "avx_vnni"
+      ]
+    },
+    "memory": {
+      "total_bytes": 34070962176,
+      "speed_mts": 3200
+    },
+    "gpus": [
+      {
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vendor": "NVIDIA",
+        "vram_bytes": 8589410304,
+        "driver_major": "581"
+      },
+      {
+        "name": "NVIDIA GeForce RTX 3070 Ti Laptop GPU",
+        "vram_bytes": 8407482368
+      },
+      {
+        "name": "Intel(R) Iris(R) Xe Graphics",
+        "vram_bytes": 17035481088,
+        "unified": true
+      }
+    ],
+    "system": {
+      "vendor": "GIGABYTE",
+      "family": "AERO",
+      "product": "AERO 5 XE",
+      "form_factor": "laptop",
+      "chassis": "notebook"
+    },
+    "os": {
+      "name": "windows",
+      "version": "11",
+      "kernel_mm": "10.26200"
+    },
+    "power": {
+      "source": "ac",
+      "profile": "Performance"
+    },
+    "disk": {
+      "type": "nvme"
+    }
+  },
+  "runs": [
+    {
+      "preset": "ram-3g",
+      "plan_hash": "17b9e0e699568ba0",
+      "plan": {
+        "mode": "ram-ple-disk",
+        "device": "llamacpp:cpu",
+        "gpu_layers": 0,
+        "n_ctx": 4096,
+        "slots": 1,
+        "kv": "f16",
+        "fa": true,
+        "swa_full": false,
+        "mtp": true,
+        "threads": 2,
+        "enforcement": "advisory",
+        "threads_batch": 2,
+        "n_batch": 2048,
+        "n_ubatch": 512,
+        "kv_v": "f16",
+        "repack": "on",
+        "load_mode": "mmap",
+        "lazy": "on",
+        "draft_max": 2,
+        "draft_p_min": 0.5
+      },
+      "metrics": {
+        "load_ms": 2207.169,
+        "pp_tok_s": 90.27566394324415,
+        "tg_tok_s": {
+          "d0": 11.349027323726038
+        },
+        "ttft_ms": 748.21,
+        "chat_tok_s": 11.154153663626097,
+        "mtp": {
+          "acceptance": 0.7,
+          "speedup": 1.7307135881848483,
+          "tok_s": 19.304645310339495
+        },
+        "echo": {
+          "acceptance": 1,
+          "speedup": 2.0412041046630995,
+          "tok_s": 22.40318927088903
+        },
+        "peak_rss": 5919166464,
+        "peak_private": 3177078784,
+        "peak_commit": 3803287552,
+        "vram_dedicated": 28672,
+        "vram_shared": 278528,
+        "vram_source": "pdh",
+        "buffers": {
+          "CPU_Mapped": 2002895427,
+          "CPU_REPACK": 2656053492
+        },
+        "stddev": {
+          "chat_tok_s": 0.3803206135394252,
+          "echo_draft_tok_s": 1.9995613767006961,
+          "echo_tok_s": 0.045964055746489686,
+          "mtp_tok_s": 0.2498297225398234,
+          "pp_tok_s": 3.3489197480496897,
+          "tg_tok_s.d0": 0.08216629905253235,
+          "ttft_ms": 84.85634927629155
+        }
+      },
+      "reps": 2,
+      "output": {
+        "sha256": "97e62ed174058317d94697656b788e925af0a55fdc3fc4c3d72a04b4b2fe2859",
+        "tokens": 128
+      },
+      "status": "ok",
+      "variant": "threads=2,threads_batch=2"
+    }
+  ],
+  "date": "2026-10-23",
+  "duration_s": 119.6468673
+}

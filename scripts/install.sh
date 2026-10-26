@@ -41,6 +41,10 @@ START="${NANOLLM_START:-1}"
 DAEMON="${NANOLLM_DAEMON:-0}"
 ARCHIVE="${NANOLLM_ARCHIVE:-}"
 CUDA_ARCHIVE="${NANOLLM_CUDA_ARCHIVE:-}"
+# The autotuner mode to measure this machine for after the install (silent,
+# optimal or powerful); empty asks, or takes optimal without a terminal.
+MODE="${NANOLLM_MODE:-}"
+OPTIMIZE="${NANOLLM_OPTIMIZE:-1}"
 ACTION=install
 PURGE=0
 # The piped form cannot pass a flag, so these have variables as well.
@@ -76,6 +80,9 @@ Install NanoLLM as a service: systemd on Linux, launchd on macOS.
   --no-cuda           remove them again
   --daemon            macOS: a LaunchDaemon for the whole machine instead of an agent
   --no-start          install everything, start nothing
+  --mode MODE         silent, optimal or powerful: measure this machine for it after the install
+                      (a new install asks; without a terminal it takes optimal; see: nanollm optimize)
+  --no-optimize       do not measure; run `nanollm optimize` later
   --archive PATH      install this archive instead of downloading one (tests, offline)
   --cuda-archive PATH the CUDA add-on to go with --archive
   --uninstall         stop and remove the service and the installation
@@ -84,7 +91,8 @@ Install NanoLLM as a service: systemd on Linux, launchd on macOS.
 Each option has an environment variable: NANOLLM_VERSION, NANOLLM_PREFIX,
 NANOLLM_DATA_DIR, NANOLLM_ADDR, NANOLLM_USER, NANOLLM_SERVICE, NANOLLM_UI=0,
 NANOLLM_DOWNLOAD=0, NANOLLM_CUDA=1 (or 0), NANOLLM_DAEMON=1, NANOLLM_START=0,
-NANOLLM_ARCHIVE, NANOLLM_CUDA_ARCHIVE, NANOLLM_UNINSTALL=1, NANOLLM_PURGE=1.
+NANOLLM_ARCHIVE, NANOLLM_CUDA_ARCHIVE, NANOLLM_MODE, NANOLLM_OPTIMIZE=0,
+NANOLLM_UNINSTALL=1, NANOLLM_PURGE=1.
 A flag wins over one.
 EOF
 }
@@ -103,6 +111,8 @@ while [[ $# -gt 0 ]]; do
     --no-cuda)      CUDA=0; shift ;;
     --daemon)       DAEMON=1; shift ;;
     --no-start)     START=0; shift ;;
+    --mode)         MODE="${2:?--mode needs silent, optimal or powerful}"; shift 2 ;;
+    --no-optimize)  OPTIMIZE=0; shift ;;
     --archive)      ARCHIVE="${2:?--archive needs a path}"; shift 2 ;;
     --cuda-archive) CUDA_ARCHIVE="${2:?--cuda-archive needs a path}"; CUDA=1; shift 2 ;;
     --uninstall)    ACTION=uninstall; shift ;;
@@ -558,10 +568,92 @@ install_nanollm() {
   svc install "${args[@]}" >&2 || die "nanollm service install failed; the output above says why"
   local healthy=0
   if [[ "$START" == "1" ]] && wait_for_health; then healthy=1; fi
+  if [[ "$healthy" == "1" && "$WITH_MODEL" == "1" ]]; then optimize_machine "$([[ -n "$KEYS" ]] && echo 1 || echo 0)"; fi
   summary
   # /healthz does not wait for a model, so a service that does not answer it
   # within a minute is broken, and a deployment script has to be told.
   [[ "$START" != "1" || "$healthy" == "1" ]] || die "the service did not come up; see $(log_hint)"
+}
+
+# --- the autotuner ---------------------------------------------------------------
+
+# json_field prints the value of a top-level key of the small JSON that
+# `nanollm optimize --status --json` prints, without needing jq.
+json_field() { sed -n "s/^ *\"$1\": *\"\{0,1\}\([^\",]*\)\"\{0,1\},\{0,1\} *$/\1/p" | head -1; }
+
+# interactive says whether a person can be asked: a terminal on input and
+# output, which a piped `curl | bash` is not.
+interactive() { [[ -t 0 && -t 2 ]]; }
+
+# optimize_machine measures this machine for a mode through the running
+# service (the measurement happens inside it) and applies the result. A new
+# install measures for the mode asked for, or asks, or takes optimal without a
+# terminal; an upgrade offers a recheck when the libraries or the driver made
+# the profile stale (docs/OPTIMIZE.md, 4.3). Whatever goes wrong is a warning
+# with the command to repeat: the service works by the limits of the mode and
+# the static rules without a profile.
+optimize_machine() {
+  local new_install="$1" status cur stale missing mode="$MODE" a
+  if [[ "$OPTIMIZE" != "1" ]]; then
+    say "not measured (--no-optimize); to tune this machine: $EXE optimize"
+    return
+  fi
+  status="$(as_owner "$EXE" optimize --status --json -config "$CONFIG" 2>/dev/null || true)"
+  cur="$(printf '%s\n' "$status" | json_field mode)"
+  stale="$(printf '%s\n' "$status" | json_field stale)"
+  missing="$(printf '%s\n' "$status" | json_field missing)"
+  if [[ -n "$cur" ]]; then
+    # A mode is set: an upgrade, or a configuration that was kept.
+    if [[ -z "$mode" && "$stale" != "true" && "$missing" != "true" ]]; then
+      say "the $cur profile is current"
+      return
+    fi
+    if [[ -z "$mode" ]]; then
+      if interactive; then
+        say "the $cur profile needs a recheck (the libraries, the driver or the hardware changed)"
+        read -r -p "Measure again in the $cur mode? [Y/n] " a </dev/tty || a=n
+        case "$a" in [nN]*) say "later: $EXE optimize --mode $cur"; return ;; esac
+        mode="$cur"
+      else
+        warn "the $cur profile needs a recheck. Run: $EXE optimize --mode $cur --yes"
+        return
+      fi
+    fi
+  elif [[ -z "$mode" ]]; then
+    if interactive; then
+      mode="$(ask_mode)"
+    elif [[ "$new_install" == "1" ]]; then
+      mode=optimal
+    else
+      # An upgrade of an installation that never chose a mode: its behaviour is
+      # not changed behind the person's back.
+      say "this installation has no autotuner mode yet. To tune this machine: $EXE optimize"
+      return
+    fi
+  fi
+  case "$mode" in silent|optimal|powerful) ;; *) warn "'$mode' is not a mode (silent, optimal, powerful); not measured"; return ;; esac
+  say "measuring this machine for the $mode mode (about a minute; the model is unavailable meanwhile)"
+  as_owner "$EXE" optimize -config "$CONFIG" --mode "$mode" --yes >&2 ||
+    warn "the measurement failed. The service runs by the limits of the mode; to try again: $EXE optimize --mode $mode --yes"
+}
+
+# ask_mode shows the three modes and prints the one chosen; Enter is optimal.
+ask_mode() {
+  local a
+  {
+    echo
+    echo "How should NanoLLM use this machine?"
+    echo "  1. silent    the least load: CPU only, 2 threads, low priority; the slowest answers"
+    echo "  2. optimal   up to 4 GiB of memory and half of the cores; the fastest answer within that"
+    echo "  3. powerful  all the free memory and cores"
+  } >&2
+  read -r -p "Mode [2]: " a </dev/tty || a=2
+  case "$(printf '%s' "$a" | tr '[:upper:]' '[:lower:]')" in
+    1|silent) echo silent ;;
+    3|powerful) echo powerful ;;
+    ""|2|optimal) echo optimal ;;
+    *) warn "'$a' is not a mode; using optimal"; echo optimal ;;
+  esac
 }
 
 summary() {

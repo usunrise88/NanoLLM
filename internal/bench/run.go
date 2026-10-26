@@ -20,6 +20,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/memlock"
 	"github.com/usunrise88/nanollm/internal/numa"
 	"github.com/usunrise88/nanollm/internal/plan"
+	"github.com/usunrise88/nanollm/internal/quietexec"
 	"github.com/usunrise88/nanollm/internal/registry"
 )
 
@@ -66,6 +67,11 @@ type Options struct {
 	// Slow shortens each run (WorkerSpec.Slow), for budgets that stream the
 	// weights from a hard disk.
 	Slow bool
+	// TuneProfile is the id of the autotune profile in force on this machine
+	// (docs/OPTIMIZE.md, §3.7), recorded in every run's plan so that results of
+	// machines are compared with their tuning. The presets themselves do not
+	// depend on it: a public result stays comparable.
+	TuneProfile string
 
 	// Exe is the binary to run workers with; empty is this one.
 	Exe     string
@@ -394,6 +400,7 @@ func planRun(o Options, model plan.Model, name string, v Variant, cpu, gpu *back
 		NUMA: place.NUMA, CPUs: place.CPUs, Cold: ws.Cold, Layout: layout,
 	}
 	run.Plan.Repack = onOff(spec.Repack)
+	run.Plan.TuneProfile = o.TuneProfile
 	if p.MTP.Enabled {
 		run.Plan.DraftMax, run.Plan.DraftPMin = spec.DraftMax, spec.DraftPMin
 	}
@@ -433,7 +440,7 @@ func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (
 		evictFile(ws.Load.DrafterPath)
 	}
 	name, args := cmdline[0], cmdline[1:]
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := quietexec.Command(ctx, name, args...)
 	// The worker places itself (internal/numa) before it reads its spec.
 	if len(ws.Env) > 0 || !ws.Place.IsZero() {
 		cmd.Env = os.Environ()

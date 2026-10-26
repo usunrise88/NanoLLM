@@ -282,6 +282,32 @@ func (pl *planner) budget(t *trial) {
 		t.mem.RAM = r
 		t.short.RAM = r.Short()
 	}
+	if pl.req.MemCap > 0 {
+		// The limit counts the memory the machine gives up: private host memory
+		// and video memory together. On unified memory they are one pool,
+		// already summed in Unified.
+		var used int64
+		switch {
+		case t.mem.Unified != nil:
+			used = t.mem.Unified.Used
+			if t.spec.gpu && hasHostDriver(pl.dev) {
+				used += GPUHostMemory
+			}
+		default:
+			if t.mem.VRAM != nil {
+				used += t.mem.VRAM.Used
+			}
+			if t.mem.RAM != nil {
+				used += t.mem.RAM.Used
+			}
+			if t.spec.gpu && hasHostDriver(pl.dev) {
+				used += GPUHostMemory
+			}
+		}
+		c := &Usage{Budget: pl.req.MemCap, Used: used, Budgeted: true}
+		t.mem.Combined = c
+		t.short.Combined = c.Short()
+	}
 }
 
 // repackable says whether the tensors of a group are matrix weights the CPU

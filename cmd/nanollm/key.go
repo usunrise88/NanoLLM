@@ -143,35 +143,15 @@ func openDocument(path string) (*config.Document, error) {
 	return config.ParseDocument(b)
 }
 
-// saveDocument rewrites the file through a temporary one in the same
-// directory, so an interrupted write cannot leave a server with no keys at all.
-func saveDocument(path string, doc *config.Document) error {
-	b, err := doc.Bytes()
-	if err != nil {
-		return err
-	}
-	// The rewritten file is parsed back before it replaces anything: an edit
-	// that produced something the loader rejects should fail here, while the
-	// working file is still the one on disk.
-	if _, err := config.ParseDocument(b); err != nil {
-		return err
-	}
-
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
-}
+// saveDocument rewrites the file atomically and only if the result loads, so
+// an interrupted write cannot leave a server with no keys at all
+// (config.Document.Save).
+func saveDocument(path string, doc *config.Document) error { return doc.Save(path) }
 
 // configPathDefault matches what serve does, so the two commands act on the
 // same file when neither is given a path.
 func configPathDefault() string {
-	if v := os.Getenv("NANOASR_CONFIG"); v != "" {
+	if v := os.Getenv("NANOLLM_CONFIG"); v != "" {
 		return v
 	}
 	return "nanollm.yaml"

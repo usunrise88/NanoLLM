@@ -432,7 +432,7 @@ func (h *handler) chat(w http.ResponseWriter, r *http.Request) {
 	id, created := newID("chatcmpl-"), time.Now().Unix()
 	model := req.Model
 	if model == "" {
-		model = h.deps.DefaultModel
+		model = h.deps.Model()
 	}
 
 	if !req.Stream {
@@ -703,7 +703,7 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request) {
 	id, created := newID("cmpl-"), time.Now().Unix()
 	model := req.Model
 	if model == "" {
-		model = h.deps.DefaultModel
+		model = h.deps.Model()
 	}
 	if !req.Stream {
 		res, err := svc.Complete(r.Context(), creq, nil)
@@ -796,6 +796,7 @@ func envelope(err error) errorEnvelope {
 
 func writeError(w http.ResponseWriter, err error) {
 	e := core.AsError(err)
+	httpx.SetRetryAfter(w, err)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(e.Code.HTTPStatus())
 	_ = json.NewEncoder(w).Encode(envelope(err))
