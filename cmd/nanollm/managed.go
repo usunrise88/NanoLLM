@@ -178,6 +178,8 @@ func managedCommand(ctx context.Context, args []string, stdin io.Reader, stdout 
 	var (
 		ctrl *managed.Controller
 		auto *managed.Autotune
+		// looped is closed once the autotune loop has returned.
+		looped = make(chan struct{})
 	)
 	err = runServer(ctx, cfg, log, runOptions{
 		listener:      ln,
@@ -246,7 +248,10 @@ func managedCommand(ctx context.Context, args []string, stdin io.Reader, stdout 
 			})
 			ctrl.Mount(mux)
 			auto.Prepare(ctx)
-			go auto.Run(ctx)
+			go func() {
+				defer close(looped)
+				auto.Run(ctx)
+			}()
 		},
 		serving: func(addr net.Addr) {
 			st := ctrl.Status()
@@ -273,6 +278,14 @@ func managedCommand(ctx context.Context, args []string, stdin io.Reader, stdout 
 			// killed, and must be before this process goes.
 			if auto != nil {
 				auto.WaitIdle(managedGrace)
+				// So must a look at the machine in progress: it uses the runtime,
+				// which closes next, and starts processes (vm_stat on macOS); one
+				// forked as the lock is let go holds the lock until it execs, and
+				// the application's next start is refused.
+				select {
+				case <-looped:
+				case <-time.After(managedGrace):
+				}
 			}
 		},
 	})
