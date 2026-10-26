@@ -2,12 +2,12 @@ package hwinfo
 
 import (
 	"context"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/usunrise88/nanollm/benchfmt"
+	"github.com/usunrise88/nanollm/internal/quietexec"
 )
 
 // enrichGPUs adds what nvidia-smi knows to NVIDIA GPUs: the driver's major
@@ -25,7 +25,7 @@ func enrichGPUs(ctx context.Context, m *benchfmt.Machine) {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "nvidia-smi", "--query-gpu=name,driver_version,power.limit", "--format=csv,noheader,nounits").Output()
+	out, err := quietexec.Command(ctx, "nvidia-smi", "--query-gpu=name,driver_version,power.limit", "--format=csv,noheader,nounits").Output()
 	if err != nil {
 		return
 	}

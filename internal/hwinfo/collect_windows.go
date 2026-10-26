@@ -5,7 +5,6 @@ package hwinfo
 import (
 	"context"
 	"encoding/binary"
-	"os/exec"
 	"regexp"
 	"strings"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 
 	"github.com/usunrise88/nanollm/benchfmt"
+	"github.com/usunrise88/nanollm/internal/quietexec"
 )
 
 var (
@@ -180,7 +180,7 @@ var schemeName = regexp.MustCompile(`\(([^)]+)\)\s*$`)
 func powerScheme(ctx context.Context) string {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "powercfg", "/getactivescheme").Output()
+	out, err := quietexec.Command(ctx, "powercfg", "/getactivescheme").Output()
 	if err != nil {
 		return ""
 	}
@@ -193,7 +193,7 @@ func powerScheme(ctx context.Context) string {
 func windowsDisk(ctx context.Context) string {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+	out, err := quietexec.Command(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
 		"$d=Get-PhysicalDisk | Sort-Object DeviceId | Select-Object -First 1; Write-Output ('{0}|{1}' -f $d.BusType,$d.MediaType)").Output()
 	if err != nil {
 		return "unknown"

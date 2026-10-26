@@ -2,6 +2,7 @@
 //
 //	nanollm init      write a config, issue keys, fetch the default model
 //	nanollm serve     run the HTTP server
+//	nanollm managed   run as the background process of an application
 //	nanollm run       interactive terminal chat without the server
 //	nanollm devices   list backends, devices and memory
 //	nanollm plan      print a placement plan without loading
@@ -15,6 +16,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -54,6 +56,8 @@ func main() {
 		err = initCommand(args)
 	case "serve":
 		err = serve(args)
+	case "managed":
+		err = managedCommand(context.Background(), args, os.Stdin, os.Stdout)
 	case "run":
 		err = runCommand(args)
 	case "devices":
@@ -98,6 +102,7 @@ func usage() {
 
   nanollm init     [-config FILE] [-data-dir DIR] [-addr ADDR] [-model ID] [-no-download] [-force]
   nanollm serve    [-config FILE] [-addr ADDR] [-log-file FILE]
+  nanollm managed  [-data-dir DIR] [-parent-pid PID] [-watch-stdin=false] [-low-priority=false] [-ui]
   nanollm run      [MODEL] [--prompt TEXT] [--preset P] [--device D] [--think] [--system TEXT] [-n N] [--temp T]
   nanollm run      --model FILE.gguf --prompt TEXT [--drafter FILE] [--device D] [-n N] [--temp T]
   nanollm devices  [-config FILE] [-lib-dir DIR]

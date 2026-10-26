@@ -226,6 +226,33 @@ func quickDevices(ctx context.Context, in []backend.Device) []Device {
 // currentKey is the key the profile would have if it were measured now: the
 // profile's own device looked up among the devices present.
 func currentKey(prof *Profile, mode Mode, devs []Device, in ActiveInput) Key {
+	k := machineKey(mode, in)
+	sel, _ := prof.Chosen.Device.Value.(string)
+	for _, d := range devs {
+		if d.Selector == sel {
+			k.Device, k.Driver = deviceKey(d), d.Driver
+			return k
+		}
+	}
+	// The device is gone: the key names nothing, and the profile differs.
+	return k
+}
+
+// MachineKey is the key of a run that would start now, with no device chosen:
+// Device and Driver name every device present. nanollm managed keeps it with
+// a run that failed, so as not to measure again until something in it changes.
+func MachineKey(ctx context.Context, mode Mode, in ActiveInput) Key {
+	k := machineKey(mode, in)
+	var names, drivers []string
+	for _, d := range quickDevices(ctx, in.Devices) {
+		names, drivers = append(names, deviceKey(d)), append(drivers, d.Driver)
+	}
+	k.Device, k.Driver = strings.Join(names, "; "), strings.Join(drivers, "; ")
+	return k
+}
+
+// machineKey is the part of a key that does not depend on the device.
+func machineKey(mode Mode, in ActiveInput) Key {
 	k := Key{
 		Mode: mode, Model: in.Manifest.ID, LibsRelease: in.LibsRelease, LlamaCommit: in.LlamaCommit, CUDABuild: cudaBuild(in.LibDir),
 		Schema: ProfileSchema, Suite: SuiteVersion, CPU: hwinfo.CPUName(), Cores: hwinfo.PhysicalCores(),
@@ -238,16 +265,11 @@ func currentKey(prof *Profile, mode Mode, devs []Device, in ActiveInput) Key {
 	if f, ok := in.Manifest.File(registry.RoleDrafter); ok {
 		k.DrafterSHA256 = f.SHA256
 	}
-	sel, _ := prof.Chosen.Device.Value.(string)
-	for _, d := range devs {
-		if d.Selector == sel {
-			k.Device = fmt.Sprintf("%s %s %d GiB", d.Selector, d.Name, (d.MemoryTotal+GiB/2)>>30)
-			k.Driver = d.Driver
-			return k
-		}
-	}
-	// The device is gone: the key names nothing, and the profile differs.
 	return k
+}
+
+func deviceKey(d Device) string {
+	return fmt.Sprintf("%s %s %d GiB", d.Selector, d.Name, (d.MemoryTotal+GiB/2)>>30)
 }
 
 // Staleness is the API's view of the state: whether a recheck is due and with

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -270,5 +271,198 @@ func TestOptimizeRunHoldApplyReload(t *testing.T) {
 	}
 	if rec := r.do("POST", "/api/v1/optimize/"+started.ID+"/apply", ""); rec.Code != http.StatusConflict {
 		t.Errorf("applying twice: %d", rec.Code)
+	}
+}
+
+// failingRunner fails every probe, as a worker that cannot load the model.
+type failingRunner struct{}
+
+func (failingRunner) Probe(context.Context, tune.ProbeSpec) (tune.ProbeResult, error) {
+	return tune.ProbeResult{}, errors.New("the worker could not load the model")
+}
+
+// hookLog records what the optimizer's hooks are told.
+type hookLog struct {
+	mu      sync.Mutex
+	started []OptimizeRun
+	done    []error
+	profile *tune.Profile
+	applied []tune.Mode
+}
+
+func (h *hookLog) attach(info *OptimizeInfo) {
+	info.OnStart = func(run OptimizeRun) {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		h.started = append(h.started, run)
+	}
+	info.OnDone = func(_ OptimizeRun, p *tune.Profile, err error) {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		h.done, h.profile = append(h.done, err), p
+	}
+	info.OnApplied = func(run OptimizeRun, p *tune.Profile) {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		h.applied = append(h.applied, p.Mode)
+	}
+}
+
+// nanollm managed's path: a run started without HTTP holds the model back,
+// applies itself as it ends, and the hooks hear of every step.
+func TestOptimizerRunAppliesItself(t *testing.T) {
+	r := newOptimizeRig(t)
+	r.api.info.ConfigPath = "" // managed has no configuration file
+	var hooks hookLog
+	hooks.attach(&r.api.info)
+	opt := &Optimizer{api: r.api}
+	ctx := context.Background()
+
+	run, err := opt.Start(StartOptions{Mode: tune.Silent, Apply: true, Reason: "missing"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.ID == "" || run.Model != "gemma-4-e4b-qat" || run.EstimateS <= 0 {
+		t.Fatalf("%+v", run)
+	}
+	<-r.runner.seen
+	hooks.mu.Lock()
+	if len(hooks.started) != 1 || hooks.started[0].Reason != "missing" || hooks.started[0].Mode != tune.Silent {
+		t.Errorf("OnStart: %+v", hooks.started)
+	}
+	hooks.mu.Unlock()
+	// A chat request in the meantime is told to come back.
+	_, err = r.rt.Resolve(ctx, "gemma-4-e4b-qat", "")
+	if ce := core.AsError(err); ce.Code != core.CodeModelUnavailable || ce.RetryAfter <= 0 {
+		t.Fatalf("a request during the run: %v", err)
+	}
+	if _, err := opt.Start(StartOptions{Mode: tune.Optimal, Apply: true}); core.AsError(err).Code != core.CodeConflict {
+		t.Errorf("a second run while one measures: %v", err)
+	}
+
+	close(r.runner.gate)
+	if err := opt.Wait(ctx, run.ID); err != nil {
+		t.Fatalf("the run failed: %v", err)
+	}
+	act := r.rt.Tune()
+	if act == nil || act.Mode != tune.Silent || act.Profile == nil {
+		t.Fatalf("the runtime did not take the profile on: %+v", act)
+	}
+	if p, err := (tune.Store{Dir: r.rt.cfg.TunePath()}).Load("gemma-4-e4b-qat", tune.Silent); err != nil || p.ID() != act.ID() {
+		t.Fatalf("the profile was not saved: %v", err)
+	}
+	if len(r.rt.Pool.Status()) != 1 {
+		t.Errorf("the model was not loaded by the new profile: %v", r.rt.Pool.Status())
+	}
+	if _, err := r.rt.Resolve(ctx, "gemma-4-e4b-qat", ""); err != nil {
+		t.Errorf("the model is still held: %v", err)
+	}
+	hooks.mu.Lock()
+	if len(hooks.done) != 1 || hooks.done[0] != nil || hooks.profile == nil || hooks.profile.ID() != act.ID() {
+		t.Errorf("OnDone: %v, %v", hooks.done, hooks.profile)
+	}
+	if len(hooks.applied) != 1 || hooks.applied[0] != tune.Silent {
+		t.Errorf("OnApplied: %v", hooks.applied)
+	}
+	hooks.mu.Unlock()
+	b, _ := os.ReadFile(r.cfg)
+	if strings.Contains(string(b), "tune:") {
+		t.Errorf("a run with no configuration path wrote the configuration:\n%s", b)
+	}
+	out := r.waitState(t, run.ID, "done")
+	if out["applied"] != true {
+		t.Errorf("the run does not say it applied: %v", out)
+	}
+	if rec := r.do("POST", "/api/v1/optimize/"+run.ID+"/apply", ""); rec.Code != http.StatusConflict {
+		t.Errorf("applying a run that applied itself: %d", rec.Code)
+	}
+
+	// The profile is current: the mode finds it again, and another mode has
+	// none, so its limits hold alone.
+	if a, err := opt.Look(ctx, tune.Silent, ""); err != nil || a.Profile == nil {
+		t.Fatalf("Look(silent): %+v, %v", a, err)
+	}
+	a, err := opt.Activate(ctx, tune.Optimal, "gemma-4-e4b-qat")
+	if err != nil || a == nil || !a.Missing || r.rt.Tune().Mode != tune.Optimal || r.rt.Tune().Profile != nil {
+		t.Fatalf("Activate(optimal): %+v, %v", a, err)
+	}
+	if a, err := opt.Activate(ctx, tune.Silent, "gemma-4-e4b-qat"); err != nil || a.Profile == nil || r.rt.Tune().ID() != act.ID() {
+		t.Fatalf("Activate(silent) back: %+v, %v", a, err)
+	}
+	if k, err := opt.MachineKey(ctx, tune.Silent, "gemma-4-e4b-qat"); err != nil || k.Mode != tune.Silent || k.ModelSHA256 == "" || k.Device == "" {
+		t.Errorf("MachineKey: %+v, %v", k, err)
+	}
+}
+
+// A run that fails leaves no profile, no hold and the mode's limits alone,
+// and OnDone hears the error.
+func TestOptimizerRunThatFails(t *testing.T) {
+	r := newOptimizeRig(t)
+	r.api.info.Runner = failingRunner{}
+	var hooks hookLog
+	hooks.attach(&r.api.info)
+	opt := &Optimizer{api: r.api}
+	ctx := context.Background()
+	run, err := opt.Start(StartOptions{Mode: tune.Silent, Apply: true, Reason: "missing"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := opt.Wait(ctx, run.ID); err == nil {
+		t.Fatal("the run did not fail")
+	}
+	hooks.mu.Lock()
+	if len(hooks.done) != 1 || hooks.done[0] == nil || hooks.profile != nil || len(hooks.applied) != 0 {
+		t.Errorf("hooks: done %v, profile %v, applied %v", hooks.done, hooks.profile, hooks.applied)
+	}
+	hooks.mu.Unlock()
+	if _, err := (tune.Store{Dir: r.rt.cfg.TunePath()}).Load("gemma-4-e4b-qat", tune.Silent); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a profile after a failed run: %v", err)
+	}
+	if _, err := r.rt.Resolve(ctx, "gemma-4-e4b-qat", ""); err != nil {
+		t.Errorf("the model is still held after a failed run: %v", err)
+	}
+	// The machine is free again.
+	if _, err := opt.Start(StartOptions{Mode: tune.Silent, DryRun: true}); err != nil {
+		t.Errorf("a run after the failed one: %v", err)
+	}
+}
+
+// The default model changes while the server runs: the requests without a
+// model, /readyz and the model list follow it.
+func TestSetDefaultModel(t *testing.T) {
+	cat, err := registry.Builtin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	other := cat[0]
+	other.ID = "gemma-copy"
+	cat = append(cat, other)
+	cfg := config.Default()
+	cfg.Server.DataDir = t.TempDir()
+	cfg.Models.Preload = nil
+	cfg.Backends.Enabled = []string{config.BackendFake}
+	rt := New(context.Background(), Options{Config: cfg, Catalog: cat, Backends: []backend.Backend{fake.New(fake.Options{NoGPU: true})}, Log: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	t.Cleanup(rt.Close)
+	if rt.DefaultModel() != config.DefaultModel || !rt.Present("gemma-copy") || rt.Present("no-such-model") {
+		t.Fatalf("before: %q", rt.DefaultModel())
+	}
+	if _, err := rt.Load(context.Background(), config.DefaultModel); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := rt.Ready(); !ok {
+		t.Fatal("not ready with the default model loaded")
+	}
+	rt.SetDefaultModel("gemma-copy")
+	if rt.DefaultModel() != "gemma-copy" || rt.Engine.DefaultModel() != "gemma-copy" {
+		t.Fatalf("after: %q", rt.DefaultModel())
+	}
+	if ok, _ := rt.Ready(); ok {
+		t.Error("ready while the new default model is not loaded")
+	}
+	models, _ := rt.Models(context.Background())
+	for _, m := range models {
+		if m.Default != (m.ID == "gemma-copy") {
+			t.Errorf("%s: default %v", m.ID, m.Default)
+		}
 	}
 }

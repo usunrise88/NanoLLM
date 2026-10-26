@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -100,7 +101,48 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 			log.Warn("tune: cannot lower the priority", "err", err)
 		}
 	}
+	return runServer(ctx, cfg, log, runOptions{configPath: *cfgPath, release: release})
+}
 
+// runOptions is what a caller of runServer adds to the server the
+// configuration describes; the zero value is `nanollm serve`.
+type runOptions struct {
+	// configPath is the configuration file the autotuner writes tune.mode to.
+	configPath string
+	// release is called once shutdown begins.
+	release func()
+	// listener is served instead of listening on server.addr.
+	listener net.Listener
+	// middleware goes outside everything else, before authentication.
+	middleware []httpx.Middleware
+	// store replaces the model store the configuration describes.
+	store *registry.Store
+	// ownTune says the caller puts the autotuner's mode in force itself; the
+	// server does not read it from the configuration.
+	ownTune bool
+	// admin wraps the model management the dialects are given.
+	admin func(core.Admin) core.Admin
+	// optimize adds to what the autotuner is given.
+	optimize func(*server.OptimizeInfo)
+	// mount adds routes once the runtime exists; opt is nil when the native
+	// libraries cannot be located.
+	mount func(mux *http.ServeMux, rt *server.Runtime, opt *server.Optimizer)
+	// serving is called once the listener accepts connections.
+	serving func(addr net.Addr)
+	// stopped is called after the HTTP server has shut down, before the
+	// runtime closes.
+	stopped func()
+	// shutdownGrace replaces how long in-flight requests get at the end.
+	shutdownGrace time.Duration
+	// closeLate closes what is still open when the grace runs out, and the
+	// stop is still a clean one; otherwise the expiry is the error returned.
+	closeLate bool
+}
+
+// runServer runs the server the configuration describes until ctx is done:
+// `nanollm serve` and `nanollm managed` both. The log and the priority are the
+// caller's, set before the backends start their threads.
+func runServer(ctx context.Context, cfg config.Config, log *slog.Logger, o runOptions) error {
 	backends := openBackends(cfg, log)
 	defer func() {
 		for _, b := range backends {
@@ -116,11 +158,17 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 	if err != nil {
 		return err
 	}
+	store := o.store
+	if store == nil {
+		store = newStore(cfg)
+	}
 	rt := server.New(ctx, server.Options{
-		Config: cfg, Catalog: catalog, Store: newStore(cfg), Backends: backends, Log: log,
+		Config: cfg, Catalog: catalog, Store: store, Backends: backends, Log: log,
 	})
 	defer rt.Close()
-	rt.SetTune(loadTune(ctx, cfg, catalog, rt, log))
+	if !o.ownTune {
+		rt.SetTune(loadTune(ctx, cfg, catalog, rt, log))
+	}
 	go rt.Preload(ctx)
 
 	mux := http.NewServeMux()
@@ -135,11 +183,11 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
 		if ok, reason := rt.Ready(); !ok {
 			httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]any{
-				"status": "not_ready", "reason": reason, "model": cfg.Models.Default,
+				"status": "not_ready", "reason": reason, "model": rt.DefaultModel(),
 			})
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, map[string]any{"status": "ready", "model": cfg.Models.Default})
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"status": "ready", "model": rt.DefaultModel()})
 	})
 
 	snapshot := func() any {
@@ -163,10 +211,14 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 			jobs = q
 		}
 	}
+	var admin core.Admin = rt
+	if o.admin != nil {
+		admin = o.admin(rt)
+	}
 	if err := adapter.MountAll(mux, cfg.API.Dialects, adapter.Deps{
 		Service:        rt.Engine,
-		Admin:          rt,
-		DefaultModel:   cfg.Models.Default,
+		Admin:          admin,
+		DefaultModel:   rt.DefaultModel,
 		Catalog:        catalog,
 		ConfigSnapshot: snapshot,
 		Extra:          jobs,
@@ -175,12 +227,20 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 	}
 
 	rt.MountStats(mux)
+	var opt *server.Optimizer
 	if libDir, err := backend.ResolveLibDir(cfg.Backends.LibDir); err == nil {
 		rt.MountBench(mux, server.BenchInfo{LibDir: libDir, Version: version, Tag: llamacpp.PinnedTag, Commit: llamacpp.PinnedCommit})
-		rt.MountOptimize(mux, server.OptimizeInfo{
+		info := server.OptimizeInfo{
 			LibDir: libDir, Version: version, LibsRelease: llamacpp.LibsRelease, LlamaTag: llamacpp.PinnedTag,
-			LlamaCommit: llamacpp.PinnedCommit, ConfigPath: *cfgPath,
-		})
+			LlamaCommit: llamacpp.PinnedCommit, ConfigPath: o.configPath, Context: ctx,
+		}
+		if o.optimize != nil {
+			o.optimize(&info)
+		}
+		opt = rt.MountOptimize(mux, info)
+	}
+	if o.mount != nil {
+		o.mount(mux, rt, opt)
 	}
 
 	public := []string{"/healthz", "/readyz"}
@@ -197,10 +257,11 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 		}
 	}
 
-	mw := []httpx.Middleware{
+	mw := append([]httpx.Middleware{}, o.middleware...)
+	mw = append(mw,
 		httpx.WithRequestID(), httpx.Recover(log), httpx.SecurityHeaders(), httpx.AccessLog(log),
 		httpx.LimitBody(cfg.Server.MaxBody),
-	}
+	)
 	if cfg.Auth.Mode == "open" {
 		log.Warn("authentication disabled", "addr", cfg.Server.Addr,
 			"note", "open mode is only permitted on a loopback address")
@@ -224,30 +285,54 @@ func serveContext(ctx context.Context, release func(), args []string) error {
 		Handler:           httpx.Chain(mux, mw...),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	ln := o.listener
+	if ln == nil {
+		if ln, err = (&net.ListenConfig{}).Listen(ctx, "tcp", cfg.Server.Addr); err != nil {
+			// Logged as well as returned: a service's stderr goes nowhere, and
+			// "address already in use" is the commonest reason it stops.
+			log.Error("server stopped", "err", err)
+			return err
+		}
+	}
+	if o.serving != nil {
+		o.serving(ln.Addr())
+	}
 	errCh := make(chan error, 1)
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
 	}()
 
+	grace := shutdownGrace
+	if o.shutdownGrace > 0 {
+		grace = o.shutdownGrace
+	}
 	select {
 	case err := <-errCh:
-		// Logged as well as returned: a service's stderr goes nowhere, and
-		// "address already in use" is the commonest reason it stops.
 		log.Error("server stopped", "err", err)
 		return err
 	case <-ctx.Done():
-		log.Info("shutting down", "grace", shutdownGrace)
+		log.Info("shutting down", "grace", grace)
 	}
 	// A second signal during a stuck shutdown falls through to the default
 	// disposition and terminates.
-	if release != nil {
-		release()
+	if o.release != nil {
+		o.release()
 	}
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), grace)
 	defer cancel()
-	return srv.Shutdown(shutdownCtx)
+	err = srv.Shutdown(shutdownCtx)
+	if o.closeLate && errors.Is(err, context.DeadlineExceeded) {
+		// A connection the client opened and never used counts as active for
+		// five seconds, as long as the whole grace of a managed instance.
+		log.Warn("shutdown: closing what is still open after the grace", "grace", grace)
+		err = srv.Close()
+	}
+	if o.stopped != nil {
+		o.stopped()
+	}
+	return err
 }
 
 // newStore is the on-disk model store the configuration describes.

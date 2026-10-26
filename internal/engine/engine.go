@@ -16,6 +16,7 @@ import (
 	"errors"
 	"math"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -64,6 +65,11 @@ type Service struct {
 	resolve Resolver
 	// Metrics counts finished requests; it is never nil.
 	Metrics *stats.Metrics
+
+	// model and thinking start as cfg.DefaultModel and cfg.EnableThinking and
+	// change while the server runs (SetDefaultModel, SetThinking).
+	model    atomic.Pointer[string]
+	thinking atomic.Bool
 }
 
 // New returns the service.
@@ -71,8 +77,22 @@ func New(cfg Config, p *pool.Pool, resolve Resolver) *Service {
 	if cfg.ContextOverflow == "" {
 		cfg.ContextOverflow = OverflowError
 	}
-	return &Service{cfg: cfg, pool: p, resolve: resolve, Metrics: stats.New()}
+	s := &Service{cfg: cfg, pool: p, resolve: resolve, Metrics: stats.New()}
+	s.SetDefaultModel(cfg.DefaultModel)
+	s.SetThinking(cfg.EnableThinking)
+	return s
 }
+
+// DefaultModel is the model a request that names none runs.
+func (s *Service) DefaultModel() string { return *s.model.Load() }
+
+// SetDefaultModel changes the model a request that names none runs, from the
+// next request on.
+func (s *Service) SetDefaultModel(id string) { s.model.Store(&id) }
+
+// SetThinking changes whether a request that does not say thinks, from the
+// next request on.
+func (s *Service) SetThinking(on bool) { s.thinking.Store(on) }
 
 var _ core.Service = (*Service)(nil)
 
@@ -118,7 +138,7 @@ func (s *Service) record(kind string, start time.Time, out *genOut, err error) {
 // acquire resolves and loads the model of a request.
 func (s *Service) acquire(ctx context.Context, model, device string) (*pool.Instance, Target, func(), error) {
 	if model == "" {
-		model = s.cfg.DefaultModel
+		model = s.DefaultModel()
 	}
 	t, err := s.resolve(ctx, model, device)
 	if err != nil {
@@ -160,7 +180,7 @@ func (s *Service) Chat(ctx context.Context, req core.ChatRequest, sink core.Sink
 	defer release()
 	tm.last = time.Now() // loading is not a pipeline stage
 
-	thinking := s.cfg.EnableThinking
+	thinking := s.thinking.Load()
 	if req.EnableThinking != nil {
 		thinking = *req.EnableThinking
 	}

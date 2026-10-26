@@ -28,14 +28,25 @@ type Deps struct {
 	// Extra carries optional route providers a dialect may recognise by
 	// interface (the job queue mounts its native routes through it).
 	Extra any
-	// DefaultModel is models.default, the model a request without one gets.
-	DefaultModel string
+	// DefaultModel is the model a request without one gets: models.default,
+	// or the model the server was switched to since (nanollm managed). A
+	// function, so that the dialects see the switch.
+	DefaultModel func() string
 	// Catalog is the built-in model catalog.
 	Catalog []registry.Manifest
 	// ConfigSnapshot returns the effective configuration with secrets already
 	// redacted. A function rather than a value so a dialect cannot be handed
 	// the live struct and reach into it.
 	ConfigSnapshot func() any
+}
+
+// Model is the model a request without one gets; empty when no default is
+// set.
+func (d Deps) Model() string {
+	if d.DefaultModel == nil {
+		return ""
+	}
+	return d.DefaultModel()
 }
 
 // Adapter is one dialect.

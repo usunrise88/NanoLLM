@@ -441,6 +441,25 @@ jobs:
           ./scripts/install.ps1 -Uninstall -Purge
           if (Get-Service NanoLLM -ErrorAction SilentlyContinue) { throw "the service survived -Uninstall" }
 
+      # nanollm managed (nanollm-embedded.md) the way an application starts it:
+      # the binary of the archive as a child process with pipes, without a
+      # console window on Windows, as an ordinary user. The measurement at the
+      # start goes through its own worker processes, on the scripted backend.
+      - name: nanollm managed, as an application starts it
+        env:
+          ARCHIVE: ${{ steps.dist.outputs.archive }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/managed"
+          mkdir -p "$dir"
+          case "$ARCHIVE" in
+            *.zip) if command -v unzip >/dev/null; then unzip -q "$ARCHIVE" -d "$dir"; else 7z x -bso0 -o"$dir" "$ARCHIVE"; fi ;;
+            *) tar -xzf "$ARCHIVE" -C "$dir" ;;
+          esac
+          bin="$dir/nanollm"
+          [ "$RUNNER_OS" != Windows ] || bin="$dir/nanollm.exe"
+          NANOLLM_MANAGED_BINARY="$bin" go test -count=1 -v -run '^TestManagedBinary$' ./cmd/nanollm
+
   # Both container images (deploy/Dockerfile). The CPU one serves: healthy,
   # keys enforced, a reply from the tiny model. The CUDA one runs without a
   # GPU here and must fall back to the CPU and say why; on a GPU it is
