@@ -58,6 +58,7 @@ func (*Adapter) Mount(mux *http.ServeMux, deps adapter.Deps) error {
 
 	mux.HandleFunc("GET /api/v1/devices", h.devices)
 	mux.HandleFunc("GET /api/v1/models", h.models)
+	mux.HandleFunc("GET /api/v1/models/{id}/capabilities", h.capabilities)
 	mux.HandleFunc("GET /api/v1/catalog", func(w http.ResponseWriter, _ *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, map[string]any{"models": deps.Catalog})
 	})
@@ -320,6 +321,27 @@ func (h *handler) models(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"models": ms})
+}
+
+// capabilities answers what a catalog model can do through this API (RFC R1).
+func (h *handler) capabilities(w http.ResponseWriter, r *http.Request) {
+	a, ok := h.adminSvc(w)
+	if !ok {
+		return
+	}
+	id := r.PathValue("id")
+	ms, err := a.Models(r.Context())
+	if err != nil {
+		httpx.WriteProblem(w, err)
+		return
+	}
+	for _, m := range ms {
+		if m.ID == id {
+			httpx.WriteJSON(w, http.StatusOK, core.CapabilitiesOf(m))
+			return
+		}
+	}
+	httpx.WriteProblem(w, core.Errorf(core.CodeModelNotFound, "model %q is not in the catalog", id))
 }
 
 // download streams progress as server-sent events: "progress" while bytes

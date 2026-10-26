@@ -38,6 +38,8 @@ type Parser struct {
 	fenceOpen bool
 	skipLead  bool   // JSON mode: whitespace after the opening fence
 	tail      string // JSON mode: held whitespace and backticks at the end
+	// repaired is set when the parser dropped words that the model wrote after its calls.
+	repaired bool
 }
 
 type pstate int
@@ -207,11 +209,15 @@ func (p *Parser) run(final bool) ([]core.Delta, error) {
 			i := strings.Index(p.buf, callOpen)
 			if i < 0 {
 				// Text after the calls is not part of the answer; keep only
-				// what could start another call.
-				p.buf = p.buf[len(p.buf)-heldPrefix(p.buf, []string{callOpen}):]
+				// what could start another call. Dropping words is a repair.
+				keep := heldPrefix(p.buf, []string{callOpen})
 				if final {
-					p.buf = ""
+					keep = 0
 				}
+				if strings.TrimSpace(p.buf[:len(p.buf)-keep]) != "" {
+					p.repaired = true
+				}
+				p.buf = p.buf[len(p.buf)-keep:]
 				return out, nil
 			}
 			p.buf = p.buf[i+len(callOpen):]
@@ -449,4 +455,10 @@ func (r *dslReader) errf(msg string) error {
 // header into content.
 func (p *Parser) InReasoning() bool {
 	return p.state == psThoughtLead || p.state == psReasoning
+}
+
+// Repaired reports whether the parser dropped words that the model wrote after its
+// calls. The answer does not hold them, and the parse report says "repaired".
+func (p *Parser) Repaired() bool {
+	return p.repaired
 }

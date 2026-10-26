@@ -26,6 +26,12 @@ import (
 
 func server(t *testing.T) *httptest.Server {
 	t.Helper()
+	return serverWith(t, nil)
+}
+
+// serverWith is server with a model management service.
+func serverWith(t *testing.T, admin core.Admin) *httptest.Server {
+	t.Helper()
 	p := pool.New(func(ctx context.Context, k pool.Key) (backend.Model, any, error) {
 		m, err := fake.New(fake.Options{}).Load(ctx, backend.LoadSpec{NCtx: k.NCtx})
 		return m, nil, err
@@ -40,7 +46,7 @@ func server(t *testing.T) *httptest.Server {
 		})
 	mux := http.NewServeMux()
 	if err := adapter.MountAll(mux, []string{"openai", "native", "ollama"}, adapter.Deps{
-		Service: svc, Catalog: []registry.Manifest{{ID: "tiny"}}, ConfigSnapshot: func() any { return nil },
+		Service: svc, Admin: admin, Catalog: []registry.Manifest{{ID: "tiny"}}, ConfigSnapshot: func() any { return nil },
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -358,5 +364,37 @@ func TestOllamaBesideTheOthers(t *testing.T) {
 	resp = post(t, srv, "/api/v1/chat", `{"model":"tiny","messages":[{"role":"user","content":"x [[fake:echo]]"}]}`)
 	if resp.StatusCode != 200 {
 		t.Fatalf("native: %d", resp.StatusCode)
+	}
+}
+
+// modelsAdmin answers model management with a fixed catalog; only Models is used.
+type modelsAdmin struct {
+	core.Admin
+	models []core.ModelInfo
+}
+
+func (a modelsAdmin) Models(context.Context) ([]core.ModelInfo, error) {
+	return a.models, nil
+}
+
+func TestNativeCapabilitiesOfAModel(t *testing.T) {
+	srv := serverWith(t, modelsAdmin{models: []core.ModelInfo{{ID: "gemma-4-e4b-qat", Family: "gemma4"}}})
+	resp, err := http.Get(srv.URL + "/api/v1/models/gemma-4-e4b-qat/capabilities")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var c core.Capabilities
+	decodeJSON(t, resp.Body, &c)
+	if resp.StatusCode != http.StatusOK || !c.ParseReport || !c.AssistantPrefix || len(c.ToolFormats) != 2 {
+		t.Fatalf("%d %+v", resp.StatusCode, c)
+	}
+	missing, err := http.Get(srv.URL + "/api/v1/models/absent/capabilities")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer missing.Body.Close()
+	if missing.StatusCode != http.StatusNotFound {
+		t.Fatalf("an absent model answered %d, want 404", missing.StatusCode)
 	}
 }
