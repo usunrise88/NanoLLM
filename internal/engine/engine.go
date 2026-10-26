@@ -162,6 +162,11 @@ func (s *Service) acquire(ctx context.Context, model, device string) (*pool.Inst
 }
 
 func (s *Service) Chat(ctx context.Context, req core.ChatRequest, sink core.Sink) (*core.ChatResult, error) {
+	switch req.ToolFormat {
+	case "", core.ToolFormatStrict, core.ToolFormatRescue:
+	default:
+		return nil, core.Errorf(core.CodeInvalidRequest, "tool_format must be strict or rescue, not %q", req.ToolFormat).WithParam("tool_format")
+	}
 	if len(req.Messages) == 0 {
 		return nil, core.Errorf(core.CodeInvalidRequest, "messages must not be empty").WithParam("messages")
 	}
@@ -204,12 +209,16 @@ func (s *Service) Chat(ctx context.Context, req core.ChatRequest, sink core.Sink
 	if choice == core.ToolChoiceNone {
 		tools = nil
 	}
-	prompt := chat.PromptGemma4(req.Messages, tools, chat.Options{EnableThinking: thinking, AddGenerationPrompt: true})
+	if req.ToolFormat == core.ToolFormatRescue && choice == core.ToolChoiceRequired && len(tools) > 0 {
+		return nil, core.Errorf(core.CodeInvalidRequest, "tool_choice required needs the tool grammar, which tool_format rescue does not apply").WithParam("tool_choice")
+	}
+	prompt := chat.PromptGemma4(req.Messages, tools, chat.Options{EnableThinking: thinking, AddGenerationPrompt: true, AssistantPrefix: req.AssistantPrefix})
 	tm.mark(core.StageTemplate)
 
 	g := gen{
 		svc: s, inst: inst, target: target, tm: tm, sink: sink,
 		parse:       &chat.ParseOptions{Tools: len(tools) > 0},
+		rescue:      req.ToolFormat == core.ToolFormatRescue,
 		maxReason:   req.MaxReasoningTokens,
 		promptText:  prompt,
 		addSpecial:  false,
@@ -232,6 +241,7 @@ func (s *Service) Chat(ctx context.Context, req core.ChatRequest, sink core.Sink
 		Usage:        out.usage,
 		Stats:        out.stats,
 		Warnings:     out.warnings,
+		Parse:        out.parse,
 	}
 	return res, nil
 }
@@ -320,6 +330,7 @@ type gen struct {
 	tm          *timer
 	sink        core.Sink
 	parse       *chat.ParseOptions // nil for raw completion
+	rescue      bool               // tool_format rescue: no tool grammar
 	sampler     backend.SamplerSpec
 	noDraft     bool
 	maxReason   int
@@ -337,6 +348,7 @@ type genOut struct {
 	usage              core.Usage
 	stats              core.Stats
 	warnings           []core.Warning
+	parse              *core.ParseReport
 	// queued is the time the request waited for a slot, drafted and accepted
 	// the MTP tokens, for the server's metrics.
 	queued            time.Duration
@@ -364,6 +376,8 @@ func (g *gen) constrain(req core.Generation, tools []core.Tool, choice string) e
 		}
 	case len(tools) > 0 && choice == core.ToolChoiceRequired:
 		spec, err = grammar.Gemma4Tools(tools, true, true)
+	case len(tools) > 0 && g.rescue:
+		// rescue applies no grammar: the parser reads the calls from the text.
 	case len(tools) > 0:
 		// tool_choice auto: the lazy grammar is an improvement, not a
 		// requirement; the parser reads calls without it.
@@ -475,6 +489,8 @@ func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 
 	dec := &utf8Stream{}
 	var parser *chat.Parser
+	var raw strings.Builder
+	var parseErr error
 	if g.parse != nil {
 		parser = chat.NewParser(*g.parse)
 	}
@@ -504,14 +520,21 @@ func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 	}
 	// feed routes decoded text through the parser and the stop sequences.
 	feed := func(text string, lps []core.Logprob) error {
+		raw.WriteString(text)
 		var deltas []core.Delta
-		if parser != nil {
+		switch {
+		case parser != nil && parseErr != nil:
+			// rescue stopped the parser; the report keeps the whole text.
+		case parser != nil:
 			ds, err := parser.Feed(text)
 			if err != nil {
-				return err
+				if !g.rescue {
+					return err
+				}
+				parseErr = err
 			}
 			deltas = ds
-		} else if text != "" {
+		case text != "":
 			deltas = []core.Delta{{Content: text}}
 		}
 		for i, d := range deltas {
@@ -658,10 +681,11 @@ func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 			return nil, err
 		}
 	}
-	if parser != nil && !stopped {
+	if parser != nil && !stopped && parseErr == nil {
 		ds, err := parser.Close()
 		if err != nil {
 			out.warnings = append(out.warnings, core.Warning{Code: "parse_error", Message: err.Error()})
+			parseErr = err
 		}
 		for _, d := range ds {
 			if d.Content != "" {
@@ -686,6 +710,12 @@ func (g *gen) run(ctx context.Context, req core.Generation) (*genOut, error) {
 	}
 	g.tm.last = end
 
+	if parser != nil {
+		out.parse = parseReport(parser, parseErr, raw.String())
+		if parseErr != nil && g.rescue {
+			out.content, out.reasoning, out.calls = raw.String(), "", nil
+		}
+	}
 	switch {
 	case len(out.calls) > 0:
 		out.finish = core.FinishToolCalls
@@ -844,4 +874,16 @@ func (s *stopper) flush() string {
 	out := s.held
 	s.held = ""
 	return out
+}
+
+// parseReport says how the reply was read: ok, repaired, or failed with the reply
+// text kept whole (RFC R4).
+func parseReport(p *chat.Parser, err error, raw string) *core.ParseReport {
+	switch {
+	case err != nil:
+		return &core.ParseReport{Status: core.ParseFailed, Raw: raw, Error: err.Error()}
+	case p.Repaired():
+		return &core.ParseReport{Status: core.ParseRepaired, Raw: raw}
+	}
+	return &core.ParseReport{Status: core.ParseOK}
 }

@@ -25,6 +25,9 @@ type Options struct {
 	// PreserveThinking keeps earlier turns' reasoning when they made tool
 	// calls; off, as in the template.
 	PreserveThinking bool
+	// AssistantPrefix is text that the model continues in its turn, after the turn
+	// opener. It applies only with AddGenerationPrompt.
+	AssistantPrefix string
 }
 
 // Gemma 4 control strings.
@@ -56,6 +59,9 @@ func PromptGemma4(messages []core.Message, tools []core.Tool, opts Options) stri
 		// adds no generation prompt; without one the model does not open its
 		// reasoning channel properly.
 		out += turnOpen + "model\n"
+	}
+	if opts.AddGenerationPrompt {
+		out += opts.AssistantPrefix
 	}
 	return out
 }

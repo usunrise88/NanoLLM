@@ -117,6 +117,15 @@ type ChatRequest struct {
 	// MaxReasoningTokens closes the thinking block when reached, and the
 	// answer follows.
 	MaxReasoningTokens int `json:"max_reasoning_tokens,omitempty"`
+
+	// ToolFormat says how tool calls are read. "strict", the default, constrains the
+	// output with the tool grammar when tools are offered. "rescue" applies no
+	// grammar: the calls are read from the text, and what cannot be read is reported
+	// in the parse report (RFC R4).
+	ToolFormat string `json:"tool_format,omitempty"`
+	// AssistantPrefix is text that the model continues in its own turn. The reply
+	// holds only what the model adds after it (RFC R5).
+	AssistantPrefix string `json:"assistant_prefix,omitempty"`
 }
 
 type CompletionRequest struct {
@@ -138,6 +147,9 @@ type ChatResult struct {
 	Usage        Usage     `json:"usage"`
 	Stats        Stats     `json:"stats"`
 	Warnings     []Warning `json:"warnings,omitempty"`
+	// Parse says how the reply was read from the model's text. It is nil for a
+	// request that the parser does not read.
+	Parse *ParseReport `json:"parse,omitempty"`
 }
 
 type CompletionResult struct {
@@ -200,4 +212,24 @@ type DetokenizeRequest struct {
 
 type DetokenizeResult struct {
 	Text string `json:"text"`
+}
+
+// Tool formats (ChatRequest.ToolFormat).
+const (
+	ToolFormatStrict = "strict"
+	ToolFormatRescue = "rescue"
+)
+
+// Parse statuses (ParseReport.Status).
+const (
+	ParseOK       = "ok"       // every call and channel was read as written
+	ParseRepaired = "repaired" // the parser dropped words that followed the calls
+	ParseFailed   = "failed"   // a call could not be read; Raw holds the whole reply text
+)
+
+// ParseReport says how the reply was read from the model's text (RFC R4).
+type ParseReport struct {
+	Status string `json:"status"`
+	Raw    string `json:"raw,omitempty"`
+	Error  string `json:"error,omitempty"`
 }
