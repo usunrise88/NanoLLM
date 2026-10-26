@@ -42,6 +42,16 @@ type Downloader struct {
 	Primary string
 
 	once sync.Once
+	// mu guards Mirrors once SetMirrors may change them under a download.
+	mu sync.Mutex
+}
+
+// SetMirrors replaces the mirrors from the next download on: nanollm managed
+// takes the application's new list without a restart.
+func (d *Downloader) SetMirrors(mirrors []string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.Mirrors = append([]string(nil), mirrors...)
 }
 
 // DefaultPrimary is where pinned files come from unless a mirror answers.
@@ -83,8 +93,11 @@ func (d *Downloader) sources(f File) ([]string, error) {
 	if !f.Pinned() {
 		return nil, fmt.Errorf("%s/%s is not pinned to a commit, size and sha256", f.Repo, f.Path)
 	}
+	d.mu.Lock()
+	bases := append([]string{d.Primary}, d.Mirrors...)
+	d.mu.Unlock()
 	var out []string
-	for _, base := range append([]string{d.Primary}, d.Mirrors...) {
+	for _, base := range bases {
 		u, err := url.Parse(base)
 		if err != nil || u.Scheme != "https" || u.Host == "" {
 			return nil, fmt.Errorf("download source %q must be an https URL", base)

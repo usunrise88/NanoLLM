@@ -133,6 +133,27 @@ and a recheck after an upgrade that made the profile stale (`--mode` /
 `-Mode`, `--no-optimize` / `-NoOptimize`). A config older than this feature
 rejects the `tune:` key, so upgrade the binary before adding it.
 
+## Embed in an application
+
+`nanollm managed` runs NanoLLM as the background process of another
+application, with no administrator rights:
+
+- a child process on a loopback port the OS picks, with a token made up for
+  each start; both arrive on stdout as one JSON line;
+- it stops when its stdin closes or the `-parent-pid` process exits;
+- it reads no configuration file: the application's choices (model, mode)
+  live in `<data-dir>/settings.json` and change through
+  `PATCH /api/v1/managed/settings`;
+- it tunes itself: when the mode (`silent` until the application picks
+  another) has no current profile, it measures as soon as the model is on
+  disk and applies the result.
+
+```sh
+nanollm managed -data-dir "$HOME/.local/share/softphone/nanollm" -parent-pid $$
+```
+
+The integrator's guide, in Russian, is [nanollm-embedded.md](nanollm-embedded.md).
+
 ## Layout
 
 ```
@@ -149,6 +170,7 @@ internal/chat/          Gemma 4 template, tool-call and reasoning parsers
 internal/grammar/       JSON Schema to GBNF
 internal/api/           adapter registry; native/, openai/, ollama/ dialects
 internal/server/        runtime wiring for serve and run
+internal/managed/       nanollm managed: settings, events, the autotune loop
 internal/httpx/         auth, problem+json, SSE, middleware
 internal/registry/      catalog, manifests, downloads, tensor inventories
 internal/queue/         SQLite jobs, SSE, webhooks

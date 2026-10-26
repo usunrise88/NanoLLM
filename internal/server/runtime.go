@@ -214,6 +214,32 @@ func (r *Runtime) SetTune(a *tune.Active) { r.tune.Store(a) }
 // Tune is what SetTune installed, nil when the autotuner is off.
 func (r *Runtime) Tune() *tune.Active { return r.tune.Load() }
 
+// DefaultModel is the model a request that names none runs: models.default,
+// or the one SetDefaultModel set since.
+func (r *Runtime) DefaultModel() string { return r.Engine.DefaultModel() }
+
+// SetDefaultModel makes id the default model from the next request on: the
+// requests that name no model, /readyz and the autotuner's runs without one.
+// It loads and unloads nothing.
+func (r *Runtime) SetDefaultModel(id string) { r.Engine.SetDefaultModel(id) }
+
+// Present reports whether the model can load without a download: complete on
+// disk, or served by the scripted backend alone, which needs no files.
+func (r *Runtime) Present(id string) bool {
+	m, err := r.manifest(id)
+	if err != nil {
+		return false
+	}
+	if _, ok := r.byName[config.BackendFake]; ok && len(r.backends) == 1 {
+		return true
+	}
+	if r.store == nil {
+		return false
+	}
+	st, err := r.store.Status(m)
+	return err == nil && st.State == registry.StateComplete
+}
+
 // ProbedDevices are the devices the backends listed at start.
 func (r *Runtime) ProbedDevices() []backend.Device {
 	r.mu.Lock()
@@ -485,7 +511,7 @@ func (r *Runtime) Models(ctx context.Context) ([]core.ModelInfo, error) {
 	resident := r.Pool.Status()
 	var out []core.ModelInfo
 	for _, m := range r.catalog {
-		info := core.ModelInfo{ID: m.ID, Family: m.Family, Params: m.Params, Quant: m.Quant, Default: m.ID == r.cfg.Models.Default, Disk: registry.StateAbsent}
+		info := core.ModelInfo{ID: m.ID, Family: m.Family, Params: m.Params, Quant: m.Quant, Default: m.ID == r.DefaultModel(), Disk: registry.StateAbsent}
 		for _, f := range m.Files {
 			info.SizeBytes += f.Size
 		}
@@ -652,8 +678,9 @@ func (r *Runtime) Devices(ctx context.Context) ([]core.DeviceInfo, error) {
 
 // Ready reports whether the default model is resident, for /readyz.
 func (r *Runtime) Ready() (bool, string) {
+	def := r.DefaultModel()
 	for _, s := range r.Pool.Status() {
-		if s.Key.Model == r.cfg.Models.Default && !s.Retired {
+		if s.Key.Model == def && !s.Retired {
 			return true, ""
 		}
 	}

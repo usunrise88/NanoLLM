@@ -2,9 +2,10 @@ package hwinfo
 
 import (
 	"context"
-	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/usunrise88/nanollm/internal/quietexec"
 )
 
 // nvidiaLive reads every NVIDIA GPU nvidia-smi knows; none when it is absent
@@ -28,7 +29,7 @@ func NVIDIALive(ctx context.Context) []GPULive {
 		nvidiaLiveFields + ",clocks_throttle_reasons.active",
 		strings.Replace(nvidiaLiveFields, ",compute_cap", "", 1) + ",clocks_throttle_reasons.active",
 	} {
-		out, err := exec.CommandContext(ctx, "nvidia-smi", "--query-gpu="+fields, "--format=csv,noheader,nounits").Output()
+		out, err := quietexec.Command(ctx, "nvidia-smi", "--query-gpu="+fields, "--format=csv,noheader,nounits").Output()
 		if err != nil {
 			continue
 		}
@@ -39,7 +40,7 @@ func NVIDIALive(ctx context.Context) []GPULive {
 	if len(gpus) == 0 {
 		return nil
 	}
-	if out, err := exec.CommandContext(ctx, "nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader,nounits").Output(); err == nil {
+	if out, err := quietexec.Command(ctx, "nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader,nounits").Output(); err == nil {
 		// The listing does not say which GPU a process is on; with one GPU
 		// (the usual laptop) it is that one.
 		if procs := parseComputeApps(string(out)); len(gpus) == 1 {

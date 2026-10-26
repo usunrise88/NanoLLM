@@ -20,6 +20,7 @@ import (
 	"github.com/usunrise88/nanollm/internal/memlock"
 	"github.com/usunrise88/nanollm/internal/numa"
 	"github.com/usunrise88/nanollm/internal/plan"
+	"github.com/usunrise88/nanollm/internal/quietexec"
 	"github.com/usunrise88/nanollm/internal/registry"
 )
 
@@ -439,7 +440,7 @@ func (o Options) spawn(ctx context.Context, ws WorkerSpec, budget plan.Budget) (
 		evictFile(ws.Load.DrafterPath)
 	}
 	name, args := cmdline[0], cmdline[1:]
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := quietexec.Command(ctx, name, args...)
 	// The worker places itself (internal/numa) before it reads its spec.
 	if len(ws.Env) > 0 || !ws.Place.IsZero() {
 		cmd.Env = os.Environ()

@@ -269,6 +269,29 @@ func (p *Profile) Hash() string {
 // ID is the profile's name for the pool key and the logs: mode@hash.
 func (p *Profile) ID() string { return string(p.Mode) + "@" + p.Hash() }
 
+// Summary is the short form of a profile the APIs give.
+type Summary struct {
+	ID       string    `json:"id"`
+	Created  time.Time `json:"created"`
+	Device   any       `json:"device"`
+	PlanMode any       `json:"plan_mode"`
+	NCtx     int       `json:"n_ctx"`
+	MTP      any       `json:"mtp"`
+	AnswerS  float64   `json:"answer_s"`
+	Measured int64     `json:"measured_bytes"`
+}
+
+// Summary is the short form of the profile, nil for no profile.
+func (p *Profile) Summary() *Summary {
+	if p == nil {
+		return nil
+	}
+	return &Summary{
+		ID: p.ID(), Created: p.Created, Device: p.Chosen.Device.Value, PlanMode: p.Chosen.PlanMode.Value, NCtx: p.Chosen.NCtx,
+		MTP: p.Chosen.MTP.Value, AnswerS: p.Answer.AnswerS, Measured: p.Memory.MeasuredBytes,
+	}
+}
+
 // Store keeps profiles in a directory, <model>.<mode>.json, with the previous
 // version of each next to it as .prev.
 type Store struct{ Dir string }

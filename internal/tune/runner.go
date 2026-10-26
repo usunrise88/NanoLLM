@@ -7,12 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/usunrise88/nanollm/internal/backend"
 	"github.com/usunrise88/nanollm/internal/numa"
+	"github.com/usunrise88/nanollm/internal/quietexec"
 )
 
 // Runner runs one probe: loads the model as the spec says and measures it.
@@ -66,7 +66,7 @@ func (r SpawnRunner) Probe(ctx context.Context, spec ProbeSpec) (ProbeResult, er
 	if err != nil {
 		return res, err
 	}
-	cmd := exec.CommandContext(ctx, exe, WorkerArgs...)
+	cmd := quietexec.Command(ctx, exe, WorkerArgs...)
 	cmd.Env = append(os.Environ(), r.Env...)
 	for k, v := range spec.Env {
 		cmd.Env = append(cmd.Env, k+"="+v)
