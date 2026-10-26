@@ -14,12 +14,16 @@ import (
 // reads them with O_DIRECT into buffers of its own, and the model's tensors
 // are pointed at those buffers: while the layer computes, the tensor's data
 // pointer is the ring's. The tensors are found by name through
-// llama_model_get_tensor (patches/next/0010), the stream spec's ranges are
+// llama_model_get_tensor (patches/llama.cpp/0010), the stream spec's ranges are
 // matched to them by file offset, and a ggml_tensor's data pointer is written
 // in place (the offset is checked against the library in a native test).
 
 // tensorDataOffset is offsetof(struct ggml_tensor, data) in ggml b11600.
 const tensorDataOffset = 248
+
+// tensorPtr is the address of a ggml_tensor, which the model owns and the Go
+// runtime does not see (the same conversion as memlock_windows.go).
+func tensorPtr(t GgmlTensor) unsafe.Pointer { return *(*unsafe.Pointer)(unsafe.Pointer(&t)) }
 
 // ringTensor is a tensor the ring points elsewhere: where its data pointer
 // lives and what it was.
@@ -33,7 +37,7 @@ type ringTensor struct {
 // leaves the model as it was.
 func (m *model) attachRing(spec *backend.StreamSpec) (*memlock.Ring, error) {
 	if !m.b.lib.cxx["llama_model_get_tensor"] {
-		return nil, fmt.Errorf("the library has no llama_model_get_tensor (patches/next/0010)")
+		return nil, fmt.Errorf("the library has no llama_model_get_tensor (patches/llama.cpp/0010)")
 	}
 	f, err := gguf.Open(m.spec.Path)
 	if err != nil {
@@ -53,10 +57,10 @@ func (m *model) attachRing(spec *backend.StreamSpec) (*memlock.Ring, error) {
 			return nil, fmt.Errorf("the range of layer %d at %d (%d bytes) is not a tensor of the file", r.Layer, r.Offset, r.Length)
 		}
 		p := llamaModelGetTensor(m.mdl, t.Name)
-		if p == nil {
+		if p == 0 {
 			return nil, fmt.Errorf("the model has no tensor %s", t.Name)
 		}
-		slot := (*uintptr)(unsafe.Add(p, tensorDataOffset))
+		slot := (*uintptr)(unsafe.Add(tensorPtr(p), tensorDataOffset))
 		if *slot == 0 {
 			return nil, fmt.Errorf("tensor %s has no data (it is not mapped from the file)", t.Name)
 		}

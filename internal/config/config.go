@@ -237,7 +237,7 @@ type Stream struct {
 	// readahead, the default), pread (reads of the file, Depth at a time,
 	// into the page cache; for an NVMe disk, which needs a queue deeper than
 	// one) or direct (O_DIRECT reads into a ring of buffers the model's
-	// tensors are pointed at: Linux, libraries with patches/next/0010).
+	// tensors are pointed at: Linux, libraries with patches/llama.cpp/0010).
 	Method string `yaml:"method"`
 	// Depth is the reads in flight of method pread; zero is four.
 	Depth int `yaml:"depth"`

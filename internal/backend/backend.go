@@ -165,7 +165,7 @@ type StreamSpec struct {
 	// readahead: madvise WILLNEED, PrefetchVirtualMemory), "pread" (reads
 	// of the file, Depth at a time, into the page cache; OPT-9) or "direct"
 	// (O_DIRECT reads into a ring of buffers the tensors are pointed at, no
-	// page cache: Linux, libraries with patches/next/0010). Depth is zero for four.
+	// page cache: Linux, libraries with patches/llama.cpp/0010). Depth is zero for four.
 	Method string
 	Depth  int
 	// Probe installs the layer callback and does nothing in it, to measure
