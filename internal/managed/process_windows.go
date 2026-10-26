@@ -40,6 +40,12 @@ func WatchParent(ctx context.Context, pid int, stop func(reason string)) error {
 	if err != nil {
 		return err
 	}
+	// A process that has exited opens as long as anybody (an antivirus, say)
+	// still holds a handle to it, and is signalled from the start.
+	if ev, err := windows.WaitForSingleObject(h, 0); err == nil && ev == windows.WAIT_OBJECT_0 {
+		_ = windows.CloseHandle(h)
+		return errors.New("the parent process is not running")
+	}
 	go func() {
 		defer func() { _ = windows.CloseHandle(h) }()
 		for ctx.Err() == nil {
