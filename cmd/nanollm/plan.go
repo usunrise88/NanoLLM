@@ -21,7 +21,8 @@ import (
 // real one.
 func planCommand(args []string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("plan", flag.ContinueOnError)
-	presetName := fs.String("preset", "", "memory budget, one of plan.Presets (required)")
+	cfgPath := configFlag(fs)
+	presetName := fs.String("preset", "", "memory budget, one of plan.Presets; without it the model is planned the way the server places it, from the configuration, and each setting says where it comes from")
 	device := fs.String("device", "", "accelerator selector, e.g. llamacpp:vulkan0 (default: the preset's synthetic device)")
 	deviceMem := fs.String("device-memory", "", "the device's memory, e.g. 6g or 5800m (default: the preset's budget)")
 	mode := fs.String("mode", "auto", "force a mode: M1…M9 or its name")
@@ -32,17 +33,20 @@ func planCommand(args []string, stdout io.Writer) error {
 	noFA := fs.Bool("no-fa", false, "plan for a device without flash attention")
 	drafter := fs.String("drafter", "", "drafter GGUF, when MODEL is a file")
 	layout := fs.String("layout", registry.LayoutOriginal, "original or nano: plan from the relaid copy of a catalog model (OPT-7; `models relayout` writes it)")
-	cfgPath := configFlag(fs)
 	asJSON := fs.Bool("json", false, "print the plan as JSON")
 	pos, err := parseFlags(fs, args)
 	if err != nil {
 		return err
 	}
-	if len(pos) != 1 {
+	if len(pos) > 1 || (len(pos) == 0 && *presetName != "") {
 		return errors.New("plan: give one model, a catalog id or a GGUF path")
 	}
 	if *presetName == "" {
-		return fmt.Errorf("plan: --preset is required; one of %s", strings.Join(plan.Presets, ", "))
+		model := ""
+		if len(pos) == 1 {
+			model = pos[0]
+		}
+		return planFromConfig(stdout, *cfgPath, model, *device, *asJSON)
 	}
 	preset, err := plan.LookupPreset(*presetName)
 	if err != nil {
@@ -252,6 +256,7 @@ func printPlan(w io.Writer, p *plan.Plan) {
 		usage("vram", p.Memory.VRAM)
 		usage("ram", p.Memory.RAM)
 		usage("unified", p.Memory.Unified)
+		usage("limit", p.Memory.Combined)
 		fmt.Fprintf(w, "  %-11s %s (reported, not budgeted)\n", "file-backed", mib(p.Memory.FileBacked))
 	}
 
@@ -267,7 +272,7 @@ func printPlan(w io.Writer, p *plan.Plan) {
 			for _, s := range []struct {
 				name string
 				n    int64
-			}{{"vram", a.Shortfall.VRAM}, {"ram", a.Shortfall.RAM}, {"unified", a.Shortfall.Unified}} {
+			}{{"vram", a.Shortfall.VRAM}, {"ram", a.Shortfall.RAM}, {"unified", a.Shortfall.Unified}, {"memory limit", a.Shortfall.Combined}} {
 				if s.n > 0 {
 					parts = append(parts, s.name+" "+mib(s.n))
 				}

@@ -1,0 +1,11 @@
+NanoLLM optimize: optimal (up to 4.0 GiB of memory, 5 threads)
+
+  machine   Intel Core i7-12700H, 10 cores (20 threads), 15.5 GiB RAM (14.3 GiB free)
+  model     gemma-4-e4b-qat on ssd 2719 MB/s
+  survey    1.4 s
+
+  candidate     mode             context  memory   answer    verdict
+  llamacpp:cpu  M7 ram-ple-disk  32768    3.4 GiB  ~138.8 s  measure
+
+  ! cuda_addon_missing     An NVIDIA GPU is present but the CUDA add-on is not installed: the card runs through Vulkan, slower. Reinstall with the CUDA option (install.sh --cuda).
+  i wsl                    Running inside WSL: the GPU may be unavailable and the disk is slower.

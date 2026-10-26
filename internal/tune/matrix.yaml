@@ -1,0 +1,331 @@
+# The matrix of known optimizations (docs/OPTIMIZE.md, §3.8 and appendix A).
+#
+# A cell is one measured fact: this lever, in this variant, on a class of
+# hardware, did this. The class names only the attributes the result depends on
+# (tune.Significant lists them per lever); a machine with the same values gets
+# the cell as "class", the nearest other as "inherited". Every cell names the
+# file that holds the measurement, and a test checks the file exists.
+#
+# machines: how many machines of the class were measured (more wins a tie).
+
+cells:
+  # ---------------------------------------------------------------- CPU
+  - lever: repack
+    class: {cpu_variant: haswell}
+    verdict: win
+    effect: {metric: tg_tok_s, ratio: 1.4, note: "tg +35…50 %, pp +47…56 % (mode M7)"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-night-repack-warm.json
+    why: "the CPU kernels read the weights in their own layout"
+  - lever: repack
+    class: {cpu_variant: alderlake}
+    verdict: win
+    effect: {metric: tg_tok_s, ratio: 2.0, note: "without it tg ×0.5, pp ×0.2"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "the AVX-VNNI kernels of patch 0005 work on repacked weights only"
+
+  - lever: mtp_cpu
+    variant: {draft_max: 2, p_min: 0.5}
+    class: {cpu_variant: haswell}
+    verdict: win
+    effect: {metric: chat_tok_s, ratio: 1.38}
+    conditions: {preset: ram-8g, threads: 16, numa: interleave}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-mtp-next2-strong.json
+    why: "checking 2–3 tokens costs almost as much as one (the multi-row kernels of OPT-16)"
+  - lever: mtp_cpu
+    variant: {draft_max: 2, p_min: 0.75}
+    class: {cpu_variant: haswell}
+    verdict: win
+    effect: {metric: chat_tok_s, ratio: 1.21}
+    conditions: {preset: ram-4g, threads: 4}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-mtp-next-weak.json
+    why: "on four cores a wrong draft costs more, so a stricter p_min"
+  - lever: mtp_cpu
+    variant: {draft_max: 2, p_min: 0}
+    class: {cpu_variant: alderlake}
+    verdict: win
+    effect: {metric: chat_tok_s, ratio: 1.89}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "the same multi-row kernels; the drafter's guesses are accepted often enough on chat"
+
+  - lever: ngram_cpu
+    variant: {n_max: 2}
+    class: {cpu_variant: haswell}
+    verdict: neutral
+    effect: {metric: chat_tok_s, ratio: 1.04, note: "echo tasks ×1.93"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-night-ngram-strong.json
+    why: "prompt lookup pays only where the answer repeats the prompt"
+
+  - lever: numa
+    variant: {policy: distribute}
+    class: {numa_nodes: "4"}
+    verdict: win
+    effect: {metric: tg_tok_s, ratio: 1.23, note: "with MTP +5 %"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-numa-distribute.txt
+    why: "each node reads the weights from its own memory"
+
+  - lever: threads_decode
+    variant: {team: physical}
+    class: {hybrid: "false"}
+    verdict: win
+    effect: {metric: tg_tok_s, note: "32 threads on 16 cores: tg ×0.4–0.5"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-19-dev-threads-after-pin.json
+    why: "SMT siblings compete for the same vector units and memory bandwidth"
+  - lever: threads_decode
+    variant: {team: p_cores}
+    class: {hybrid: "true"}
+    verdict: win
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "six performance cores already saturate the memory bus; an efficiency core holds back every matrix product it shares"
+  - lever: threads_prefill
+    variant: {team: logical}
+    class: {hybrid: "true"}
+    verdict: win
+    effect: {metric: pp_tok_s, ratio: 1.3, note: "pp 125 → 155–172"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "prefill is limited by arithmetic, which the efficiency cores and second threads add"
+
+  - lever: kv_q8
+    class: {}
+    verdict: win
+    effect: {metric: tg_tok_s, ratio: 1.1, note: "depth 4096 tg +5…22 %, pp −2…5 %"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-19-dev-o2-strong.json
+    why: "a quarter of the cache to read per token; the answer can change, so only a memory rule uses it"
+
+  - lever: fa_off_cpu
+    class: {cpu_variant: alderlake}
+    verdict: depends
+    effect: {metric: tg_tok_s, ratio: 1.13, note: "prefill −6 %"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "the CPU flash attention kernel for 1–3 tokens converts K and V per query head"
+
+  - lever: thp
+    class: {cpu_variant: haswell}
+    verdict: loss
+    effect: {metric: tg_tok_s, ratio: 0.84, note: "16 threads; neutral on 4 cores"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-night-thp-strong.json
+    why: "huge pages with hugetlb cost 16 % on 16 threads"
+
+  # ---------------------------------------------------------------- GPU
+  - lever: mtp_gpu
+    variant: {draft_max: 2, p_min: 0}
+    class: {gpu_backend: vulkan, gpu_vendor: intel, gpu_memory: shared}
+    verdict: win
+    effect: {metric: chat_tok_s, ratio: 1.6, note: "×1.4–1.8; draft_max and p_min change little"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/baseline-2026-10-20-gemma-igpu-uma4g/README.md
+    why: "the batch kernel of the verification is cheap against the draft round trips"
+  - lever: mtp_gpu
+    variant: {draft_max: 3, p_min: 0}
+    class: {gpu_backend: cuda, gpu_vendor: nvidia, gpu_memory: own, gpu_cc: "86"}
+    verdict: win
+    effect: {metric: chat_tok_s, ratio: 1.64}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/rtx-2026-10-21/README.md
+    why: "verification of 4 tokens costs 1.1× one; a p_min cutoff only forces graph re-capture"
+
+  - lever: device_sampling
+    class: {gpu_backend: vulkan, gpu_memory: shared}
+    verdict: loss
+    effect: {metric: pp_tok_s, note: "pp 53 against 464, MTP 14.9 against 22.3"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "the sampler chain in the Vulkan graph is slower than on the host"
+  - lever: device_sampling
+    class: {gpu_backend: cuda, gpu_memory: own}
+    verdict: win
+    effect: {metric: chat_tok_s, ratio: 1.06, note: "echo +10 %"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/rtx-2026-10-21/README.md
+    why: "the host copy of a 1 MiB row of logits per output is gone"
+
+  - lever: fa_small
+    class: {gpu_backend: vulkan, gpu_memory: shared}
+    verdict: win
+    effect: {metric: pp_tok_s, ratio: 1.23, note: "at 4096 tokens of context; +42 % at 8192"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "the Iris Xe scalar flash attention shader is the prefill bottleneck at depth"
+  - lever: fa_off_gpu
+    class: {gpu_backend: vulkan, gpu_memory: shared}
+    verdict: loss
+    effect: {metric: tg_tok_s, ratio: 0.5}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "the sliding-window layers then read the whole window of the cache"
+  - lever: fa_off_gpu
+    class: {gpu_backend: cuda, gpu_memory: own}
+    verdict: loss
+    effect: {metric: pp_tok_s, ratio: 0.93, note: "tg −3 %"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/rtx-2026-10-21/README.md
+    why: "flash attention is the faster path on Ampere"
+
+  - lever: cuda_graph
+    class: {gpu_backend: cuda}
+    verdict: win
+    effect: {metric: mtp_tok_s, note: "p_min 130 → 147"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/cuda-kernels-2026-10-21/README.md
+    why: "a CUDA graph per batch shape: a verification step of another size no longer re-captures"
+  - lever: cuda_norm
+    class: {gpu_backend: cuda}
+    verdict: win
+    effect: {metric: kernel_ms, note: "norms 1.05 → 0.73 ms, quantization 0.43 → 0.25 ms per token"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/cuda-kernels-2026-10-21/README.md
+    why: "fewer, leaner kernels between the matrix products"
+  - lever: mmvq
+    class: {gpu_cc: "86"}
+    verdict: win
+    effect: {metric: tg_tok_s, ratio: 1.05, note: "−0.6 ms per token"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/cuda-kernels-2026-10-21/README.md
+    why: "block shapes of the quantized mat-vec tuned on the GA104"
+  - lever: fa_vec
+    class: {gpu_cc: "86"}
+    verdict: neutral
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/cuda-kernels-2026-10-21/README.md
+    why: "the vector flash attention kernel equals the MMA kernel at depth 0, 4096 and 8192"
+  - lever: fuse_batch
+    class: {gpu_cc: "86"}
+    verdict: loss
+    effect: {metric: kernel_us, note: "156 against 87 µs"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/cuda-kernels-2026-10-21/README.md
+    why: "the fused batch kernel is slower than the two it replaces"
+  - lever: cuda13
+    class: {gpu_cc: "86"}
+    verdict: win
+    effect: {metric: tg_tok_s, ratio: 1.02, note: "driver 580 or newer"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/cuda-kernels-2026-10-21/README.md
+    why: "the CUDA 13 build"
+
+  - lever: vk_matvec
+    class: {gpu_vendor: intel, gpu_memory: shared, os: windows}
+    verdict: win
+    effect: {metric: tg_tok_s, ratio: 1.12, note: "verification of 3–6 tokens +14…31 %"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "the large mat-vec workgroup of patch 0006 on the Windows Intel driver"
+
+  - lever: ubatch
+    variant: {n_ubatch: 512}
+    class: {gpu_backend: vulkan, gpu_memory: shared}
+    verdict: win
+    effect: {metric: pp_tok_s, note: "1024 and 2048: pp 428 → 393"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/stage0-2026-10-21/README.md
+    why: "a larger physical batch loses on the Iris Xe"
+  - lever: ubatch
+    variant: {n_ubatch: 1024}
+    class: {gpu_backend: cuda, gpu_memory: own}
+    verdict: neutral
+    effect: {metric: pp_tok_s, ratio: 1.036, note: "the compute buffer grows"}
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/rtx-2026-10-21/README.md
+    why: "+3.6 % prefill for a larger buffer: not worth a memory limit"
+
+  - lever: ngram_gpu
+    class: {gpu_backend: vulkan}
+    verdict: loss
+    machines: [rusunrisebook]
+    source: bench/results/rusunrisebook/baseline-2026-10-20-gemma-igpu-uma4g/README.md
+    why: "useless on the iGPU"
+
+  # ---------------------------------------------------------------- disk
+  - lever: stream
+    class: {disk: hdd}
+    verdict: loss
+    effect: {metric: tg_tok_s, note: "0.05–0.13 tokens per second"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-night-stream-weak-ram-2g.json
+    why: "every token reads the cold layers from a 130 MB/s disk"
+  - lever: stream_ahead
+    class: {disk: hdd}
+    verdict: loss
+    effect: {metric: tg_tok_s, note: "ram-2g: 0.11 → 0.04"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-night-stream-ahead-ram-2g.json
+    why: "read-ahead competes with the compute for the one disk"
+  - lever: stream_evict
+    class: {disk: hdd}
+    verdict: win
+    effect: {metric: tg_tok_s, note: "M9: 0.05 → 0.08"}
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-night-stream-evict-ram-2g.json
+    why: "a computed layer's pages leave the cache instead of cycling through it"
+  - lever: madv_random
+    class: {disk: hdd}
+    verdict: neutral
+    machines: [hyper]
+    source: bench/results/hyper/2026-10-20-dev-night-stream-keep-ram-2g.json
+    why: "no difference for the per-layer embeddings"
+
+# How fast each class runs the reference model: for estimating a candidate's
+# answer time before it is measured. depth_pp and depth_tg carry the numbers
+# at the start over to the reference request (a prompt of 4096 tokens).
+baselines:
+  - device: cpu
+    class: {cpu_variant: alderlake, hybrid: "true"}
+    threads: 6
+    pp_thread_exp: 0.78
+    tg_thread_exp: 0.1
+    pp512: 202
+    tg0: 11.1
+    depth_pp: 0.86
+    depth_tg: 0.87
+    mtp_gain: 1.91
+    source: bench/results/rusunrisebook/optimize-stage0-2026-10-23/calibrate-cpu-t0.json
+  - device: cpu
+    class: {cpu_variant: haswell, hybrid: "false"}
+    threads: 16
+    tg_thread_exp: 0.57
+    pp512: 145
+    tg0: 24.8
+    depth_pp: 0.8
+    depth_tg: 0.66
+    mtp_gain: 1.38
+    estimated: true
+    source: bench/results/hyper/2026-10-20-dev-mtp-next2-strong.json
+  - device: cpu
+    class: {cpu_variant: haswell, hybrid: "false"}
+    threads: 4
+    tg_thread_exp: 0.57
+    pp512: 44
+    tg0: 11.3
+    depth_pp: 0.8
+    depth_tg: 0.66
+    mtp_gain: 1.21
+    estimated: true
+    source: bench/results/hyper/2026-10-20-dev-mtp-next-weak.json
+  - device: vulkan
+    class: {gpu_backend: vulkan, gpu_vendor: intel, gpu_memory: shared}
+    pp512: 449
+    tg0: 11.3
+    depth_pp: 0.92
+    depth_tg: 0.8
+    mtp_gain: 1.89
+    source: bench/results/rusunrisebook/optimize-stage0-2026-10-23/calibrate-iris.json
+  - device: cuda
+    class: {gpu_backend: cuda, gpu_vendor: nvidia, gpu_memory: own, gpu_cc: "86"}
+    pp512: 5693
+    tg0: 100
+    depth_pp: 1.12
+    depth_tg: 0.96
+    mtp_gain: 1.87
+    source: bench/results/rusunrisebook/optimize-stage0-2026-10-23/calibrate-cuda.json

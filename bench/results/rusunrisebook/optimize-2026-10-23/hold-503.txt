@@ -1,0 +1,10 @@
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+Referrer-Policy: no-referrer
+Retry-After: 10
+X-Content-Type-Options: nosniff
+X-Request-Id: a02daa0fe7d59702
+Date: Fri, 23 Oct 2026 16:21:56 GMT
+Content-Length: 160
+
+{"error":{"message":"gemma-4-e4b-qat is being measured by the autotuner or the benchmark; try again shortly","type":"server_error","code":"model_unavailable"}}

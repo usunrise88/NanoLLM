@@ -1,0 +1,273 @@
+{
+  "candidate": {
+    "id": "llamacpp:cpu",
+    "device": {
+      "selector": "llamacpp:cpu",
+      "backend": "llamacpp",
+      "id": "cpu",
+      "kind": "cpu",
+      "type": "cpu",
+      "name": "12th Gen Intel(R) Core(TM) i7-12700H",
+      "vendor": "Intel",
+      "memory_total": 34070962176,
+      "memory_free": 11409342464,
+      "features": [
+        "multirow-q4_0"
+      ]
+    },
+    "preset": "ram-7.5g",
+    "mode": "M6 ram-full",
+    "plan": {
+      "model": "gemma-4-e4b-qat",
+      "preset": "ram-7.5g",
+      "mode": "ram-full",
+      "mode_id": "M6",
+      "gpu_layers": 0,
+      "layers_on_gpu": 0,
+      "n_ctx": 16384,
+      "slots": 1,
+      "n_batch": 2048,
+      "n_ubatch": 512,
+      "n_outputs_max": 3,
+      "flash_attention": true,
+      "kv": {
+        "type_k": "f16",
+        "type_v": "f16",
+        "swa_full": true,
+        "swa_full_reason": "the full sliding-window cache fits the budget: the prompt cache can reuse a prefix of any length",
+        "unified": false,
+        "cells_full": 16384,
+        "cells_swa": 16384,
+        "streams": 1,
+        "bytes": 939524096
+      },
+      "load_mode": "dio",
+      "lazy_mode": "off",
+      "repack": true,
+      "mtp": {
+        "enabled": true,
+        "reason": "the drafter (41.9 MiB) runs on the CPU with the target's output layer and reads its KV cache",
+        "draft_max": 2,
+        "draft_p_min": 0.5
+      },
+      "groups": {
+        "G0": {
+          "vram": 0,
+          "ram_locked": 754974720,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G1": {
+          "vram": 0,
+          "ram_locked": 1585446912,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G2": {
+          "vram": 0,
+          "ram_locked": 376750080,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G3": {
+          "vram": 0,
+          "ram_locked": 1857945600,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G4": {
+          "vram": 0,
+          "ram_locked": 2241704,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G5": {
+          "vram": 0,
+          "ram_locked": 939524096,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G6": {
+          "vram": 0,
+          "ram_locked": 81640464,
+          "file_backed": 0,
+          "disk": 0
+        },
+        "G7": {
+          "vram": 0,
+          "ram_locked": 173644185,
+          "file_backed": 0,
+          "disk": 0
+        }
+      },
+      "memory": {
+        "ram": {
+          "budget": 8053063680,
+          "used": 5973494353,
+          "budgeted": true
+        },
+        "file_backed": 0,
+        "overhead_ram": 201326592
+      },
+      "compute_calibrated": true,
+      "target": {
+        "n_ctx": 16384,
+        "slots": 1
+      },
+      "sources": {
+        "min_n_ctx": "mode"
+      },
+      "tried": [
+        {
+          "mode": "vram-full",
+          "id": "M1",
+          "fits": false,
+          "skipped": "the preset grants no device memory"
+        },
+        {
+          "mode": "vram-ple-host",
+          "id": "M2",
+          "fits": false,
+          "skipped": "the preset grants no device memory"
+        },
+        {
+          "mode": "vram-ple-disk",
+          "id": "M3",
+          "fits": false,
+          "skipped": "the preset grants no device memory"
+        },
+        {
+          "mode": "vram-partial",
+          "id": "M4",
+          "fits": false,
+          "skipped": "the preset grants no device memory"
+        },
+        {
+          "mode": "ram-full",
+          "id": "M6",
+          "fits": true
+        }
+      ]
+    },
+    "spec": {
+      "Path": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+      "DrafterPath": "C:\\ProgramData\\NanoLLM\\models\\gemma-4-e4b-qat\\8c5a9e4fd5482e2be20fe0bf013b4c262a8f4265\\mtp-gemma-4-E4B-it.gguf",
+      "Device": "llamacpp:cpu",
+      "GPULayers": 0,
+      "Overrides": null,
+      "LoadMode": "dio",
+      "LazyMode": "off",
+      "Repack": true,
+      "NCtx": 16384,
+      "Slots": 1,
+      "NBatch": 2048,
+      "NUBatch": 512,
+      "NOutputsMax": 3,
+      "Threads": 7,
+      "ThreadsBatch": 7,
+      "KVTypeK": "f16",
+      "KVTypeV": "f16",
+      "FlashAttention": true,
+      "FlashAttnSmallBatch": false,
+      "BackendSampling": false,
+      "CudaNano": null,
+      "SWAFull": true,
+      "KVUnified": false,
+      "DraftMax": 2,
+      "DraftPMin": 0.5,
+      "NGram": 0,
+      "Stream": null
+    },
+    "class": {
+      "cpu_arch": "x86_64",
+      "cpu_variant": "alderlake",
+      "hybrid": "true",
+      "numa_nodes": "1",
+      "os": "windows"
+    },
+    "n_ctx": 16384,
+    "slots": 1,
+    "mtp": true,
+    "planned_private": 5973494353,
+    "planned_vram": 0,
+    "planned_bytes": 5973494353,
+    "estimate": {
+      "known": true,
+      "pp": 161.5,
+      "tg": 17.08938,
+      "answer_s": 42.91699118247671,
+      "basis": "cpu baseline (distance 0), depth factors estimated"
+    }
+  },
+  "probe": {
+    "load_ms": 5697.436,
+    "memory": {
+      "peak_private": 6086385664,
+      "peak_commit": 6691729408,
+      "vram_dedicated": 28672,
+      "vram_shared": 278528,
+      "vram_source": "pdh"
+    },
+    "prefill": {
+      "tokens": 4096,
+      "pp512": 157.56743455350434,
+      "pp": 147.61657205192813
+    },
+    "calibration": {
+      "pp512": 157.56743455350434,
+      "pp4096": 147.61657205192813,
+      "tg0": 13.372419855267117,
+      "tg4096": 10.307735479358048,
+      "short_tg": 11.297769389931211,
+      "depth_pp": 0.9368469599713052,
+      "depth_tg": 0.7708205089969596,
+      "variants": {
+        "mtp2/0": [
+          22.288572196187832,
+          17.476305043079094
+        ],
+        "mtp2/0.5": [
+          20.760588888932826,
+          19.050646991722918
+        ],
+        "mtp3/0": [
+          20.227645129019304,
+          19.521526759396192
+        ],
+        "off": [
+          13.372419855267117,
+          10.307735479358048
+        ]
+      }
+    },
+    "batch_ms": {
+      "1": 98.535,
+      "3": 121.475,
+      "4": 137.008
+    },
+    "elapsed_s": 0
+  },
+  "baseline": {
+    "device": "cpu",
+    "class": {
+      "cpu_arch": "x86_64",
+      "cpu_variant": "alderlake",
+      "hybrid": "true",
+      "numa_nodes": "1",
+      "os": "windows"
+    },
+    "threads": 7,
+    "pp512": 157.6,
+    "tg0": 13.4,
+    "depth_pp": 0.94,
+    "depth_tg": 0.77,
+    "mtp_gain": 1.89,
+    "source": "bench/results/\u003cmachine\u003e/optimize-stage0-\u003cdate\u003e/calibrate-\u003cdevice\u003e.json"
+  },
+  "best_variant": "mtp3/0",
+  "mechanism": {
+    "1": 98.535,
+    "3": 121.475,
+    "4": 137.008
+  }
+}

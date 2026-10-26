@@ -58,6 +58,15 @@ var (
 	PinnedCommit = bindingCommit
 )
 
+// LibsRelease is the release of the native libraries this binary was built for
+// (scripts/libs.release, for example b11600-n8), stamped like PinnedTag:
+//
+//	-X github.com/usunrise88/nanollm/internal/backend/llamacpp.LibsRelease=b…
+//
+// The autotune profile is keyed on it (docs/OPTIMIZE.md, §3.6): new libraries
+// change the speeds the profile was measured with. An unstamped build says "dev".
+var LibsRelease = "dev"
+
 func init() {
 	backend.Register(Name, open)
 }

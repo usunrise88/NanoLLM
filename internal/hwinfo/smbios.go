@@ -16,6 +16,8 @@ type smbiosInfo struct {
 	boardVendor, boardProduct string
 	chassis                   int
 	memMTS                    int
+	// memModules counts the memory devices that are populated.
+	memModules int
 }
 
 // parseSMBIOS reads the raw table GetSystemFirmwareTable('RSMB') returns: an
@@ -71,6 +73,10 @@ func parseSMBIOS(raw []byte) smbiosInfo {
 				out.chassis = int(formatted[5] & 0x7f)
 			}
 		case 17:
+			// Size (0x0C): 0 is an empty slot, 0xFFFF unknown.
+			if len(formatted) >= 0x0E && binary.LittleEndian.Uint16(formatted[0x0C:0x0E]) != 0 {
+				out.memModules++
+			}
 			speed := 0
 			if len(formatted) >= 0x22 {
 				speed = int(binary.LittleEndian.Uint16(formatted[0x20:0x22])) // configured speed

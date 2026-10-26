@@ -1,0 +1,4 @@
+mode optimal
+  llamacpp:cuda0             chosen                   answer    3.9 s  decode   94.0  held  4420 MiB  off
+chosen llamacpp:cuda0
+problems mode_degraded/error
